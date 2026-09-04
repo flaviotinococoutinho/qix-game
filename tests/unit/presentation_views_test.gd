@@ -16,7 +16,11 @@ func test_hud_reads_session_round_identity_and_target_progress() -> void:
 	eq((hud.get_node("Percent") as Label).text, "40.0/80")
 	eq((hud.get_node("RoundTitle") as Label).text, "ABYSSAL RELAY")
 	eq((hud.get_node("Vitals") as Label).text, "L×2  E05")
-	eq(int((hud.get_node("ObjectiveFill") as ColorRect).size.x), 25)
+	# 400‰ rumo a um alvo de 800‰ é exatamente meio trilho — o que se afirma é a proporção,
+	# não a largura da banda, que é decisão de layout e pode mudar sem quebrar isto.
+	eq(
+		int((hud.get_node("ObjectiveFill") as ColorRect).size.x),
+		int(roundf(QixGameHud.OBJECTIVE_WIDTH * 0.5)))
 	eq(session.simulation.state_checksum(), before, "a apresentação não altera a simulação")
 	hud.free()
 
