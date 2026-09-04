@@ -57,9 +57,12 @@ Itens sem critério de pronto não entram aqui.
       algo falha quando ele é violado. → Teste que varra `game/simulation`, `game/rules` e
       `game/session` procurando `randi(`, `randf(`, `RandomNumberGenerator`, `Time.`, `Input.`,
       `delta`, `Tween`. *Pronto:* teste vermelho ao introduzir a violação de propósito.
-- [ ] **Checksum/replay não têm teste de regressão explícito contra mudança estética.** →
-      Teste que roda uma rodada, guarda o checksum, e falha se ele mudar sem bump de versão
-      declarado. *Pronto:* invariante 8 do `CLAUDE.md` mecanicamente defendido.
+- [ ] **Cobertura dourada só alcança a rodada 1.** `replay_checksum_golden_test.gd` fixa o
+      `config_hash` das três rodadas, mas só roda uma rota (177 ticks, uma captura) na rodada 1.
+      R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
+      literal cobre. → Estender a rota dourada para as três rodadas, ou justificar por escrito
+      que o `config_hash` basta. *Pronto:* cada perfil de boss de produção tem pelo menos um
+      checksum final fixado, ou uma nota dizendo por que não precisa.
 
 ### P3 — experiência e estética (o alvo real)
 
@@ -91,4 +94,30 @@ repete o que falhou.
 
 | Data (UTC) | Item | PR | Resultado |
 |---|---|---|---|
+| 2026-09-04 | P2: teste dourado de checksum/replay (invariantes 7 e 8) | #5 | verde — 138 testes, 11.515 asserções, 0 falhas; guarda provada vermelha com domínio perturbado e verde com cor perturbada |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
+
+### Fila de revisão — leia antes de escolher item
+
+O loop abre PR mais rápido do que a revisão humana mescla. Em 2026-09-04T09:00Z havia **cinco
+PRs abertos e nenhum mesclado**, todos com base no commit inicial:
+
+| PR | Item do backlog |
+|---|---|
+| #1 | P1 — cena órfã `node_2d.tscn` |
+| #2 | P1 — inventário dos nove addons |
+| #3 | P2 — varredura estática dos invariantes 1 e 4 |
+| #4 | P1 — poda de `samples/` e `guide_examples/` |
+| #5 | P2 — checksum dourado (invariantes 7 e 8) |
+
+Consequências práticas para a próxima execução:
+
+1. **Confira os PRs abertos antes de escolher** (`gh pr list --state open`, ou o equivalente MCP).
+   Um item já coberto por PR aberto não está livre só porque o checkbox do backlog continua vazio —
+   o backlog não é atualizado até o merge.
+2. **Espere conflito em `docs/`.** Todo PR do loop toca `LOOP_LEDGER.md`, e vários tocam
+   `TEST_MATRIX.md`. A contagem final da suíte nesse arquivo (`138 testes, 11.515 asserções`) é
+   válida para o #5 isolado; quem mesclar depois precisa recontar, não somar de cabeça.
+3. **Prefira arquivos novos a edições em arquivos disputados.** A descoberta de testes em
+   `run_tests.gd` varre diretório, então dois PRs podem acrescentar arquivos de teste sem
+   se tocarem — foi o que permitiu #3 e #5 coexistirem.

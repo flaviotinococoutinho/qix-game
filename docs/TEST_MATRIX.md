@@ -29,6 +29,7 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | simulação | capturas sucessivas até mais de 80%, pontuação, percentual, arbitragem captura×contato nos dois modos, morte, rollback da trilha, reentrada, game over, vitória e bônus |
 | sessão | intro/clear temporizados, confirmação sem intent, simulação congelada após vitória, carry de score/vidas, board/replay novos, conclusão e reinício da campanha |
 | replay | reprodução determinística, checksum, round-trip binário e rejeição atômica de versão/seed/regras/geometria/estado inicial incompatíveis |
+| checksum dourado | valores literais fixados para `RULES_VERSION`, `SCHEMA_VERSION`, seed e `config_hash` das três rodadas de produção, e para o checksum inicial/final/serializado de uma rota de 177 ticks com o chefe ativo — falha quando o contrato de replay se move, verde quando só a apresentação muda (invariantes 7 e 8) |
 | entrada | teclado/InputMap, direção única/sobreposição, D-pad, stick com histerese, A/X/Start, estado independente por gamepad, deduplicação InputMap×raw de A/Start, multitouch, disconnect/reset e equivalência canônica gamepad×touch |
 | feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum |
 | boss | validação dos perfis WANDER/PURSUIT/SWEEP, octantes inteiros, jitter determinístico, reflexão, pulso de velocidade, limites seguros, hash de regras e replay incompatível rejeitado antes da mutação |
@@ -55,7 +56,8 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | geração autorável | WAL v3 finalizou 16 staged/16 committed; subconjunto direcionado passou 22 testes/353 asserções |
 | perfil isolado do board | R8 p50/p95 1/1 µs em 240 amostras; legado sintético 31.160/32.304 µs; speedup p95 32.304× e 4× menos bytes por refresh |
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
-| log final da suíte | 134 testes, 11.489 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 |
+| log final da suíte | 138 testes, 11.515 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 |
+| guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo
 
