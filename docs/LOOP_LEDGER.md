@@ -1,5 +1,10 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
+> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** backlog e histórico conferidos contra os PRs abertos do loop (#1 a #5) na data
+> acima. Este documento é reescrito a cada execução — a data aqui marca a última run, não uma
+> validação de conteúdo do jogo.
+
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
 
@@ -189,6 +194,36 @@ Itens sem critério de pronto não entram aqui.
       literal cobre. → Estender a rota dourada para as três rodadas, ou justificar por escrito
       que o `config_hash` basta. *Pronto:* cada perfil de boss de produção tem pelo menos um
       checksum final fixado, ou uma nota dizendo por que não precisa.
+**Em revisão não é feito, mas também não é livre.** Um item com PR aberto não deve ser pego de
+novo: escolha o próximo. Confirme com `gh pr list --state open` (ou o MCP do GitHub) antes de
+decidir — a lista abaixo é a foto da última run, não a verdade corrente.
+
+### P1 — higiene estrutural (barato, destrava o resto)
+
+- [~] **`node_2d.tscn` órfão na raiz.** Cena vazia de 103 bytes, sem referência. É exatamente o
+      tipo de resíduo que ensina o próximo leitor que a raiz é um depósito. → Remover, ou
+      justificar por escrito se algo depender dela. *Pronto:* raiz sem arquivo não explicado.
+      **PR #1 aberto (2026-09-04).**
+- [~] **`samples/` e `guide_examples/` (~6 MB) são demos de addons de terceiros.** Convivem com o
+      código do jogo e poluem toda busca por `.tscn`/`.gd`. → Decidir: podar, mover para fora do
+      versionamento, ou documentar por que ficam. *Pronto:* decisão registrada e busca por cena
+      do jogo retornando só cenas do jogo. **PR #4 aberto (2026-09-04).**
+- [~] **`addons/` tem nove addons; nem todos parecem usados** (`softbody2d`, `curve2collision`,
+      `GDDraw`, `yard`, `curved_lines_2d`, `phantom_camera`). → Mapear quem é realmente carregado
+      pelo runtime e quem é ferramenta de editor; registrar em `docs/PROJECT_CONTRACT.md`.
+      *Pronto:* tabela addon → consumidor → shipped/editor-only. **PR #2 aberto (2026-09-04).**
+
+### P2 — integridade de contexto
+
+- [~] **Os invariantes do `CLAUDE.md` não têm teste que os defenda.** Um invariante só existe se
+      algo falha quando ele é violado. → Teste que varra `game/simulation`, `game/rules` e
+      `game/session` procurando `randi(`, `randf(`, `RandomNumberGenerator`, `Time.`, `Input.`,
+      `delta`, `Tween`. *Pronto:* teste vermelho ao introduzir a violação de propósito.
+      **PR #3 aberto (2026-09-04).**
+- [~] **Checksum/replay não têm teste de regressão explícito contra mudança estética.** →
+      Teste que roda uma rodada, guarda o checksum, e falha se ele mudar sem bump de versão
+      declarado. *Pronto:* invariante 8 do `CLAUDE.md` mecanicamente defendido.
+      **PR #5 aberto (2026-09-04).**
 
 ### P3 — experiência e estética (o alvo real)
 
@@ -223,6 +258,15 @@ execução futura não rodou os comandos, o motivo tem que ser dito, não omitid
 
 Ruído esperado na saída: o autoload de ferramental imprime
 `[godot_ai game_helper] registered mcp capture` ao final de todo script headless. Não é erro.
+## Pendências conhecidas
+
+- **Cinco PRs do loop estão abertos e `main` não andou desde `74c173a`.** O loop produz mais
+  rápido do que a revisão acontece, e todos os PRs saem do mesmo commit: espere conflito em
+  `docs/LOOP_LEDGER.md` a cada merge. Ao resolver, mantenha a linha `> **Verificado em**` de cada
+  doc — `tests/unit/doc_freshness_header_test.gd` recusa doc sem cabeçalho.
+- **P3 é a próxima fronteira e nenhum item dele foi tocado.** Quando os P1/P2 acima estiverem
+  mesclados, o loop deixa de fazer higiene e passa a mexer em experiência: aí valem em dobro os
+  invariantes 6 e 8, porque estética que muda checksum é vazamento para o domínio.
 
 ## Histórico
 
@@ -265,6 +309,7 @@ O que ficou provado e não precisa ser reinvestigado:
 | 2026-09-04 | P2 guarda mecânica dos invariantes 1 e 4: `tests/unit/domain_purity_test.gd` | (este) | verde — 138 testes / 11 547 asserções / 0 falhas; vermelho comprovado com violação plantada e revertida |
 | 2026-09-04 | P1 `addons/`: inventário addon → consumidor → destino no export | #2 | aberto por outra execução; não reivindicado aqui |
 | 2026-09-04 | P1 `node_2d.tscn` órfão | #1 | aberto por outra execução; não reivindicado aqui |
+| 2026-09-04 | P2: cabeçalho de verificação em todo `docs/*.md` + guarda em teste | (esta branch) | verde — 136 testes, 11.513 asserções, 0 falhas |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
 
 ### Notas de execução — 2026-09-04 (guarda de invariantes)

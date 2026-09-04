@@ -1,5 +1,10 @@
 # PROJECT_CONTRACT — QIX GAME (vertical slice)
 
+> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** engine, viewport, renderer e tick conferidos em `project.godot`; arquivos da
+> tabela de ownership conferidos por existência. Alvos, tamanhos de export e estado do
+> ferramental MCP seguem do run macOS de 2026-09-03 e não foram reexecutados.
+
 Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; título público ainda não definido.
 
 ## Engine e stack

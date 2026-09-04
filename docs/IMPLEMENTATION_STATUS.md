@@ -1,5 +1,10 @@
 # IMPLEMENTATION_STATUS
 
+> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o verde de M2/G2 foi reconfirmado pela suíte e pela rota de captura headless.
+> O âmbar de release/hardware **não** foi reavaliado: exports, aparelho físico e assinatura
+> exigem macOS e SDKs ausentes na nuvem.
+
 ## Gate atual
 
 **M2 / G2 — VERDE. Shipping candidate técnico — VERDE. Release/hardware — ÂMBAR**

@@ -1,5 +1,10 @@
 # TEST_MATRIX
 
+> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** `tests/run_tests.gd` reexecutado (134 testes, 11.489 asserções, 0 falhas) e
+> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Os
+> testes Python do parser Metal HUD e o run de shipping não foram reexecutados.
+
 Última validação automatizada: **2026-09-03**, Godot
 **4.7.2-stable.mono.official** em macOS. Run de shipping:
 `20260903T065739Z-65912`, `runner_status=complete`, `runner_exit=0`, `overall_exit=0`.
