@@ -50,6 +50,15 @@ Itens sem critério de pronto não entram aqui.
 
 ### P2 — integridade de contexto
 
+- [ ] **Não existe CI: o repositório não tem `.github/workflows/`.** Constatado em 2026-09-04
+      pelo PR #5 — zero check runs no PR. Consequência: a única evidência de que a suíte passa é
+      o corpo do PR, escrito por quem propôs a mudança; nada revalida no merge, e um PR que
+      quebre a suíte entra em `main` sem resistência. Isso é especialmente caro num projeto cujo
+      contrato é determinismo e checksum, e cujo agente afirma "verde" a cada hora. → Workflow
+      que baixe o Godot 4.7.2 headless, rode `--import` e depois `tests/run_tests.gd` e
+      `tools/verify_m2_capture_route.gd`. *Pronto:* um PR com teste quebrado de propósito é
+      barrado pelo próprio GitHub, não pela leitura do revisor.
+
 - [ ] **Nenhum `docs/*.md` declara sua data de última verificação.** Documento sem data envelhece
       em silêncio e vira mentira confiante. → Cabeçalho padronizado com data e commit de
       verificação. *Pronto:* todo doc de `docs/` datado.
