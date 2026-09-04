@@ -240,10 +240,24 @@ decidir — a lista abaixo é a foto da última run, não a verdade corrente.
 - [ ] **Envelopes de áudio por evento.** `05-som.md` descreve o formato de sequência e o YM2203.
       Traduzir o *comportamento* (ataque curto, cauda, prioridade entre vozes) para os envelopes
       procedurais atuais. *Pronto:* cada cue tem intenção declarada e prioridade documentada.
-- [ ] **Acessibilidade cromática.** A barra de qualidade em `ART_DIRECTION.md` exige que estado
-      não dependa só de cor. Verificar por simulação de deuteranopia/protanopia se `TRAIL`,
-      `BOUNDARY` e `FREE` continuam distinguíveis. *Pronto:* contraste de luminância medido e
-      registrado.
+- [ ] **`BOUNDARY`×`TRAIL` a 1,04:1 — a decisão mais cara do jogo no canal mais frágil.** A
+      medição de 2026-09-04 (`docs/ART_DIRECTION.md`, “Contraste medido”) mostra contorno e trilha
+      com a mesma luminância nas quatro paletas; “estou protegido” × “estou desenhando” depende de
+      matiz mais o glint/pulso do shader. Resolver mexe no rosto do jogo e **exige olho humano na
+      tela** — uma sessão headless mede, não aprova. Caminhos: baixar a luminância de `BOUNDARY`,
+      subir a de `TRAIL`, ou dar ao contorno uma trama espacial mais grossa que sobreviva a 1 px.
+      *Pronto:* par acima de 3:1 nas quatro paletas, `PAIR_FLOOR`/`KNOWN_DEBT` e a seção de
+      `ART_DIRECTION` reescritos no mesmo commit, e alguém confirmou por captura que o campo não
+      ficou lavado.
+- [ ] **Ameaça sobre borda e trilha depende de forma, não de luminância.** Mesma medição:
+      `BOUNDARY`×`THREAT` 1,28–1,42:1 e `TRAIL`×`THREAT` 1,83–2,04:1 no pior caso (deuteranopia).
+      Hoje o losango do chefe carrega sozinho a leitura. *Pronto:* ou o par sobe de 3:1, ou está
+      escrito qual canal não cromático (contorno escuro, halo, cadência) garante a leitura, com
+      teste que o defenda.
+- [ ] **O contorno do jogador é a mesma cor do chão em que ele anda.** `QixPlayerView` usa
+      `visual.boundary_color` como `_outer`; parado sobre `BOUNDARY`, a silhueta só se separa pelo
+      núcleo e pelo halo de `accent_color`. Achado colateral da medição, ainda não quantificado.
+      *Pronto:* contraste jogador × chão medido em `BOUNDARY` e em `FREE`, e decisão registrada.
 - [ ] **Transição entre rodadas.** Intro/clear existem; avaliar se a *continuidade* (score,
       vidas, ameaça crescente) é sentida ou apenas exibida. *Pronto:* a passagem conta uma
       progressão, não mostra um relatório.
@@ -358,3 +372,16 @@ Consequências práticas para a próxima execução:
 3. **Prefira arquivos novos a edições em arquivos disputados.** A descoberta de testes em
    `run_tests.gd` varre diretório, então dois PRs podem acrescentar arquivos de teste sem
    se tocarem — foi o que permitiu #3 e #5 coexistirem.
+| 2026-09-04 | P3 acessibilidade cromática: medição de contraste por estado, catraca e registro | ai/loop-20260904T110520Z | verde; dívida encontrada e registrada |
+| 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
+
+### Notas da execução de 2026-09-04 11h
+
+Todos os itens P1 e P2 deste backlog já tinham PR aberto (#1 a #6) e nenhum deles estava mesclado.
+Por isso a execução subiu para P3 em vez de duplicar trabalho. **Uma próxima execução deve olhar
+`gh pr list --state open` antes de escolher: o backlog abaixo ainda descreve P1/P2 como pendentes
+porque esses PRs vivem em branches, não em `main`.**
+
+O item de acessibilidade cromática foi entregue como o critério pedia — *medido e registrado* —,
+não como correção de paleta. Trocar cor de estado sem ver a tela seria escrever no rosto do jogo
+sem olhar para ele; os três itens que nasceram da medição estão no topo de P3 com o que falta.

@@ -135,6 +135,7 @@ $G --headless --path . --import            # obrigatório 1× por checkout (cach
 $G --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd # testes puros + integração
 $G --headless --path . --script res://tools/build_campaign_content.gd          # baseline transacional
 $G --headless --path . --script res://tools/profile_board_view.gd              # perfil CPU/R8
+$G --headless --path . --script res://tools/verify_palette_contrast.gd         # contraste por estado
 tools/shipping/run_shipping_qa.sh                                               # exports + probes
 $G --path . --editor                       # abre o editor (liga godot-ai e fennara)
 $G --path .                                # roda a cena principal
