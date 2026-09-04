@@ -27,6 +27,7 @@ var _fallback_background: ImageTexture
 var _fallback_size := Vector2i.ZERO
 var _board_instance_id: int = 0
 var _board_version: int = -1
+var _last_trail_exposure: float = 0.0
 
 var _refresh_count: int = 0
 var _skipped_count: int = 0
@@ -62,6 +63,9 @@ func sync(simulation: GameSimulation, visual: RoundVisualDefinition = null) -> v
 	_ensure_presentation()
 	_apply_visual(visual, simulation.board.width, simulation.board.height)
 	_reveal_material.set_shader_parameter("presentation_tick", float(simulation.tick))
+	# Leitura de risco: a trilha confirmada esquenta e acelera conforme se afasta da moldura.
+	_last_trail_exposure = TrailExposure.of_simulation(simulation)
+	_reveal_material.set_shader_parameter("trail_exposure", _last_trail_exposure)
 
 	var board_id := simulation.board.get_instance_id()
 	if board_id == _board_instance_id and simulation.board.version == _board_version:
@@ -233,6 +237,11 @@ func mask_texture_instance_id() -> int:
 
 func reveal_sprite() -> Sprite2D:
 	return _reveal_sprite
+
+
+## Última exposição de trilha projetada no shader. Telemetria de apresentação, nunca gameplay.
+func last_trail_exposure() -> float:
+	return _last_trail_exposure
 
 
 static func cell_reveals_background(cell: int) -> bool:

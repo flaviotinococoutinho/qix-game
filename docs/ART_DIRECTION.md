@@ -11,7 +11,10 @@ cósmica que estava encoberta. A leitura do estado continua imediata mesmo em 24
 
 ## Hierarquia visual
 
-1. `TRAIL` é o elemento de maior luminância e pulsa entre amarelo e branco.
+1. `TRAIL` é o elemento de maior luminância e pulsa entre amarelo e branco. O pulso **não é
+   constante**: acelera e ergue o piso de luminância conforme a trilha se afasta da moldura
+   (`TrailExposure`), de modo que a exposição seja legível antes do impacto. O aviso viaja por
+   frequência e brilho, nunca por matiz.
 2. Jogador e chefe têm silhuetas compactas, núcleos contrastantes e leitura em 1×.
 3. `BOUNDARY` desenha o contorno seguro em ciano/verde.
 4. `CLAIMED` revela a ilustração original da rodada.

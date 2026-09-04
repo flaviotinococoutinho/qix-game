@@ -23,6 +23,11 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
    item *devem* se encontrar aqui.
 5. **Nunca reabra um item de "Decisões fechadas"** sem um argumento novo e explícito no PR. Essa
    seção existe para impedir que o loop oscile entre duas opções para sempre.
+5. **Este arquivo mente enquanto os PRs não são mesclados.** O ledger versionado em `main` só
+   conhece o trabalho já integrado; itens tratados em PRs abertos continuam parecendo livres.
+   Antes de escolher um item, liste os PRs abertos do loop e trate um item já coberto por um PR
+   aberto como indisponível. A seção "Em revisão" abaixo é uma cópia de cortesia, não a verdade —
+   a verdade é a lista de PRs abertos.
 
 ## Decisões fechadas — não reabrir sem argumento novo
 
@@ -39,6 +44,29 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 | Contador de percentagem sobe em degraus | `docs/decisions/ADR-0009` |
 | Identidade visual é *Lumen Cartography* | `docs/ART_DIRECTION.md` |
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
+
+## Em revisão — PRs abertos do loop (cópia de cortesia, verificada em 2026-09-04T13Z)
+
+Cada linha corresponde a um item do backlog abaixo que **já tem PR aberto**. Não pegue nenhum
+deles. Se um PR for fechado sem mesclar, o item volta ao backlog e esta linha some.
+
+| PR | Item do backlog |
+|---|---|
+| #1 | `node_2d.tscn` órfão na raiz (P1) |
+| #2 | inventário dos nove addons (P1) |
+| #3 | varredura estática dos invariantes 1 e 4 (P2) |
+| #4 | poda de `samples/` e `guide_examples/` (P1) |
+| #5 | checksums dourados de replay, invariantes 7 e 8 (P2) |
+| #6 | data de verificação em todo `docs/*.md` (P2) |
+| #7 | acessibilidade cromática por estado do campo (P3) |
+| #8 | curva de percentagem em degraus (P3) |
+| #9 | ritmo do risco: exposição da trilha (P3) — este PR |
+
+Oito PRs abertos e nenhum mesclado é o achado estrutural desta execução: o loop produz mais
+rápido do que a revisão absorve, e cada novo PR toca `docs/LOOP_LEDGER.md`, então a fila vai
+gerar conflito de merge entre si. **Recomendação ao revisor humano:** mesclar ou fechar a fila
+P1 (#1, #2, #4) antes de acumular mais, e mesclar na ordem de abertura para que os conflitos de
+ledger sejam triviais.
 
 ## Backlog — prioridade decrescente
 
@@ -241,6 +269,21 @@ decidir — a lista abaixo é a foto da última run, não a verdade corrente.
 - [ ] **Ritmo do risco: trilha longa deve doer.** Verificar se o custo de uma trilha longa está
       legível *antes* da morte (luminância, som, háptica) e não só no impacto. *Pronto:* o jogador
       consegue nomear o momento em que ficou exposto.
+- [ ] **Curva de percentagem e feedback de progresso.** `06-gameplay.md` descreve como o Volfied
+      calcula e apresenta a percentagem em passos discretos. Comparar com o `permille` atual e
+      avaliar se a leitura de progresso no HUD tem a mesma clareza de "quanto falta".
+      *Pronto:* ADR ou nota com o número adotado e a citação da seção de origem.
+- [ ] **Ritmo do risco: som e háptica da exposição.** O canal visual foi feito (`TrailExposure`,
+      PR #9): o pulso da trilha acelera e clareia, e o HUD nomeia o limiar. Faltam os outros dois
+      canais que o item original citava — um cue de áudio que suba com a exposição e um toque
+      háptico ao cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes de áudio
+      abaixo, que define prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com
+      prioridade declarada, sem alterar checksum.
+- [ ] **Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
+      `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
+      Os dois números são justificáveis no papel e **não foram vistos em jogo** — a sessão de
+      nuvem não roda o jogo. *Pronto:* alguém joga as três rodadas e confirma (ou corrige) onde
+      o aviso deve nascer.
 - [ ] **Tipografia e ritmo do HUD.** `07-texto-e-fonte.md` mostra um HUD construído sprite a
       sprite. Avaliar espaçamento, alinhamento e hierarquia do HUD atual em 240×320 — texto que
       compete com o campo é ruído. *Pronto:* HUD legível em 1× sem esconder decisão de movimento.
@@ -332,6 +375,7 @@ O que ficou provado e não precisa ser reinvestigado:
 | 2026-09-04 | P1 `node_2d.tscn` órfão | #1 | aberto por outra execução; não reivindicado aqui |
 | 2026-09-04 | P2: cabeçalho de verificação em todo `docs/*.md` + guarda em teste | (esta branch) | verde — 136 testes, 11.513 asserções, 0 falhas |
 | 2026-09-04 | P3 curva de percentagem: contador do HUD sobe em degraus (ADR-0009) | `ai/loop-20260904T120237Z` | verde — 137 testes, 11.501 asserções, 0 falhas; rota M2 inalterada (179→825) |
+| 2026-09-04 | P3 ritmo do risco: `TrailExposure`, pulso da trilha por exposição, aviso nomeado no HUD | #9 | verde (140 testes, 11.552 asserções, 0 falhas; rota M2 179→825‰; `p95` do BoardView em 1 µs) |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
 
 ### Notas de execução — 2026-09-04 (guarda de invariantes)

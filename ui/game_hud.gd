@@ -190,6 +190,10 @@ func _status_text(simulation: GameSimulation, session: GameSession, paused: bool
 	if _flash_ticks > 0:
 		return _flash_message
 	if simulation.trail_active:
+		# A trilha longa já dói no campo (luminância e ritmo do pulso); aqui ela ganha nome, para
+		# que o jogador consiga dizer *quando* ficou exposto em vez de só descobrir no impacto.
+		if TrailExposure.is_warning(TrailExposure.of_simulation(simulation)):
+			return "EXPOSTO · VOLTE À BORDA"
 		return "FECHE NA BORDA"
 	return "DESENHE · ESPAÇO/Z"
 
