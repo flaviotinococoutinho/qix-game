@@ -308,6 +308,19 @@ decidir — a lista abaixo é a foto da última run, não a verdade corrente.
       `visual.boundary_color` como `_outer`; parado sobre `BOUNDARY`, a silhueta só se separa pelo
       núcleo e pelo halo de `accent_color`. Achado colateral da medição, ainda não quantificado.
       *Pronto:* contraste jogador × chão medido em `BOUNDARY` e em `FREE`, e decisão registrada.
+- [ ] **Forma do envelope por intenção.** Metade do item "envelopes de áudio" ficou de fora do PR
+      de prioridade: `QixProceduralAudioLibrary._attack_release` é **o mesmo envelope para os dez
+      cues**, com attack e release proporcionais à duração. Consequência medível: `death` (0,42 s)
+      só atinge amplitude cheia ~34 ms depois do início, e `game_over` (0,75 s) ~60 ms — um
+      impacto com fade-in não é um impacto. Os cues curtos (`trail`, `shield`) não sofrem disso.
+      → Attack/release autorados por cue na receita, ao lado de `intent` e `priority`; ataque em
+      milissegundos absolutos, não em fração da duração. *Pronto:* teste que mede o frame de pico
+      do PCM e exige que os cues de impacto piquem em ≤ 8 ms, e que os de anúncio mantenham a
+      subida suave que já têm.
+- [ ] **Acessibilidade cromática.** A barra de qualidade em `ART_DIRECTION.md` exige que estado
+      não dependa só de cor. Verificar por simulação de deuteranopia/protanopia se `TRAIL`,
+      `BOUNDARY` e `FREE` continuam distinguíveis. *Pronto:* contraste de luminância medido e
+      registrado.
 - [ ] **Transição entre rodadas.** Intro/clear existem; avaliar se a *continuidade* (score,
       vidas, ameaça crescente) é sentida ou apenas exibida. *Pronto:* a passagem conta uma
       progressão, não mostra um relatório.
@@ -437,3 +450,20 @@ porque esses PRs vivem em branches, não em `main`.**
 O item de acessibilidade cromática foi entregue como o critério pedia — *medido e registrado* —,
 não como correção de paleta. Trocar cor de estado sem ver a tela seria escrever no rosto do jogo
 sem olhar para ele; os três itens que nasceram da medição estão no topo de P3 com o que falta.
+| 2026-09-04 | P3 envelopes de áudio, parte 1: cada cue declara intenção e prioridade; alocação de voz deixa de ser rodízio cego | `ai/loop-20260904T140000Z` | verde — 138 testes, 11555 asserções, 0 falhas; rota M2 byte-idêntica |
+| 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
+
+### Notas da execução de 2026-09-04T14Z
+
+- O `main` deste checkout ainda é o commit de fundação: **nove PRs do loop estão abertos e nenhum
+  foi mesclado** (`#1`–`#9`). Isso significa que o backlog abaixo continua mostrando como abertos
+  itens que já têm PR: P1 inteiro (`#1`, `#2`, `#4`), P2 inteiro (`#3`, `#5`, `#6`) e três de P3
+  (`#7` contraste, `#8` percentagem, `#9` trilha longa). **Antes de escolher um item, confira
+  `gh pr list --state open`** — o ledger do `main` não sabe o que está em revisão.
+- Restam sem PR aberto, em P3: *tipografia e ritmo do HUD*, *transição entre rodadas* e a parte 2
+  dos envelopes (acima).
+- Achado que motivou o PR desta execução: `QixHapticFeedback` já tinha uma escada de prioridade
+  (morte 100 … respawn 30) e escolhia **um** pulso por tick, mas `QixAudioDirector` despachava
+  todos os cues num rodízio cego de oito vozes. Som e háptica podiam discordar sobre qual era o
+  acontecimento do tick, e o cue mais frequente podia truncar o mais importante. A escada agora é
+  uma só, com teste que falha se as duas divergirem.

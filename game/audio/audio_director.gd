@@ -16,6 +16,12 @@ const TRAIL_THROTTLE_MSEC := 36
 var _music: AudioStreamPlayer
 var _voices: Array[AudioStreamPlayer] = []
 var _voice_cursor := 0
+## Prioridade do cue que cada voz segura e o instante em que ela volta a ficar
+## livre. Mantemos isto aqui em vez de ler `AudioStreamPlayer.playing` porque o
+## runtime headless nunca inicia o playback: a decisão de mix precisa ser a mesma
+## nos dois caminhos para ser testável.
+var _voice_priorities := PackedInt32Array()
+var _voice_free_msec := PackedInt64Array()
 var _round_index := -1
 var _last_trail_msec := -TRAIL_THROTTLE_MSEC
 var _music_cache: Dictionary = {}
@@ -46,6 +52,7 @@ func shutdown() -> void:
 	_music_cache.clear()
 	_cue_cache.clear()
 	_round_index = -1
+	_release_all_voices()
 
 
 func ensure_ready() -> void:
@@ -118,15 +125,72 @@ func play_cue(cue_name: StringName) -> void:
 		if now - _last_trail_msec < TRAIL_THROTTLE_MSEC:
 			return
 		_last_trail_msec = now
-	var voice := _voices[_voice_cursor]
-	_voice_cursor = (_voice_cursor + 1) % _voices.size()
+	# O cue é sintetizado e cacheado antes da decisão de mix: mesmo um pedido
+	# recusado deve exercitar o pipeline de síntese, que é o que o smoke valida.
 	if not _cue_cache.has(cue_name):
 		_cue_cache[cue_name] = QixProceduralAudioLibrary.cue(cue_name)
+	var priority := QixProceduralAudioLibrary.priority_for(cue_name)
+	var index := select_voice(voice_priorities_now(), priority, _voice_cursor)
+	if index < 0:
+		return  # todas as vozes seguram algo tão ou mais importante: não corta
+	_voice_cursor = (index + 1) % _voices.size()
+	_voice_priorities[index] = priority
+	_voice_free_msec[index] = (
+		Time.get_ticks_msec() + QixProceduralAudioLibrary.duration_msec(cue_name)
+	)
+	var voice := _voices[index]
 	voice.stream = _cue_cache[cue_name]
 	# Headless ainda constrói o cue para validar o pipeline e o cache; só não
 	# inicia o hardware playback, que é o caminho afetado pelo leak de teardown.
 	if runtime_allows_playback() and voice.is_inside_tree():
 		voice.play()
+
+
+## Prioridade que cada voz ainda segura neste instante, ou `PRIORITY_IDLE` para as
+## que já terminaram. É o snapshot que `select_voice` consome.
+func voice_priorities_now() -> PackedInt32Array:
+	var now := Time.get_ticks_msec()
+	var snapshot := PackedInt32Array()
+	snapshot.resize(_voices.size())
+	for index in _voices.size():
+		var busy: bool = index < _voice_free_msec.size() and _voice_free_msec[index] > now
+		snapshot[index] = (
+			_voice_priorities[index] if busy else QixProceduralAudioLibrary.PRIORITY_IDLE
+		)
+	return snapshot
+
+
+## Escolhe a voz que vai tocar `incoming_priority`, ou `-1` se o pedido deve ser
+## recusado. `busy_priorities[i]` é a prioridade que a voz `i` ainda segura (ou
+## `PRIORITY_IDLE` se está livre) e `cursor` é a próxima voz do rodízio, que mantém
+## cues consecutivos espalhados em vez de empilhados na mesma voz.
+##
+## A regra vem do despacho de canal do Volfied (`reference/volfied/05-som.md` §5.4):
+## um pedido só entra num canal ocupado quando é **mais importante** que o que lá
+## soa; senão é recusado, e o que já soa termina inteiro. O Volfied codifica isso
+## como "menor valor = mais importante"; aqui a escala é a de `QixHapticFeedback`
+## (maior valor = mais importante), porque é a que este jogo já usa para ordenar os
+## mesmos eventos. O que importa para a experiência é a consequência: a morte do
+## jogador nunca mais é cortada ao meio pelo início de uma trilha.
+static func select_voice(
+	busy_priorities: PackedInt32Array,
+	incoming_priority: int,
+	cursor: int,
+) -> int:
+	var count := busy_priorities.size()
+	if count == 0:
+		return -1
+	var victim := -1
+	var victim_priority := incoming_priority
+	for offset in count:
+		var index: int = posmod(cursor + offset, count)
+		var holding := busy_priorities[index]
+		if holding == QixProceduralAudioLibrary.PRIORITY_IDLE:
+			return index
+		if holding < victim_priority:
+			victim = index
+			victim_priority = holding
+	return victim
 
 
 func set_mix(master: float, music: float, sfx: float) -> void:
@@ -143,6 +207,7 @@ func set_enabled(value: bool) -> void:
 			_music.stop()
 		for voice in _voices:
 			voice.stop()
+		_release_all_voices()
 	elif runtime_allows_playback() and _music != null and _music.stream != null and _music.is_inside_tree():
 		_music.play()
 
@@ -155,7 +220,22 @@ func presentation_state() -> Dictionary:
 		"voice_count": _voices.size(),
 		"cached_music": _music_cache.size(),
 		"cached_cues": _cue_cache.size(),
+		"busy_voices": _busy_voice_count(),
 	}
+
+
+func _busy_voice_count() -> int:
+	var busy := 0
+	for priority in voice_priorities_now():
+		if priority != QixProceduralAudioLibrary.PRIORITY_IDLE:
+			busy += 1
+	return busy
+
+
+func _release_all_voices() -> void:
+	_voice_priorities.fill(QixProceduralAudioLibrary.PRIORITY_IDLE)
+	_voice_free_msec.fill(0)
+	_voice_cursor = 0
 
 
 static func cues_for_events(events: Array[GameEvent]) -> Array[StringName]:
@@ -204,6 +284,10 @@ func _ensure_players() -> void:
 		voice.bus = BUS_SFX
 		add_child(voice)
 		_voices.append(voice)
+	if _voice_priorities.size() != _voices.size():
+		_voice_priorities.resize(_voices.size())
+		_voice_free_msec.resize(_voices.size())
+		_release_all_voices()
 
 
 func _ensure_buses() -> void:

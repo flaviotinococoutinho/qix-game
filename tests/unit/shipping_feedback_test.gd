@@ -117,6 +117,113 @@ func test_haptic_plan_coalesces_same_tick_to_highest_priority_and_scales_intensi
 	eq(pulse["duration_ms"], 240)
 
 
+func test_every_dispatched_cue_declares_intent_and_priority() -> void:
+	var kinds := GameEvent.Kind.values()
+	var dispatched: Array[StringName] = []
+	for kind in kinds:
+		var cue_name := QixAudioDirector.cue_for_kind(kind)
+		if cue_name != &"" and not dispatched.has(cue_name):
+			dispatched.append(cue_name)
+	ok(dispatched.size() >= 10, "o plano de cues cobre os marcos de gameplay e sessão")
+	for cue_name in dispatched:
+		var recipe: Dictionary = QixProceduralAudioLibrary.CUE_RECIPES.get(cue_name, {})
+		ok(not recipe.is_empty(), "cue despachado sem receita: %s" % cue_name)
+		ok(
+			String(recipe.get("intent", "")).length() > 12,
+			"cue sem intenção declarada: %s" % cue_name,
+		)
+		ok(
+			QixProceduralAudioLibrary.priority_for(cue_name)
+			> QixProceduralAudioLibrary.PRIORITY_IDLE,
+			"cue sem prioridade acima de PRIORITY_IDLE: %s" % cue_name,
+		)
+		ok(QixProceduralAudioLibrary.duration_msec(cue_name) > 0)
+
+
+## A escala de prioridade do som e a da háptica descrevem os mesmos eventos. Se elas
+## divergirem, o jogador ouve um acontecimento e sente outro no mesmo tick.
+func test_cue_priority_ladder_agrees_with_the_haptic_ladder() -> void:
+	var haptics := QixHapticFeedback.new()
+	var pairs := {
+		&"capture": GameEvent.Kind.CAPTURED,
+		&"reject": GameEvent.Kind.CAPTURE_REJECTED,
+		&"shield": GameEvent.Kind.SHIELD_CRITICAL,
+		&"death": GameEvent.Kind.PLAYER_DIED,
+		&"respawn": GameEvent.Kind.PLAYER_RESPAWNED,
+		&"round_clear": GameEvent.Kind.ROUND_WON,
+		&"game_over": GameEvent.Kind.GAME_OVER,
+		&"campaign_complete": GameEvent.Kind.CAMPAIGN_COMPLETE,
+	}
+	for cue_name in pairs:
+		var events: Array[GameEvent] = [GameEvent.make(pairs[cue_name])]
+		var pulse := haptics.plan(events)
+		eq(
+			QixProceduralAudioLibrary.priority_for(cue_name),
+			int(pulse["priority"]),
+			"som e háptica discordam sobre o peso de %s" % cue_name,
+		)
+	# `trail` e `round_start` não têm pulso háptico: entram abaixo do menor que tem.
+	ok(QixProceduralAudioLibrary.priority_for(&"trail") < 30)
+	ok(QixProceduralAudioLibrary.priority_for(&"round_start") < 30)
+	ok(
+		QixProceduralAudioLibrary.priority_for(&"trail")
+		< QixProceduralAudioLibrary.priority_for(&"round_start"),
+		"o cue mais frequente é o mais barato de perder",
+	)
+
+
+func test_voice_allocation_prefers_free_voices_and_refuses_to_cut_something_louder() -> void:
+	var idle := QixProceduralAudioLibrary.PRIORITY_IDLE
+	var death := QixProceduralAudioLibrary.priority_for(&"death")
+	var trail := QixProceduralAudioLibrary.priority_for(&"trail")
+
+	# Voz livre a partir do cursor: o rodízio continua espalhando cues iguais.
+	eq(QixAudioDirector.select_voice(PackedInt32Array([idle, idle, idle]), trail, 1), 1)
+	eq(QixAudioDirector.select_voice(PackedInt32Array([idle, death, idle]), trail, 1), 2)
+
+	# Sem voz livre: a trilha não corta a morte — é recusada.
+	eq(
+		QixAudioDirector.select_voice(PackedInt32Array([death, death]), trail, 0),
+		-1,
+		"o início de uma trilha nunca pode truncar o cue de morte",
+	)
+	# Mas a morte corta a trilha, e escolhe a voz de menor prioridade.
+	eq(QixAudioDirector.select_voice(PackedInt32Array([death, trail]), death, 0), 1)
+	# Empate exato também é recusa: o que já soa termina inteiro (§5.4).
+	eq(QixAudioDirector.select_voice(PackedInt32Array([trail, trail]), trail, 0), -1)
+	# Entre duas vítimas possíveis, a de menor prioridade absoluta.
+	var capture := QixProceduralAudioLibrary.priority_for(&"capture")
+	eq(QixAudioDirector.select_voice(PackedInt32Array([capture, trail]), death, 0), 1)
+	eq(QixAudioDirector.select_voice(PackedInt32Array([trail, capture]), death, 1), 0)
+	# Sem vozes configuradas não há para onde despachar.
+	eq(QixAudioDirector.select_voice(PackedInt32Array(), death, 0), -1)
+
+
+func test_director_holds_a_loud_cue_against_a_flood_of_cheap_ones() -> void:
+	var hub := QixFeedbackHub.new()
+	hub.ensure_ready()
+	var director: QixAudioDirector = hub.audio
+	director.play_cue(&"death")
+	eq(director.presentation_state()["busy_voices"], 1)
+	# Sete `capture` enchem as vozes restantes; o oitavo pedido não tem para onde ir
+	# e, por ser mais leve que a morte, é recusado em vez de cortá-la.
+	for _i in QixAudioDirector.SFX_VOICES - 1:
+		director.play_cue(&"capture")
+	eq(director.presentation_state()["busy_voices"], QixAudioDirector.SFX_VOICES)
+	var before := director.voice_priorities_now()
+	director.play_cue(&"capture")
+	eq(director.voice_priorities_now(), before, "pedido recusado não muda a alocação")
+	ok(
+		before.has(QixProceduralAudioLibrary.priority_for(&"death")),
+		"a morte continua segurando a voz dela",
+	)
+	# O cache de síntese é exercitado mesmo pelo pedido recusado.
+	eq(director.presentation_state()["cached_cues"], 2)
+	director.shutdown()
+	eq(director.presentation_state()["busy_voices"], 0)
+	hub.free()
+
+
 func test_feedback_observers_do_not_mutate_simulation_or_replay() -> void:
 	var rules := GameRules.new()
 	rules.boss_substeps = 0
