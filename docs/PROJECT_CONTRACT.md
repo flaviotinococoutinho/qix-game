@@ -31,6 +31,28 @@ Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; 
 - `reference_root`: `/Users/flaviocoutinho/development/qiqix` (`docs/00..08`, `docs/ACHADOS_ANOTACAO.md`, `reference/mame/`)
 - Não há `project.godot` nem `.git` em `reference_root`; nada ali é modificado por este projeto.
 
+### Raízes de terceiros
+
+A raiz do repositório hospeda diretórios que **não são do jogo**. A regra é: código de vendor que
+o runtime carrega fica versionado; material de estudo que só acompanha o vendor, não.
+
+| Diretório | O que é | Decisão |
+|---|---|---|
+| `addons/` | código de vendor; parte do runtime ou do ferramental de editor | versionado; inventário por addon é item aberto do loop |
+| `guide_examples/` | projeto-exemplo do addon GUIDE (32 cenas, 55 scripts) | **removido** do versionamento; ignorado |
+| `samples/` | projeto-exemplo do addon softbody2d (6 cenas, 6 scripts) | **removido** do versionamento; ignorado |
+| `antipixel_state_machine/` | máquina de estados de vendor na raiz (3 cenas, 7 scripts) | mantido por ora; nenhum arquivo do jogo o referencia — decisão pendente no loop |
+
+Os dois removidos eram demos: nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou
+`content/` os referenciava, e os cinco `uid://` que compartilhavam com `addons/` são **de posse dos
+addons** — a dependência apontava dos demos para o addon, nunca ao contrário. Custavam 38 das 43
+cenas do repositório e um `class_name` de vendor (`LaserProjectile`) no namespace global.
+
+Os `exclude_filter` de `export_presets.cfg` continuam listando `guide_examples/**` e `samples/**`,
+e `tests/integration/shipping_export_test.gd` continua exigindo isso. É defesa deliberada: um
+checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e o filtro garante que elas
+não entrem no payload mesmo assim. Filtro e `.gitignore` cobrem caminhos diferentes do mesmo risco.
+
 ## Ownership
 
 | Camada | Proprietário | Regra |
