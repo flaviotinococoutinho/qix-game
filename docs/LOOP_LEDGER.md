@@ -9,9 +9,14 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
    antes de qualquer edição.
 2. **Escolha exatamente UM item** do backlog — o de maior prioridade que caiba num PR pequeno e
    revisável. Um PR grande não é produtividade: é uma revisão que não vai acontecer.
-3. **Atualize este arquivo dentro do mesmo PR**: mova o item para o histórico, ajuste o backlog
-   com o que você aprendeu, registre o que ficou pendente.
-4. **Nunca reabra um item de "Decisões fechadas"** sem um argumento novo e explícito no PR. Essa
+3. **Escreva o relato da execução em `docs/loop/runs/<carimbo>.md`** — um arquivo novo, seu, com
+   item escolhido, o que mudou, como foi verificado e o que ficou pendente. Não apense ao
+   histórico deste arquivo: ele é o ponto onde as execuções colidem. Ver
+   `docs/loop/runs/README.md`.
+4. **Ajuste o backlog deste arquivo dentro do mesmo PR** com o que você aprendeu, e marque o item
+   que atacou. O backlog continua compartilhado de propósito: duas execuções que mexem no mesmo
+   item *devem* se encontrar aqui.
+5. **Nunca reabra um item de "Decisões fechadas"** sem um argumento novo e explícito no PR. Essa
    seção existe para impedir que o loop oscile entre duas opções para sempre.
 
 ## Decisões fechadas — não reabrir sem argumento novo
@@ -33,6 +38,25 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 
 Cada item diz **o que**, **por que importa para a experiência** e **como saber que ficou bom**.
 Itens sem critério de pronto não entram aqui.
+
+### P0 — a fila (nada mais avança enquanto isto não anda)
+
+- [x] **O histórico deste arquivo era o ponto único de conflito da fila.** Toda execução apensava
+      uma linha ao mesmo ponto, então os 78 pares de PRs colidiam aqui — nenhum por desacordo
+      real. Levantado pela medição do PR #14. → Resolvido: histórico virou um arquivo por
+      execução em `docs/loop/runs/`, backlog continua compartilhado de propósito.
+      *Pronto:* duas execuções seguidas sem conflito no histórico — vale da próxima em diante;
+      os 15 PRs já abertos continuam colidindo entre si na tabela congelada.
+- [ ] **Drenar a fila de PRs abertos.** Em 2026-09-04T19:58Z eram 15 (#1–#15), nenhum mesclado,
+      `main` ainda em 2 commits. Só um humano mescla; o loop não mescla o próprio PR. Todo item
+      deste backlog já tem PR aberto, então cada execução nova ou duplica ou fica no meta.
+      → Mesclar na ordem recomendada pelo PR #14 (#13 primeiro, o portão de CI).
+      *Pronto:* `main` com mais de 2 commits e a fila em ≤ 2 PRs abertos.
+- [ ] **Sobreposição silenciosa do #15 não foi medida.** #15 (transição entre rodadas) chegou
+      depois da medição de #14 e toca apresentação, como #8, #9, #10 e #11 — a classe de
+      sobreposição que o git aceita e o teste reprova. → Rodar
+      `tools/loop/merge_queue_report.sh --verify 15 <n>` (a ferramenta vive no ramo de #14).
+      *Pronto:* os pares de #15 classificados como os de #14.
 
 ### P1 — higiene estrutural (barato, destrava o resto)
 
@@ -86,8 +110,11 @@ Itens sem critério de pronto não entram aqui.
 
 ## Histórico
 
-Uma linha por execução. Mais recente no topo. Não apague: um loop que esquece o que tentou
-repete o que falhou.
+**A tabela abaixo está congelada. Não apense nada a ela.** O histórico agora é um arquivo por
+execução em [`docs/loop/runs/`](loop/runs/README.md) — a tabela era o ponto onde toda execução
+escrevia na mesma linha, e por isso todo par de PRs do loop colidia aqui (78 conflitos em 78
+pares, medidos no PR #14). Não apague as linhas antigas nem os arquivos de execução: um loop que
+esquece o que tentou repete o que falhou.
 
 | Data (UTC) | Item | PR | Resultado |
 |---|---|---|---|
