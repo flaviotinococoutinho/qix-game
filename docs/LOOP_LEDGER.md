@@ -39,14 +39,19 @@ Itens sem critério de pronto não entram aqui.
 - [ ] **`node_2d.tscn` órfão na raiz.** Cena vazia de 103 bytes, sem referência. É exatamente o
       tipo de resíduo que ensina o próximo leitor que a raiz é um depósito. → Remover, ou
       justificar por escrito se algo depender dela. *Pronto:* raiz sem arquivo não explicado.
-- [ ] **`samples/` e `guide_examples/` (~6 MB) são demos de addons de terceiros.** Convivem com o
-      código do jogo e poluem toda busca por `.tscn`/`.gd`. → Decidir: podar, mover para fora do
-      versionamento, ou documentar por que ficam. *Pronto:* decisão registrada e busca por cena
-      do jogo retornando só cenas do jogo.
 - [ ] **`addons/` tem nove addons; nem todos parecem usados** (`softbody2d`, `curve2collision`,
       `GDDraw`, `yard`, `curved_lines_2d`, `phantom_camera`). → Mapear quem é realmente carregado
       pelo runtime e quem é ferramenta de editor; registrar em `docs/PROJECT_CONTRACT.md`.
       *Pronto:* tabela addon → consumidor → shipped/editor-only.
+      **Em revisão no PR #2** — não pegar de novo até fechar.
+- [ ] **`antipixel_state_machine/` é a última raiz de terceiros não decidida.** 3 cenas, 7 scripts,
+      132 KB, e **nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou `content/` o
+      referencia** (verificado por grep em 2026-09-04). O `.gitignore` já recusa o PDF do vendor,
+      o que sugere que a pasta entrou sem decisão. Foi deixada de fora da poda dos demos por
+      disciplina de "uma pasta por vez" e porque, ao contrário de `samples/`/`guide_examples/`,
+      ela não é demo de um addon presente em `addons/` — pode ser dependência real adormecida.
+      → Confirmar se algo a carrega em runtime antes de remover. *Pronto:* mantida com
+      consumidor nomeado, ou removida com a mesma evidência de posse de `uid://` usada na poda.
 
 ### P2 — integridade de contexto
 
@@ -91,4 +96,27 @@ repete o que falhou.
 
 | Data (UTC) | Item | PR | Resultado |
 |---|---|---|---|
+| 2026-09-04 | P1: poda de `samples/` e `guide_examples/` (demos de vendor) + § Raízes de terceiros no contrato | #4 | verde — 134 testes, 11489 asserções, 0 falhas; rota 17,9→82,5% com `errors: []` |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
+
+### Notas da execução de 2026-09-04 (poda dos demos)
+
+O que ficou provado e não precisa ser reinvestigado:
+
+- **A dependência apontava só para dentro.** Os 5 `uid://` que `samples/`/`guide_examples/`
+  compartilhavam com o resto do repositório são **de posse de `addons/`** (guide e softbody2d):
+  os demos referenciavam os addons, nunca o contrário. Por isso a remoção não quebrou nada.
+- **O custo era real, não só estético.** As duas pastas eram 38 das 43 cenas do repositório — o
+  jogo em si tem 2 (`app/bootstrap.tscn`, `ui/`) — e `guide_examples/virtual_sticks/projectile/`
+  registrava `class_name LaserProjectile` no namespace **global** do projeto.
+- **Os `exclude_filter` foram mantidos de propósito.** `export_presets.cfg` e
+  `tests/integration/shipping_export_test.gd` seguem citando `guide_examples/**` e `samples/**`.
+  Não é resíduo: um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e o
+  filtro cobre um caminho que o `.gitignore` não cobre. **Não "limpar" isso numa execução futura.**
+- **Ruído de ambiente a ignorar na nuvem.** Todo `--import` aqui emite 3 erros de
+  `GDExtension dynamic library not found` para `addons/fennara/bin/libfennara.linux.editor.x86_64.so`.
+  O binário é gitignored por decisão registrada; verificado por A/B que o erro aparece igual **com
+  e sem** a mudança. Não é regressão e não vale investigar de novo.
+- **O critério de pronto do item foi cumprido só em parte, e isso é deliberado.** Buscar por cena
+  ainda devolve `addons/**` (101 cenas de vendor, item do PR #2) e `antipixel_state_machine/`
+  (3 cenas, agora item próprio no backlog). O que sumiu foi a poluição que não tinha dono.
