@@ -29,6 +29,20 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 | Identidade visual é *Lumen Cartography* | `docs/ART_DIRECTION.md` |
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
 
+## Estado da fila — leia antes de escolher um item
+
+> **2026-09-04T21:00Z — todo o backlog abaixo já tem PR aberto. Não abra o 17.º.**
+>
+> Há 16 PRs abertos e zero merges. Cada item de P1, P2 e P3 desta lista está coberto por um deles
+> (#1–#11, #15), mais quatro de infraestrutura do loop (#12, #13, #14, #16). O gargalo deixou de
+> ser "o que fazer a seguir" e passou a ser **integração**.
+>
+> A fila foi medida de ponta a ponta em `docs/loop/2026-09-04-fila-verificada.md`: os 16 PRs
+> combinam-se verdes (174 testes, 0 falhas) com um patch de 4 linhas em
+> `tests/unit/game_hud_test.gd`, e há uma ordem de merge verificada. A próxima execução deve
+> **ajudar a drenar a fila** — aplicar o patch, confirmar a ordem, fechar o que ficou obsoleto —
+> e não acrescentar trabalho novo.
+
 ## Backlog — prioridade decrescente
 
 Cada item diz **o que**, **por que importa para a experiência** e **como saber que ficou bom**.
@@ -91,4 +105,5 @@ repete o que falhou.
 
 | Data (UTC) | Item | PR | Resultado |
 |---|---|---|---|
+| 2026-09-04 | Mede a fila inteira: ordem de merge verificada e a causa exata de #8 × #11 (`docs/loop/2026-09-04-fila-verificada.md`) | este | verde — 16 PRs combinam com um patch de 4 linhas |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
