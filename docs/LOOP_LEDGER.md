@@ -287,6 +287,9 @@ decidir — a lista abaixo é a foto da última run, não a verdade corrente.
 - [ ] **Tipografia e ritmo do HUD.** `07-texto-e-fonte.md` mostra um HUD construído sprite a
       sprite. Avaliar espaçamento, alinhamento e hierarquia do HUD atual em 240×320 — texto que
       compete com o campo é ruído. *Pronto:* HUD legível em 1× sem esconder decisão de movimento.
+- [ ] **Ritmo do risco: trilha longa deve doer.** Verificar se o custo de uma trilha longa está
+      legível *antes* da morte (luminância, som, háptica) e não só no impacto. *Pronto:* o jogador
+      consegue nomear o momento em que ficou exposto.
 - [ ] **Envelopes de áudio por evento.** `05-som.md` descreve o formato de sequência e o YM2203.
       Traduzir o *comportamento* (ataque curto, cauda, prioridade entre vozes) para os envelopes
       procedurais atuais. *Pronto:* cada cue tem intenção declarada e prioridade documentada.
@@ -321,6 +324,13 @@ decidir — a lista abaixo é a foto da última run, não a verdade corrente.
       não dependa só de cor. Verificar por simulação de deuteranopia/protanopia se `TRAIL`,
       `BOUNDARY` e `FREE` continuam distinguíveis. *Pronto:* contraste de luminância medido e
       registrado.
+- [ ] **A geometria do HUD depende da ordem de construção.** `_add_label` só obtém o retângulo
+      pedido porque atribui `size` depois de entrar na árvore; antes do primeiro frame o mínimo
+      do `Label` ainda é o do tema (23 px). Funciona, mas é frágil e invisível. → Avaliar
+      `custom_minimum_size` explícito ou um `Theme` do HUD com o tamanho de fonte já definido,
+      para que a altura não dependa de quando `_ready` corre. *Pronto:* altura correta medida
+      dentro do runner, sem a ressalva que `game_hud_layout_test.gd` documenta hoje.
+
 - [ ] **Transição entre rodadas.** Intro/clear existem; avaliar se a *continuidade* (score,
       vidas, ameaça crescente) é sentida ou apenas exibida. *Pronto:* a passagem conta uma
       progressão, não mostra um relatório.
@@ -467,3 +477,29 @@ sem olhar para ele; os três itens que nasceram da medição estão no topo de P
   todos os cues num rodízio cego de oito vozes. Som e háptica podiam discordar sobre qual era o
   acontecimento do tick, e o cue mais frequente podia truncar o mais importante. A escada agora é
   uma só, com teste que falha se as duas divergirem.
+| 2026-09-04 | P3 tipografia e ritmo do HUD: grade explícita + hierarquia da percentagem | `ai/loop-20260904T150…` | verde — 142 testes, 0 falhas |
+| 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
+
+### O que a execução de 2026-09-04T15 aprendeu
+
+**A banda superior estava mal proporcionada, e havia sobreposição real.** Medido com a fonte
+do tema, em pior caso e a 7 px: `Round` ocupava 18 px num retângulo de 34, `Score` 30 em 61 e
+`Vitals` 28 em 87 — enquanto `Percent`, a leitura primária, ficava espremida em 50. Pior:
+`Round` ia até x=37 e `Score` começava em x=36, ou seja **1 px de sobreposição** que ninguém
+via porque ambos são alinhados à esquerda e o texto real não chegava lá. O trilho do escudo
+começava em x=151 com o rótulo em x=150.
+
+**Armadilha para quem for escrever teste de HUD nesta base.** No contexto do runner (tudo
+corre dentro de `_initialize()`, antes de a árvore processar um frame) a altura de um `Label`
+fica presa a um mínimo obsoleto — 23 px, calculado com o tamanho de fonte do tema em vez do
+override. Depois do primeiro frame ela assenta no valor pedido. Verificado com sonda
+descartável: `Percent size=(86,14), min=(1,13)`. Ou seja: **medir X no runtime é fiável, medir
+Y não é.** O comentário `# evita os 23 px padrão` em `_add_label` está correto no runtime real;
+não o "corrija" com base no que o runner mostra.
+
+**Nota de coordenação, não de código.** Nesta execução havia **dez PRs do loop abertos e
+nenhum mesclado**, todos ramificados do mesmo commit de `main` e todos a editar este ficheiro.
+Assim que o primeiro entrar, os outros nove conflitam no `LOOP_LEDGER.md`. Além disso o backlog
+está praticamente esgotado: cada item P1/P2/P3 já tem PR aberto, exceto "Transição entre
+rodadas". Uma execução futura que não encontre item livre deve preferir **um PR só de ledger**
+a inventar trabalho — e vale mais rever/rebasar a fila existente do que aumentá-la.
