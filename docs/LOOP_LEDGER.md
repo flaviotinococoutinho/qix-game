@@ -334,6 +334,18 @@ decidir — a lista abaixo é a foto da última run, não a verdade corrente.
 - [ ] **Transição entre rodadas.** Intro/clear existem; avaliar se a *continuidade* (score,
       vidas, ameaça crescente) é sentida ou apenas exibida. *Pronto:* a passagem conta uma
       progressão, não mostra um relatório.
+- [x] **Transição entre rodadas.** Feito em 2026-09-04T19:00Z — ver histórico. Ficou pendente
+      o *tempo* da passagem: a barra de progresso é linear em ticks e a transição não tem
+      ritmo (nenhuma ênfase no instante em que o número de continuidade aparece). Isso é
+      animação de apresentação, não texto, e merece item próprio quando a fila drenar.
+
+### Itens nascidos de uma execução (ainda sem prioridade atribuída)
+
+- [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
+      `phase = ROUND_CLEAR` num teste não arquiva a rodada, o que é correto mas não é óbvio:
+      custou uma asserção errada na execução de 19:00Z. Qualquer apresentação que conte
+      rodadas depende disso. → Documentar a regra no cabeçalho de `GameSession`.
+      *Pronto:* o contrato de `records` legível sem ler `_archive_current_round`.
 
 ## Notas de ambiente (sandbox de nuvem)
 
@@ -503,3 +515,22 @@ Assim que o primeiro entrar, os outros nove conflitam no `LOOP_LEDGER.md`. Além
 está praticamente esgotado: cada item P1/P2/P3 já tem PR aberto, exceto "Transição entre
 rodadas". Uma execução futura que não encontre item livre deve preferir **um PR só de ledger**
 a inventar trabalho — e vale mais rever/rebasar a fila existente do que aumentá-la.
+| 2026-09-04T19:00 | P3 **Transição entre rodadas**: a passagem passa a carregar score/vidas e a apontar para o próximo setor (`ui/round_transition_view.gd`) | este | verde — 136 testes, 11.501 asserções, 0 falhas; rota M2 byte-a-byte idêntica antes/depois |
+| 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
+
+### Estado da fila em 2026-09-04T19:00Z — 14 PRs abertos, nenhum mesclado
+
+A execução de 18:00Z (PR #14) deixou `tools/loop/merge_queue_report.sh` e uma análise da fila
+bem mais completa do que esta seção; **quando os dois PRs forem mesclados, prevaleça a versão
+do #14**, que mede os pares e recomenda a ordem de merge. Rodei aquela ferramenta a partir do
+ramo do #14 antes de escolher o item, e foi ela que decidiu a escolha:
+
+- `ui/round_transition_view.gd` **não é tocado por nenhum dos 14 PRs abertos** — foi o único
+  item de backlog restante sem PR e também o único caminho sem sobreposição silenciosa.
+- A disputa continua concentrada em `ui/game_hud.gd` (`#8×#9`, `#8×#11`, `#9×#11`) e em
+  `docs/TEST_MATRIX.md` (`#3×#5`, `#3×#9`, `#7×#8`). Esta execução edita `TEST_MATRIX.md`
+  **alterando a linha existente de "apresentação"**, não apensando ao fim da tabela, para não
+  criar um sétimo par no mesmo ponto de colisão.
+- **O backlog acabou.** Com este item, todo P1/P2/P3 herdado tem PR aberto. A próxima execução
+  não tem de onde tirar item novo sem que alguém drene a fila: o P0 "drenar a fila" deixou de
+  ser prioridade e passou a ser pré-condição.
