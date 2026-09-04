@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RoundContent" format=3]
+
+[ext_resource type="Resource" path="res://content/rounds/definitions/round_03_verdant_singularity.tres" id="1_yikbg"]
+[ext_resource type="Resource" path="res://content/rules/expert.tres" id="2_i6n8g"]
+[ext_resource type="Script" path="res://game/rules/round_content.gd" id="3_hjlra"]
+[ext_resource type="Resource" path="res://content/visuals/round_03_verdant_singularity.tres" id="4_wrvax"]
+
+[resource]
+script = ExtResource("3_hjlra")
+round_id = &"verdant_singularity"
+rules = ExtResource("2_i6n8g")
+round_definition = ExtResource("1_yikbg")
+seed_value = 933117401
+visual = ExtResource("4_wrvax")

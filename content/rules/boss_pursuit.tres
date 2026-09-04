@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BossBehaviorProfile" format=3]
+
+[ext_resource type="Script" path="res://game/enemies/boss_behavior_profile.gd" id="1_xjiy0"]
+
+[resource]
+script = ExtResource("1_xjiy0")
+pattern = 1
+pursuit_jitter_steps = 1
+pulse_period_ticks = 360
+pulse_duration_ticks = 60
+pulse_speed_permille = 1150

@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "godot-ai": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/uvx",
+      "args": [
+        "--link-mode",
+        "copy",
+        "--from",
+        "godot-ai==3.2.4",
+        "godot-ai",
+        "attach",
+        "--port",
+        "8000",
+        "--ws-port",
+        "9500"
+      ],
+      "env": {}
+    }
+  }
+}

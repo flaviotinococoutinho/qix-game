@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GameRules" format=3]
+
+[ext_resource type="Resource" path="res://content/rules/boss_sweep.tres" id="1_5r705"]
+[ext_resource type="Script" path="res://game/rules/game_rules.gd" id="2_bnd4i"]
+
+[resource]
+script = ExtResource("2_bnd4i")
+completion_bonus = 2500
+shield_ticks = 1440
+boss_speed_fp = 128
+boss_turn_every_ticks = 30
+boss_behavior = ExtResource("1_5r705")

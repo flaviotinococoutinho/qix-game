@@ -1,0 +1,28 @@
+# ── Godot ────────────────────────────────────────────────────────────────────
+# Cache de import e de class_name: regenerado por `--headless --path . --import`.
+.godot/
+
+# ── Ferramental de editor (MCP) ──────────────────────────────────────────────
+# Estado local do Fennara e seus binários nativos de TODAS as plataformas (~28 MB).
+# São ferramenta de editor, não runtime do jogo: o export hook já os remove do
+# payload. Um checkout limpo baixa o addon; a nuvem não roda editor.
+.fennara/
+addons/fennara/bin/
+
+# ── Artefatos de build ───────────────────────────────────────────────────────
+# Exports macOS/Android do shipping pass (~139 MB). Reproduzíveis por
+# tools/shipping/run_shipping_qa.sh; nunca são fonte da verdade.
+build/
+
+# ── Estado de sessão de agente (privado) ─────────────────────────────────────
+.remember/
+.claude/.cc-writes/
+.claude/settings.local.json
+
+# ── Documentação de terceiros redistribuída ──────────────────────────────────
+# PDF do vendor do antipixel_state_machine: consultar na origem, não versionar.
+State Machine Antipixel Godot Documentation.pdf
+
+# ── Ruído de SO / editor ─────────────────────────────────────────────────────
+.DS_Store
+*.tmp

@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="RoundDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/rules/round_definition.gd" id="1_mt4o6"]
+
+[resource]
+script = ExtResource("1_mt4o6")
+boss_start = Vector2i(70, 156)
+boss_dir_index = 11

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BossBehaviorProfile" format=3]
+
+[ext_resource type="Script" path="res://game/enemies/boss_behavior_profile.gd" id="1_gwe4c"]
+
+[resource]
+script = ExtResource("1_gwe4c")
+pattern = 2
+sweep_turn_steps = 3
+pulse_period_ticks = 240
+pulse_duration_ticks = 48
+pulse_speed_permille = 1250

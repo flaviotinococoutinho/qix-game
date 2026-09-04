@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CampaignDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/rules/round_content.gd" id="1_lknm8"]
+[ext_resource type="Resource" path="res://content/rounds/round_01_abyssal_relay.tres" id="2_adtds"]
+[ext_resource type="Resource" path="res://content/rounds/round_02_aurora_foundry.tres" id="3_ltyrv"]
+[ext_resource type="Resource" path="res://content/rounds/round_03_verdant_singularity.tres" id="4_xl4hi"]
+[ext_resource type="Script" path="res://game/rules/campaign_definition.gd" id="5_uyiwr"]
+
+[resource]
+script = ExtResource("5_uyiwr")
+campaign_id = &"lumen_cartography"
+rounds = Array[ExtResource("1_lknm8")]([ExtResource("2_adtds"), ExtResource("3_ltyrv"), ExtResource("4_xl4hi")])
+intro_ticks = 72
+clear_ticks = 150

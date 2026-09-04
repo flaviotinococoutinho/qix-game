@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="GameRules" format=3]
+
+[ext_resource type="Resource" path="res://content/rules/boss_wander.tres" id="1_iuug5"]
+[ext_resource type="Script" path="res://game/rules/game_rules.gd" id="2_eocsk"]
+
+[resource]
+script = ExtResource("2_eocsk")
+boss_behavior = ExtResource("1_iuug5")

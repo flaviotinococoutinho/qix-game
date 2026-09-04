@@ -1,0 +1,235 @@
+class_name QixAudioDirector
+extends Node
+## Mix e música procedural observacionais. `sync` nunca escreve em GameSession.
+
+const BUS_MASTER := &"Qix Master"
+const BUS_MUSIC := &"Qix Music"
+const BUS_SFX := &"Qix SFX"
+const SFX_VOICES := 8
+const TRAIL_THROTTLE_MSEC := 36
+
+@export_range(0.0, 1.0, 0.01) var master_volume := 0.90
+@export_range(0.0, 1.0, 0.01) var music_volume := 0.52
+@export_range(0.0, 1.0, 0.01) var sfx_volume := 0.82
+@export var enabled := true
+
+var _music: AudioStreamPlayer
+var _voices: Array[AudioStreamPlayer] = []
+var _voice_cursor := 0
+var _round_index := -1
+var _last_trail_msec := -TRAIL_THROTTLE_MSEC
+var _music_cache: Dictionary = {}
+var _cue_cache: Dictionary = {}
+var _paused := false
+
+
+func _ready() -> void:
+	ensure_ready()
+	if enabled and runtime_allows_playback() and _music.stream != null and not _music.playing:
+		_music.play()
+
+
+func _exit_tree() -> void:
+	shutdown()
+
+
+## Solta playback e PCM antes do AudioServer encerrar. Isso evita referências de
+## AudioStreamPlaybackWAV sobrevivendo ao teardown de builds e smoke tests.
+func shutdown() -> void:
+	if is_instance_valid(_music):
+		_music.stop()
+		_music.stream = null
+	for voice in _voices:
+		if is_instance_valid(voice):
+			voice.stop()
+			voice.stream = null
+	_music_cache.clear()
+	_cue_cache.clear()
+	_round_index = -1
+
+
+func ensure_ready() -> void:
+	_ensure_buses()
+	_ensure_players()
+	_apply_mix()
+
+
+## Headless runners do not have an audible output and Godot currently retains a
+## playback object when the process exits with a runtime WAV still playing.
+## Keeping synthesis available but never starting the playback makes server/CI
+## smokes deterministic and avoids reporting that engine-level exit leak as a
+## game resource leak.
+static func runtime_allows_playback() -> bool:
+	return (
+		DisplayServer.get_name().to_lower() != "headless"
+		and arguments_allow_playback(
+			OS.get_cmdline_user_args(),
+			OS.has_feature("shipping_qa"),
+		)
+	)
+
+
+## Probes gráficos medem render e encerram a árvore de forma deliberadamente
+## curta. Não abrir AudioStreamPlaybackWAV nesse caminho evita atribuir ao jogo
+## o leak de teardown do mixer registrado em godotengine/godot#76745, sem
+## silenciar a música no runtime normal nem no smoke Android.
+static func arguments_allow_playback(
+	arguments: PackedStringArray,
+	shipping_qa_enabled: bool = false,
+) -> bool:
+	if not shipping_qa_enabled:
+		return true
+	for argument in arguments:
+		if argument.begins_with("--shipping-probe="):
+			return false
+	return true
+
+
+## Interface única para o bootstrap após a simulação emitir eventos.
+func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) -> void:
+	ensure_ready()
+	if session != null and session.round_index != _round_index:
+		play_round_music(session.round_index)
+	_paused = paused
+	if _music != null and _music.is_inside_tree():
+		_music.stream_paused = paused
+	if not enabled:
+		return
+	for cue_name in cues_for_events(events):
+		play_cue(cue_name)
+
+
+func play_round_music(round_index: int) -> void:
+	ensure_ready()
+	_round_index = round_index
+	if not _music_cache.has(round_index):
+		_music_cache[round_index] = QixProceduralAudioLibrary.music_for_round(round_index)
+	_music.stream = _music_cache[round_index]
+	if enabled and runtime_allows_playback() and _music.is_inside_tree():
+		_music.play()
+
+
+func play_cue(cue_name: StringName) -> void:
+	if not enabled:
+		return
+	ensure_ready()
+	if cue_name == &"trail":
+		var now := Time.get_ticks_msec()
+		if now - _last_trail_msec < TRAIL_THROTTLE_MSEC:
+			return
+		_last_trail_msec = now
+	var voice := _voices[_voice_cursor]
+	_voice_cursor = (_voice_cursor + 1) % _voices.size()
+	if not _cue_cache.has(cue_name):
+		_cue_cache[cue_name] = QixProceduralAudioLibrary.cue(cue_name)
+	voice.stream = _cue_cache[cue_name]
+	# Headless ainda constrói o cue para validar o pipeline e o cache; só não
+	# inicia o hardware playback, que é o caminho afetado pelo leak de teardown.
+	if runtime_allows_playback() and voice.is_inside_tree():
+		voice.play()
+
+
+func set_mix(master: float, music: float, sfx: float) -> void:
+	master_volume = clampf(master, 0.0, 1.0)
+	music_volume = clampf(music, 0.0, 1.0)
+	sfx_volume = clampf(sfx, 0.0, 1.0)
+	_apply_mix()
+
+
+func set_enabled(value: bool) -> void:
+	enabled = value
+	if not value:
+		if _music != null:
+			_music.stop()
+		for voice in _voices:
+			voice.stop()
+	elif runtime_allows_playback() and _music != null and _music.stream != null and _music.is_inside_tree():
+		_music.play()
+
+
+func presentation_state() -> Dictionary:
+	return {
+		"round_index": _round_index,
+		"music_loaded": _music != null and _music.stream != null,
+		"music_paused": _paused,
+		"voice_count": _voices.size(),
+		"cached_music": _music_cache.size(),
+		"cached_cues": _cue_cache.size(),
+	}
+
+
+static func cues_for_events(events: Array[GameEvent]) -> Array[StringName]:
+	var cues: Array[StringName] = []
+	for event in events:
+		var cue_name := cue_for_kind(event.kind)
+		if cue_name != &"" and not cues.has(cue_name):
+			cues.append(cue_name)
+	return cues
+
+
+static func cue_for_kind(kind: int) -> StringName:
+	match kind:
+		GameEvent.Kind.TRAIL_STARTED:
+			return &"trail"
+		GameEvent.Kind.CAPTURED:
+			return &"capture"
+		GameEvent.Kind.CAPTURE_REJECTED:
+			return &"reject"
+		GameEvent.Kind.PLAYER_DIED:
+			return &"death"
+		GameEvent.Kind.PLAYER_RESPAWNED:
+			return &"respawn"
+		GameEvent.Kind.SHIELD_CRITICAL:
+			return &"shield"
+		GameEvent.Kind.ROUND_STARTED:
+			return &"round_start"
+		GameEvent.Kind.ROUND_CLEAR_STARTED, GameEvent.Kind.ROUND_WON:
+			return &"round_clear"
+		GameEvent.Kind.GAME_OVER:
+			return &"game_over"
+		GameEvent.Kind.CAMPAIGN_COMPLETE:
+			return &"campaign_complete"
+	return &""
+
+
+func _ensure_players() -> void:
+	if not is_instance_valid(_music):
+		_music = AudioStreamPlayer.new()
+		_music.name = "Music"
+		_music.bus = BUS_MUSIC
+		add_child(_music)
+	while _voices.size() < SFX_VOICES:
+		var voice := AudioStreamPlayer.new()
+		voice.name = "Sfx%02d" % _voices.size()
+		voice.bus = BUS_SFX
+		add_child(voice)
+		_voices.append(voice)
+
+
+func _ensure_buses() -> void:
+	_ensure_bus(BUS_MASTER, &"Master")
+	_ensure_bus(BUS_MUSIC, BUS_MASTER)
+	_ensure_bus(BUS_SFX, BUS_MASTER)
+	var master_index := AudioServer.get_bus_index(BUS_MASTER)
+	if master_index >= 0 and AudioServer.get_bus_effect_count(master_index) == 0:
+		AudioServer.add_bus_effect(master_index, AudioEffectLimiter.new())
+
+
+func _ensure_bus(bus_name: StringName, send_to: StringName) -> void:
+	if AudioServer.get_bus_index(bus_name) < 0:
+		AudioServer.add_bus()
+		var index := AudioServer.bus_count - 1
+		AudioServer.set_bus_name(index, bus_name)
+		AudioServer.set_bus_send(index, send_to)
+
+
+func _apply_mix() -> void:
+	_set_bus_linear(BUS_MASTER, master_volume)
+	_set_bus_linear(BUS_MUSIC, music_volume)
+	_set_bus_linear(BUS_SFX, sfx_volume)
+
+
+func _set_bus_linear(bus_name: StringName, linear: float) -> void:
+	var index := AudioServer.get_bus_index(bus_name)
+	if index >= 0:
+		AudioServer.set_bus_volume_db(index, linear_to_db(maxf(linear, 0.0001)))
