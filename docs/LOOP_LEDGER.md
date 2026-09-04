@@ -167,6 +167,28 @@ Itens sem critério de pronto não entram aqui.
 - [ ] **Checksum/replay não têm teste de regressão explícito contra mudança estética.** →
       Teste que roda uma rodada, guarda o checksum, e falha se ele mudar sem bump de versão
       declarado. *Pronto:* invariante 8 do `CLAUDE.md` mecanicamente defendido.
+- [ ] **Não existe CI: o repositório não tem `.github/workflows/`.** Constatado em 2026-09-04
+      pelo PR #5 — zero check runs no PR. Consequência: a única evidência de que a suíte passa é
+      o corpo do PR, escrito por quem propôs a mudança; nada revalida no merge, e um PR que
+      quebre a suíte entra em `main` sem resistência. Isso é especialmente caro num projeto cujo
+      contrato é determinismo e checksum, e cujo agente afirma "verde" a cada hora. → Workflow
+      que baixe o Godot 4.7.2 headless, rode `--import` e depois `tests/run_tests.gd` e
+      `tools/verify_m2_capture_route.gd`. *Pronto:* um PR com teste quebrado de propósito é
+      barrado pelo próprio GitHub, não pela leitura do revisor.
+
+- [ ] **Nenhum `docs/*.md` declara sua data de última verificação.** Documento sem data envelhece
+      em silêncio e vira mentira confiante. → Cabeçalho padronizado com data e commit de
+      verificação. *Pronto:* todo doc de `docs/` datado.
+- [ ] **Os invariantes do `CLAUDE.md` não têm teste que os defenda.** Um invariante só existe se
+      algo falha quando ele é violado. → Teste que varra `game/simulation`, `game/rules` e
+      `game/session` procurando `randi(`, `randf(`, `RandomNumberGenerator`, `Time.`, `Input.`,
+      `delta`, `Tween`. *Pronto:* teste vermelho ao introduzir a violação de propósito.
+- [ ] **Cobertura dourada só alcança a rodada 1.** `replay_checksum_golden_test.gd` fixa o
+      `config_hash` das três rodadas, mas só roda uma rota (177 ticks, uma captura) na rodada 1.
+      R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
+      literal cobre. → Estender a rota dourada para as três rodadas, ou justificar por escrito
+      que o `config_hash` basta. *Pronto:* cada perfil de boss de produção tem pelo menos um
+      checksum final fixado, ou uma nota dizendo por que não precisa.
 
 ### P3 — experiência e estética (o alvo real)
 
@@ -264,3 +286,30 @@ O que ficou provado e não precisa ser reinvestigado:
   Os erros de `libfennara.linux.editor.x86_64.so` na saída são pré-existentes e esperados — o
   binário do GDExtension não é versionado. `tools/profile_board_view.gd` **não** foi executado:
   nada nesta mudança toca `BoardView`, a máscara R8 ou custo por quadro.
+| 2026-09-04 | P2: teste dourado de checksum/replay (invariantes 7 e 8) | #5 | verde — 138 testes, 11.515 asserções, 0 falhas; guarda provada vermelha com domínio perturbado e verde com cor perturbada |
+| 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
+
+### Fila de revisão — leia antes de escolher item
+
+O loop abre PR mais rápido do que a revisão humana mescla. Em 2026-09-04T09:00Z havia **cinco
+PRs abertos e nenhum mesclado**, todos com base no commit inicial:
+
+| PR | Item do backlog |
+|---|---|
+| #1 | P1 — cena órfã `node_2d.tscn` |
+| #2 | P1 — inventário dos nove addons |
+| #3 | P2 — varredura estática dos invariantes 1 e 4 |
+| #4 | P1 — poda de `samples/` e `guide_examples/` |
+| #5 | P2 — checksum dourado (invariantes 7 e 8) |
+
+Consequências práticas para a próxima execução:
+
+1. **Confira os PRs abertos antes de escolher** (`gh pr list --state open`, ou o equivalente MCP).
+   Um item já coberto por PR aberto não está livre só porque o checkbox do backlog continua vazio —
+   o backlog não é atualizado até o merge.
+2. **Espere conflito em `docs/`.** Todo PR do loop toca `LOOP_LEDGER.md`, e vários tocam
+   `TEST_MATRIX.md`. A contagem final da suíte nesse arquivo (`138 testes, 11.515 asserções`) é
+   válida para o #5 isolado; quem mesclar depois precisa recontar, não somar de cabeça.
+3. **Prefira arquivos novos a edições em arquivos disputados.** A descoberta de testes em
+   `run_tests.gd` varre diretório, então dois PRs podem acrescentar arquivos de teste sem
+   se tocarem — foi o que permitiu #3 e #5 coexistirem.
