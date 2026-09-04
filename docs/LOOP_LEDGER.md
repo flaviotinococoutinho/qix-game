@@ -100,9 +100,29 @@ Itens sem critério de pronto não entram aqui.
       `phantom_camera`, `softbody2d` e `yard`, e exclui `fennara`/`godot_ai` só parcialmente — o
       que `PROJECT_CONTRACT.md` §Ownership já discute em prosa. Falta a **tabela**. → Registrar em
       `docs/PROJECT_CONTRACT.md`. *Pronto:* tabela addon → consumidor → shipped/editor-only.
+- [ ] **`node_2d.tscn` órfão na raiz.** Cena vazia de 103 bytes, sem referência. É exatamente o
+      tipo de resíduo que ensina o próximo leitor que a raiz é um depósito. → Remover, ou
+      justificar por escrito se algo depender dela. *Pronto:* raiz sem arquivo não explicado.
+- [ ] **Podar as três pastas de demos de terceiros da raiz: `samples/` (4,0 MB, 6 cenas),
+      `guide_examples/` (2,3 MB, 32 cenas) e `antipixel_state_machine/` (132 KB, 3 cenas).**
+      O inventário de addons (histórico, 2026-09-04) já provou o que faltava saber: nenhuma das
+      três tem consumidor no código do jogo, e as três já estão nos `exclude_filter` dos dois
+      presets de `export_presets.cfg`. Ou seja, **o custo delas é 100 % de leitura e busca, 0 % de
+      payload** — são 41 das 142 cenas de terceiros que enterram as 2 cenas do jogo. `samples/` é
+      demo do `softbody2d` e `guide_examples/` é demo do `guide`; se um dia esses addons forem
+      usados, o demo se rebaixa do upstream. → Remover, uma pasta por commit, com o porquê no PR.
+      *Pronto:* `find . -name '*.tscn'` fora de `addons/` retornando só cenas do jogo.
 
 ### P2 — integridade de contexto
 
+- [ ] **Decidir o destino dos sete addons dormentes** — `guide`, `curved_lines_2d`,
+      `phantom_camera`, `GDDraw`, `softbody2d`, `curve2collision`, `yard` (11,5 MB, 101 cenas).
+      O inventário provou que nenhum é habilitado, nenhum é referenciado e todos já são excluídos
+      do export. Não é P1 porque `addons/` é uma pasta que todo leitor de Godot sabe ignorar — mas
+      11,5 MB de dependência dormente é uma decisão adiada, não um estado neutro, e o próximo
+      leitor não tem como saber se `phantom_camera` é lixo ou plano. → ADR curta: remover, ou
+      declarar quais ficam como reserva e por quê. *Pronto:* nenhuma pasta em `addons/` sem uma
+      linha que diga por que ela está lá.
 - [ ] **Nenhum `docs/*.md` declara sua data de última verificação.** Documento sem data envelhece
       em silêncio e vira mentira confiante. → Cabeçalho padronizado com data e commit de
       verificação. *Pronto:* todo doc de `docs/` datado.
@@ -160,4 +180,6 @@ esquece o que tentou repete o que falhou.
 |---|---|---|---|
 | 2026-09-04 | P0 · portão de verificação headless em GitHub Actions | (este) | verde no runner real (134/0); sonda confirmou que o portão fica vermelho |
 | 2026-09-04 | P1: remoção de `node_2d.tscn` órfão da raiz + levantamento de addons/demos para o backlog | `ai/loop-20260904T*` | verde — 134 testes, 11489 asserções, 0 falhas; rota M2 825‰ |
+| 2026-09-04 | P1 `addons/`: inventário addon → consumidor → destino no export, em `PROJECT_CONTRACT.md` | #2 | verde — 134 testes / 11 489 asserções / 0 falhas; rota M2 179→825 ‰ |
+| 2026-09-04 | P1 `node_2d.tscn` órfão | #1 | em revisão (aberto por outra execução; não reivindicado aqui) |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |

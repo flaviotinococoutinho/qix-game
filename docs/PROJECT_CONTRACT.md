@@ -58,6 +58,46 @@ runner `20260903T065739Z-65912` provaram que esse payload inicia sem referência
 distribuição real, a presença do helper Godot AI deve ser uma decisão explícita: removê-lo por
 completo ou mantê-lo junto de todo o fechamento necessário.
 
+## Addons — quem é jogo, quem é ferramenta
+
+Inventário verificado em **2026-09-04** contra o checkout de `main` em `74c173a`. Existe porque
+nove pastas em `addons/` não dizem, por si, quais participam do jogo: sem esta tabela, cada leitor
+refaz a mesma investigação e alguns concluem errado.
+
+| Addon | Versão | Habilitado em `[editor_plugins]` | Consumido pelo jogo | Destino no export |
+|---|---|---|---|---|
+| `godot_ai` | 3.2.4 | **sim** (único) | autoload `_mcp_game_helper` | `runtime/` embarca; `clients/`, `custom_tools/`, `debugger/`, `dock_panels/`, `export/`, `handlers/`, `testing/` excluídos |
+| `fennara` | 0.4.2 | não é plugin de editor — é `GDExtension` com bibliotecas `*.editor.*` | autoload `_fennara_game_capture` | `runtime/` embarca; `ai/`, `bin/`, `dist/` e o `.gdextension` excluídos |
+| `guide` (G.U.I.D.E) | 0.14.0 | não | **nenhum** | excluído em bloco |
+| `curved_lines_2d` (Scalable Vector Shapes 2D) | 2.33.3 | não | **nenhum** | excluído em bloco |
+| `phantom_camera` | 0.11.0.3 | não | **nenhum** | excluído em bloco |
+| `GDDraw` | 0.2.0 | não | **nenhum** | excluído em bloco |
+| `softbody2d` | 1.7.1 | não | **nenhum** | excluído em bloco |
+| `curve2collision` | 1.0.0 | não | **nenhum** | excluído em bloco |
+| `yard` | 1.2.0 | não | **nenhum** | excluído em bloco |
+
+Como "nenhum" foi verificado — dois testes independentes sobre `app/`, `game/`, `ui/`, `tools/`,
+`tests/`, `content/` e `assets/`:
+
+1. Nenhuma dessas árvores contém a string `res://addons/`.
+2. Dos 174 `class_name` declarados pelos nove addons, **nenhum** aparece como palavra nessas
+   árvores. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot`, não o
+   G.U.I.D.E.; a câmera é fixa em 240×320, não `phantom_camera`.
+
+Três pastas de terceiros vivem **fora** de `addons/` e também não têm consumidor: `samples/`
+(demos do `softbody2d`), `guide_examples/` (demos do `guide`) e `antipixel_state_machine/`.
+
+Consequência prática para quem lê o repositório: das **145** cenas do checkout, apenas **2** são
+do jogo — `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn`. Uma é a cena órfã da raiz, e as
+outras **142** são de terceiros: 101 em `addons/`, 32 em `guide_examples/`, 6 em `samples/` e 3 em
+`antipixel_state_machine/`. Procurar uma cena do jogo pelo nome é, hoje, uma operação com 98 % de
+ruído — é isso que o item de poda no `docs/LOOP_LEDGER.md` ataca.
+
+O que esta tabela **não** decide: se os sete addons dormentes devem ser removidos. Eles já não
+entram no payload (os `exclude_filter` de ambos os presets em `export_presets.cfg` listam os sete
+por nome), então o custo deles é de leitura e de busca, não de bytes entregues ao jogador. A
+remoção é uma decisão separada, com o seu próprio item no ledger.
+
 ## Comandos reais
 
 ```bash
