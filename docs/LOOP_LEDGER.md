@@ -26,6 +26,7 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 | Fronteira entrada/feedback | `docs/decisions/ADR-0006` |
 | Perfis de boss autoráveis | `docs/decisions/ADR-0007` |
 | Transação de conteúdo | `docs/decisions/ADR-0008` |
+| Contador de percentagem sobe em degraus | `docs/decisions/ADR-0009` |
 | Identidade visual é *Lumen Cartography* | `docs/ART_DIRECTION.md` |
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
 
@@ -33,6 +34,11 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 
 Cada item diz **o que**, **por que importa para a experiência** e **como saber que ficou bom**.
 Itens sem critério de pronto não entram aqui.
+
+> **Um item já em PR aberto não está livre.** O histórico abaixo só regista o que foi mesclado,
+> e as execuções correm de hora em hora enquanto os PRs esperam revisão — em 2026-09-04 havia
+> sete PRs do loop abertos ao mesmo tempo, cobrindo todo o P1 e todo o P2. Liste os PRs abertos
+> do loop antes de escolher e trate os itens neles como ocupados.
 
 ### P1 — higiene estrutural (barato, destrava o resto)
 
@@ -63,10 +69,12 @@ Itens sem critério de pronto não entram aqui.
 
 ### P3 — experiência e estética (o alvo real)
 
-- [ ] **Curva de percentagem e feedback de progresso.** `06-gameplay.md` descreve como o Volfied
-      calcula e apresenta a percentagem em passos discretos. Comparar com o `permille` atual e
-      avaliar se a leitura de progresso no HUD tem a mesma clareza de "quanto falta".
-      *Pronto:* ADR ou nota com o número adotado e a citação da seção de origem.
+- [ ] **A pontuação não acompanha a subida do contador.** `06-gameplay.md §6.3` mostra que no
+      original cada degrau do contador **paga pontos**, e é isso que faz o número na barra
+      superior pulsar junto com a área. Aqui o score é domínio e chega inteiro num tick, então
+      só a percentagem é encenada — o rótulo `S ######` continua saltando. → Avaliar se o HUD
+      pode encenar a subida do score pelos mesmos degraus, lendo o valor já confirmado.
+      *Pronto:* score e percentagem sobem juntos, sem que o HUD toque no domínio.
 - [ ] **Ritmo do risco: trilha longa deve doer.** Verificar se o custo de uma trilha longa está
       legível *antes* da morte (luminância, som, háptica) e não só no impacto. *Pronto:* o jogador
       consegue nomear o momento em que ficou exposto.
@@ -91,4 +99,5 @@ repete o que falhou.
 
 | Data (UTC) | Item | PR | Resultado |
 |---|---|---|---|
+| 2026-09-04 | P3 curva de percentagem: contador do HUD sobe em degraus (ADR-0009) | `ai/loop-20260904T120237Z` | verde — 137 testes, 11.501 asserções, 0 falhas; rota M2 inalterada (179→825) |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |

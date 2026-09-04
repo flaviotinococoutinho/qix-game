@@ -34,7 +34,7 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | boss | validação dos perfis WANDER/PURSUIT/SWEEP, octantes inteiros, jitter determinístico, reflexão, pulso de velocidade, limites seguros, hash de regras e replay incompatível rejeitado antes da mutação |
 | conteúdo | três rodadas ordenadas, IDs/seeds únicos, referências externas separadas, fundos 225×283 aprovados, alvo 80%, curva crescente e três perfis externos de boss |
 | geração transacional | shadow staging, lock exclusivo por projeto via loopback, WAL v3 ancorado ao SHA do manifest, hashes/tamanhos de payload/backup, state machine integral, targets terminais, rollback/cache e recovery após interrupção/processo morto |
-| apresentação | HUD de campanha, progresso até alvo, intro/clear/game over/campanha/pausa, VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
+| apresentação | HUD de campanha, progresso até alvo, contador de percentagem encenado em degraus (escada de denominações, teto e piso de duração, regressão instantânea), intro/clear/game over/campanha/pausa, VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
 | shipping | ícone quadrado, presets sem segredo, filtros, dispatch pela cena principal, smoke de áudio com marker/watchdog, seleção segura do serial, frame pacing e contratos de framebuffer/Metal HUD |
 | integração | existência, carga, campanha/feedback/touch ligados, camadas obrigatórias da cena principal, permissão Android de vibração e 60 Hz persistidos no projeto |
 | captura de erros | o runner de testes falha por erro de script ocorrido depois de uma asserção, e limpa a janela entre testes |
