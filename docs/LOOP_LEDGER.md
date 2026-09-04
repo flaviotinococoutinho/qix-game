@@ -104,6 +104,13 @@ Itens sem critério de pronto não entram aqui.
       leitor a ignorá-lo. → Derivar o esperado de `GameHud.OBJECTIVE_WIDTH`. *Pronto:* `#8` e
       `#11` juntos passam. **Aplicar na branch do próprio `#8`** — abrir um PR separado para
       isto recria o problema que esta seção descreve.
+- [ ] **Nenhum PR do repositório roda verificação automática.** Consultado em 2026-09-04, o PR #12
+      tem zero check runs; nenhum dos doze foi verificado por outra coisa senão uma execução do
+      loop rodando Godot à mão. É por isso que a colisão `#8`×`#11` sobreviveu a onze
+      verificações: cada uma olhou um PR contra `main`, e ninguém olhou dois PRs juntos. → Um
+      workflow que baixe o Godot 4.7.2 headless, rode `--import`, `tests/run_tests.gd` e
+      `tools/verify_m2_capture_route.gd` no *merge* do PR com a base. *Pronto:* um PR que quebra
+      a suíte fica vermelho sozinho, sem depender de alguém lembrar de olhar.
 
 ### P1 — higiene estrutural (barato, destrava o resto)
 
