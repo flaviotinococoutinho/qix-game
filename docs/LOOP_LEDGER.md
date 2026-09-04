@@ -12,7 +12,10 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 
 1. **Leia este arquivo inteiro antes de decidir o que fazer.** Ele vem depois do `CLAUDE.md` e
    antes de qualquer edição.
-2. **Escolha exatamente UM item** do backlog — o de maior prioridade que caiba num PR pequeno e
+2. **Rode `tools/loop/merge_queue_report.sh` antes de escolher.** Ele diz quais itens já têm PR
+   aberto e, sobretudo, em que arquivos a sua mudança vai colidir em silêncio com a fila. Escolher
+   sem olhar a fila é como o par `#8×#11` nasceu.
+3. **Escolha exatamente UM item** do backlog — o de maior prioridade que caiba num PR pequeno e
    revisável. Um PR grande não é produtividade: é uma revisão que não vai acontecer.
 3. **Escreva o relato da execução em `docs/loop/runs/<carimbo>.md`** — um arquivo novo, seu, com
    item escolhido, o que mudou, como foi verificado e o que ficou pendente. Não apense ao
@@ -21,6 +24,8 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 4. **Ajuste o backlog deste arquivo dentro do mesmo PR** com o que você aprendeu, e marque o item
    que atacou. O backlog continua compartilhado de propósito: duas execuções que mexem no mesmo
    item *devem* se encontrar aqui.
+4. **Atualize este arquivo dentro do mesmo PR**: mova o item para o histórico, ajuste o backlog
+   com o que você aprendeu, registre o que ficou pendente.
 5. **Nunca reabra um item de "Decisões fechadas"** sem um argumento novo e explícito no PR. Essa
    seção existe para impedir que o loop oscile entre duas opções para sempre.
 5. **Este arquivo mente enquanto os PRs não são mesclados.** O ledger versionado em `main` só
@@ -124,6 +129,52 @@ rápido do que a revisão absorve, e cada novo PR toca `docs/LOOP_LEDGER.md`, en
 gerar conflito de merge entre si. **Recomendação ao revisor humano:** mesclar ou fechar a fila
 P1 (#1, #2, #4) antes de acumular mais, e mesclar na ordem de abertura para que os conflitos de
 ledger sejam triviais.
+## Fila de merge — medida em 2026-09-04T18:00Z
+
+**A fila está travada: 13 PRs abertos, nenhum mesclado, `main` ainda com 2 commits.** Todos os
+13 ramificam do mesmo `main` e todos editam este arquivo — logo **os 78 pares conflitam**, sem
+exceção. Cada execução do loop acrescenta um PR e nenhum sai; o trabalho já feito só vale
+quando alguém mesclar.
+
+Reproduza com `tools/loop/merge_queue_report.sh` (não altera `main` nem a árvore de trabalho):
+
+| Classe | Pares | Leitura |
+|---|---|---|
+| Conflito só no ledger | 78 de 78 | mecânico: todo run escreve aqui, por contrato |
+| Conflito fora do ledger | `#3×#5`, `#3×#9`, `#7×#8` — todos em `docs/TEST_MATRIX.md` | linhas apensas no mesmo ponto; resolução trivial |
+| **Sobreposição silenciosa** | `#8×#9`, `#8×#11`, `#9×#11` — todos em `ui/game_hud.gd` | o git aceita; o teste é que decide |
+
+### A regressão #8 × #11 — medida, não suposta
+
+`#8×#11` funde **sem conflito textual** e quebra dois testes
+(`QIX_GODOT_BIN=... tools/loop/merge_queue_report.sh --verify 8 11`):
+
+```
+FAIL  game_hud_test.gd::test_percent_counter_climbs_by_denomination_instead_of_snapping
+FAIL  game_hud_test.gd::test_percent_counter_snaps_back_when_progress_regresses
+145 testes, 11536 asserções, 2 falhas
+```
+
+A asserção que cai é *"a barra conta a mesma história que o número"*: esperado 6 px, obtido 11;
+esperado 15, obtido 25. A lógica do contador de #8 está intacta — o que quebrou é que o teste de
+#8 **fixa larguras em pixels derivadas do grid anterior**, e #11 re-autora exatamente esses
+números ao dar ao HUD uma grade explícita. Nenhum dos dois PRs pode ver isso sozinho.
+
+`#8×#9` e `#9×#11` passam (0 falhas). Só o par `#8×#11` é incompatível.
+
+### Ordem de merge recomendada
+
+1. **#13 primeiro** (portão headless em CI). Mesclado por último, ele não verifica nada; mesclado
+   primeiro, todos os outros passam a ser checados sozinhos.
+2. **#1 e #4** — remoções puras (cena órfã, demos de vendor). Zero sobreposição com código.
+3. **#6, depois #2** — #6 dá cabeçalho de data a todos os docs; #2 escreve por cima em
+   `PROJECT_CONTRACT.md` sem conflito.
+4. **#3 e #5** — só testes. O conflito `#3×#5` em `TEST_MATRIX.md` são duas linhas apensas: manter
+   as duas.
+5. **#7 e #10** — contraste e áudio, sem sobreposição.
+6. **HUD, nesta ordem: #9, depois #11, e só então #8 rederivado.** #8 não pode entrar como está:
+   o teste dele precisa ler as constantes de grade que #11 introduz em vez de repetir 6 e 15 à mão.
+7. **#12** — só ledger; superseded por esta seção. Fechar ou absorver.
 
 ## Backlog — prioridade decrescente
 
@@ -194,6 +245,18 @@ Itens sem critério de pronto não entram aqui.
       workflow que baixe o Godot 4.7.2 headless, rode `--import`, `tests/run_tests.gd` e
       `tools/verify_m2_capture_route.gd` no *merge* do PR com a base. *Pronto:* um PR que quebra
       a suíte fica vermelho sozinho, sem depender de alguém lembrar de olhar.
+- [ ] **Drenar a fila de 13 PRs.** Só um humano pode mesclar; o loop não mescla o próprio PR. Até
+      lá cada execução produz trabalho que não chega ao jogo, e o custo de integração cresce.
+      → Mesclar na ordem acima. *Pronto:* `main` com mais de 2 commits e a fila em ≤ 2 PRs abertos.
+- [ ] **Este arquivo é o ponto único de conflito da fila.** 78 de 78 pares colidem aqui porque
+      toda execução apensa uma linha ao mesmo ponto do "Histórico" e marca o mesmo backlog. →
+      Mitigar movendo o histórico para um arquivo por execução (`docs/loop/runs/<carimbo>.md`),
+      deixando o ledger com decisões e backlog. Mitiga, não resolve: o backlog continua
+      compartilhado. *Pronto:* duas execuções seguidas do loop sem conflito no histórico.
+- [ ] **Nenhum PR do loop mede a própria colisão com os outros abertos.** Cada execução verifica
+      a sua mudança contra `main`, nunca contra a fila. → Rodar
+      `tools/loop/merge_queue_report.sh` no passo de orientação, antes de escolher o item.
+      *Pronto:* sobreposição silenciosa detectada no run que a cria, não três runs depois.
 
 ### P1 — higiene estrutural (barato, destrava o resto)
 
@@ -470,6 +533,7 @@ esquece o que tentou repete o que falhou.
 | 2026-09-04 | P1 `addons/`: inventário addon → consumidor → destino no export, em `PROJECT_CONTRACT.md` | #2 | verde — 134 testes / 11 489 asserções / 0 falhas; rota M2 179→825 ‰ |
 | 2026-09-04 | P1 `node_2d.tscn` órfão | #1 | em revisão (aberto por outra execução; não reivindicado aqui) |
 | 2026-09-04 | P1: poda de `samples/` e `guide_examples/` (demos de vendor) + § Raízes de terceiros no contrato | #4 | verde — 134 testes, 11489 asserções, 0 falhas; rota 17,9→82,5% com `errors: []` |
+| 2026-09-04T18:00 | Fora do backlog: mediu a fila travada (13 PRs, 78/78 pares em conflito), isolou a regressão `#8×#11` e deixou `tools/loop/merge_queue_report.sh` para a próxima execução | este | verde (suíte em `main`: 134 testes, 0 falhas) |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
 
 ### Notas da execução de 2026-09-04 (poda dos demos)
