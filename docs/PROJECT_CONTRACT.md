@@ -42,6 +42,7 @@ Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; 
 | Captura | `FloodFillCaptureResolver` | puro; devolve `CapturePlan` ou `CaptureError`; não muta nada |
 | Acaso | `DeterministicRng` | xorshift32 com seed explícita; único ponto de aleatoriedade |
 | Apresentação | `BoardView`, `PlayerView`, `EnemyView`, HUD, transição e VFX | observa snapshots/eventos confirmados; não muta a simulação |
+| Leitura de risco | `TrailExposure` (`game/board/trail_exposure.gd`) | funções puras de apresentação; traduzem o comprimento da trilha confirmada num escalar 0..1 consumido por `BoardView` e pelo HUD; nenhum valor volta ao domínio nem entra em hash |
 | Revelação | `BoardView` + shader R8 | `BoardState.cells` alimenta a máscara; somente `CLAIMED` revela o fundo |
 | Composição | `app/bootstrap.gd` | composition root; injeta campanha e dirige a sessão |
 | Entrada de dispositivo | `GameInputAdapter` + `QixTouchControls` | estado cru por gamepad, dedup InputMap/evento, teclado/touch agregados; entrega somente `MoveIntent` ao domínio |

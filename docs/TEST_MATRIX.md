@@ -15,6 +15,9 @@ cd /Users/flaviocoutinho/development/qiqix/qix-game
 ```
 
 Resultado atual: **134 testes, 11.489 asserções, 0 falhas e nenhum warning do jogo**.
+Reexecução em 2026-09-04 no build Linux headless `4.7.2.stable.official` (sessão de nuvem, sem
+editor e sem `libfennara`): **140 testes, 11.552 asserções, 0 falhas** — os seis testes novos são
+os de exposição da trilha.
 Além da suíte Godot, os testes Python do parser Metal HUD passaram **10/10**. O subconjunto
 direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 
@@ -24,6 +27,7 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 |---|---|
 | `BoardState` | borda inicial, índices, mutações, contagem de área e bytes canônicos |
 | `BoardView` | máscara R8 byte a byte, shader/paleta, revelação exclusiva de `CLAIMED`, reutilização da textura, skip sem mudança, telemetria limitada e ausência de mutação do domínio |
+| exposição da trilha | curva monótona com piso em `new_segment_slow_px` e teto geométrico, guarda contra campo degenerado, projeção do uniforme `trail_exposure` no shader, nome do aviso no HUD e checksum idêntico ao de um universo sem `sync` |
 | RNG | sequência determinística e limites |
 | captura | corte cardinal, lado protegido pelo anchor, consolidação da trilha e rejeição pura de auto-interseção |
 | simulação | capturas sucessivas até mais de 80%, pontuação, percentual, arbitragem captura×contato nos dois modos, morte, rollback da trilha, reentrada, game over, vitória e bônus |
