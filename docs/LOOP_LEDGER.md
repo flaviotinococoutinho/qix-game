@@ -28,6 +28,63 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
    Antes de escolher um item, liste os PRs abertos do loop e trate um item já coberto por um PR
    aberto como indisponível. A seção "Em revisão" abaixo é uma cópia de cortesia, não a verdade —
    a verdade é a lista de PRs abertos.
+5. **Leia "Fila de revisão" antes do backlog.** Um item com PR aberto já foi feito: pegá-lo de
+   novo produz um segundo PR que compete com o primeiro pelo mesmo arquivo. Se todos os itens
+   estiverem em revisão, o trabalho da execução **não é abrir o 12º PR** — é verificar a fila
+   (ver "Verificação de integração", abaixo).
+
+## Fila de revisão — o que já está aberto
+
+Esta seção existe porque a fila cresce mais rápido do que a revisão humana. Sem ela, cada
+execução redescobre a fila do zero e, na dúvida, duplica.
+
+**Estado em 2026-09-04T16:00Z: 11 PRs abertos, nenhum mergeado — o backlog inteiro está em
+revisão.** Cada PR saiu de `main` de forma independente e todos editam este arquivo, então
+**mergear qualquer um deixa os outros dez em conflito** (só neste arquivo, e em
+`docs/TEST_MATRIX.md` para os PRs #5, #8 e #9 — nenhum `.gd` conflita textualmente).
+
+| PR | Item do backlog | Testes no próprio head |
+|---|---|---|
+| #1 | P1 · cena órfã `node_2d.tscn` | 134 testes, 0 falhas |
+| #2 | P1 · inventário dos nove addons | 134 testes, 0 falhas |
+| #3 | P2 · varredura estática dos invariantes 1 e 4 | 138 testes, 0 falhas |
+| #4 | P1 · poda de `samples/` e `guide_examples/` | 134 testes, 0 falhas |
+| #5 | P2 · checksums dourados de replay | 138 testes, 0 falhas |
+| #6 | P2 · data de verificação em cada doc | 136 testes, 0 falhas |
+| #7 | P3 · contraste por estado do campo | 141 testes, 0 falhas |
+| #8 | P3 · percentagem em degraus | 137 testes, 0 falhas |
+| #9 | P3 · ritmo do risco na trilha longa | 140 testes, 0 falhas |
+| #10 | P3 · intenção e prioridade dos cues | 138 testes, 0 falhas |
+| #11 | P3 · grade verificável do HUD | 142 testes, 0 falhas |
+
+Quem mergear: preferir a ordem `#1, #2, #4` (higiene, diff mecânico), depois `#3, #5, #6`
+(testes de invariante), por fim os de apresentação. Antes de `#8` e `#11` juntos, ler o achado
+abaixo.
+
+### Verificação de integração — o que um PR sozinho não vê
+
+Cada PR foi verificado contra `main` isoladamente. Isso não diz nada sobre o que acontece
+quando dois deles coexistem. Com os onze aplicados juntos (conflitos de doc resolvidos à mão),
+a suíte dá **3 falhas** que nenhum head individual acusa:
+
+- **`#8` × `#11` — regressão real, merge textualmente limpo.** `#11` alarga
+  `OBJECTIVE_WIDTH` de `50.0` para `86.0` ao dar grade ao HUD; `tests/unit/game_hud_test.gd`,
+  de `#8`, afirma a largura do preenchimento em píxeis literais (`6`, `15`, `2`) derivados da
+  largura antiga. O git não vê conflito porque `#8` não toca na constante e `#11` não toca no
+  contador. *Correção:* o teste de `#8` deve derivar o esperado de `GameHud.OBJECTIVE_WIDTH`
+  em vez de fixar píxeis — a intenção do teste ("a barra conta a mesma história que o número")
+  é uma razão, não uma medida. Enquanto isso não for feito, **`#8` e `#11` não devem ser
+  mergeados um sem o outro ser reverificado.**
+- **`#6` — falha latente na resolução de conflito.** O teste de frescor exige cabeçalho de
+  verificação nas primeiras seis linhas de todo `docs/*.md`. Qualquer resolução de conflito
+  neste arquivo ou em `docs/TEST_MATRIX.md` que descarte o cabeçalho quebra a suíte. Resolver
+  conflito de doc aqui é preservar o cabeçalho, não escolher um lado.
+
+Pares verificados: `#8+#9` e `#9+#11` ficam verdes; `#8+#11` dá as duas falhas acima.
+
+**Procedimento** (uma execução que encontra a fila saturada deve repeti-lo, não abrir PR novo):
+`git fetch origin '+refs/pull/*/head:refs/remotes/pr/*'`, mergear os heads numa branch
+descartável, `--import`, rodar `tests/run_tests.gd`, e registrar aqui o que só aparece junto.
 
 ## Decisões fechadas — não reabrir sem argumento novo
 
@@ -117,6 +174,26 @@ Itens sem critério de pronto não entram aqui.
 > e as execuções correm de hora em hora enquanto os PRs esperam revisão — em 2026-09-04 havia
 > sete PRs do loop abertos ao mesmo tempo, cobrindo todo o P1 e todo o P2. Liste os PRs abertos
 > do loop antes de escolher e trate os itens neles como ocupados.
+### P0 — destrava a fila (nada abaixo importa enquanto isto não sair)
+
+- [ ] **A fila de revisão está saturada: 11 PRs abertos, zero mergeados.** O gargalo deixou de
+      ser produzir melhoria e passou a ser integrá-la. Cada PR novo empilha mais um conflito
+      neste arquivo e adia a chegada dos onze anteriores ao jogo. → Enquanto a fila não drenar,
+      a execução deve **verificar integração e registrar** (ver "Fila de revisão"), não abrir
+      trabalho novo. *Pronto:* fila abaixo de três PRs abertos.
+- [ ] **`tests/unit/game_hud_test.gd` (PR #8) fixa píxeis em vez de derivar da constante.**
+      Faz o teste falhar quando `#11` alarga `OBJECTIVE_WIDTH`, embora nenhuma das duas mudanças
+      esteja errada. Um teste que quebra por um número que ele não é dono de afirmar treina o
+      leitor a ignorá-lo. → Derivar o esperado de `GameHud.OBJECTIVE_WIDTH`. *Pronto:* `#8` e
+      `#11` juntos passam. **Aplicar na branch do próprio `#8`** — abrir um PR separado para
+      isto recria o problema que esta seção descreve.
+- [ ] **Nenhum PR do repositório roda verificação automática.** Consultado em 2026-09-04, o PR #12
+      tem zero check runs; nenhum dos doze foi verificado por outra coisa senão uma execução do
+      loop rodando Godot à mão. É por isso que a colisão `#8`×`#11` sobreviveu a onze
+      verificações: cada uma olhou um PR contra `main`, e ninguém olhou dois PRs juntos. → Um
+      workflow que baixe o Godot 4.7.2 headless, rode `--import`, `tests/run_tests.gd` e
+      `tools/verify_m2_capture_route.gd` no *merge* do PR com a base. *Pronto:* um PR que quebra
+      a suíte fica vermelho sozinho, sem depender de alguém lembrar de olhar.
 
 ### P1 — higiene estrutural (barato, destrava o resto)
 
@@ -367,6 +444,17 @@ Ruído esperado na saída: o autoload de ferramental imprime
   mesclados, o loop deixa de fazer higiene e passa a mexer em experiência: aí valem em dobro os
   invariantes 6 e 8, porque estética que muda checksum é vazamento para o domínio.
 
+## Ambiente da nuvem — ruído conhecido, não regressão
+
+Não gaste uma execução investigando isto:
+
+- `ERROR: Can't open dynamic library ... libfennara.linux.editor.x86_64.so` seguido de
+  `Error loading extension: 'res://addons/fennara/fennara.gdextension'` aparece em **toda**
+  execução headless, inclusive em `main` sem nenhuma alteração. `addons/fennara/bin/` não é
+  versionado (e não deve ser). A suíte passa apesar do erro; ele não é sinal de nada.
+- `--import` é obrigatório **também depois de cada troca de branch** que traga script novo,
+  senão o cache de `class_name` não conhece a classe e a falha não é a sua mudança.
+
 ## Histórico
 
 **A tabela abaixo está congelada. Não apense nada a ela.** O histórico agora é um arquivo por
@@ -516,6 +604,7 @@ está praticamente esgotado: cada item P1/P2/P3 já tem PR aberto, exceto "Trans
 rodadas". Uma execução futura que não encontre item livre deve preferir **um PR só de ledger**
 a inventar trabalho — e vale mais rever/rebasar a fila existente do que aumentá-la.
 | 2026-09-04T19:00 | P3 **Transição entre rodadas**: a passagem passa a carregar score/vidas e a apontar para o próximo setor (`ui/round_transition_view.gd`) | este | verde — 136 testes, 11.501 asserções, 0 falhas; rota M2 byte-a-byte idêntica antes/depois |
+| 2026-09-04 | Fila saturada: verificação de integração dos 11 PRs abertos; achado `#8`×`#11` | (este) | nada de código mudou; 3 falhas só na combinação |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
 
 ### Estado da fila em 2026-09-04T19:00Z — 14 PRs abertos, nenhum mesclado
