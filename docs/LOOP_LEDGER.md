@@ -53,6 +53,16 @@ Itens sem critério de pronto não entram aqui.
 - [ ] **Nenhum `docs/*.md` declara sua data de última verificação.** Documento sem data envelhece
       em silêncio e vira mentira confiante. → Cabeçalho padronizado com data e commit de
       verificação. *Pronto:* todo doc de `docs/` datado.
+- [ ] **O repositório não tem CI: `.github/workflows/` não existe.** Verificado em 2026-09-04 no
+      PR da guarda de invariantes — os checks do GitHub voltam `total_count: 0`. Consequência: toda
+      guarda deste projeto (a suíte inteira, e agora `domain_purity_test.gd`) só roda quando alguém
+      lembra de rodar. Um invariante defendido apenas na máquina de quem lembra é meio invariante —
+      e o loop de agente, que abre PR atrás de PR, é exatamente quem mais precisa de um verde
+      independente. → Workflow mínimo: baixar Godot 4.7.2 headless Linux, `--import`, `run_tests.gd`
+      e `verify_m2_capture_route.gd`. Atenção a dois fatos já conhecidos: os erros de
+      `libfennara.*.so` são esperados (binário não versionado) e não podem derrubar o job, e o
+      export/QA de shipping **não** roda em Linux. *Pronto:* PR do loop nasce com check verde ou
+      vermelho sem intervenção humana.
 - [ ] **Invariante 1, segunda metade: "só inteiros e ponto fixo 8.8" continua sem guarda.**
       `tests/unit/domain_purity_test.gd` (histórico, 2026-09-04) cobre a primeira metade — símbolo
       do mundo real citado no domínio. A varredura **não** procura `float` porque hoje ela ficaria
