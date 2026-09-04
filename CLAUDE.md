@@ -20,6 +20,7 @@ número daqui para lá, pare: duplicação é a entropia que este arquivo existe
 | Estado do gate de publicação | `docs/SHIPPING_PASS.md` |
 | Procedência de cada asset | `assets/ASSET-PROVENANCE.md` |
 | Como o Volfied resolve um problema do gênero | `reference/volfied/` (leia o `README.md` primeiro) |
+| O que o loop de agente já tentou e o que vem a seguir | `docs/LOOP_LEDGER.md` |
 
 **Ordem do tick**: documentada no cabeçalho de `game/simulation/game_simulation.gd`. Esse
 comentário é normativo — mudou a ordem, mudou o comentário no mesmo commit.
