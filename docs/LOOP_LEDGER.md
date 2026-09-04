@@ -82,17 +82,24 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural (barato, destrava o resto)
 
-- [ ] **`node_2d.tscn` órfão na raiz.** Cena vazia de 103 bytes, sem referência. É exatamente o
-      tipo de resíduo que ensina o próximo leitor que a raiz é um depósito. → Remover, ou
-      justificar por escrito se algo depender dela. *Pronto:* raiz sem arquivo não explicado.
-- [ ] **`samples/` e `guide_examples/` (~6 MB) são demos de addons de terceiros.** Convivem com o
-      código do jogo e poluem toda busca por `.tscn`/`.gd`. → Decidir: podar, mover para fora do
-      versionamento, ou documentar por que ficam. *Pronto:* decisão registrada e busca por cena
-      do jogo retornando só cenas do jogo.
-- [ ] **`addons/` tem nove addons; nem todos parecem usados** (`softbody2d`, `curve2collision`,
-      `GDDraw`, `yard`, `curved_lines_2d`, `phantom_camera`). → Mapear quem é realmente carregado
-      pelo runtime e quem é ferramenta de editor; registrar em `docs/PROJECT_CONTRACT.md`.
-      *Pronto:* tabela addon → consumidor → shipped/editor-only.
+- [ ] **`samples/`, `guide_examples/` e `antipixel_state_machine/` (~6,4 MB) são demos e código de
+      terceiros na raiz.** Convivem com o código do jogo e poluem toda busca por `.tscn`/`.gd`.
+      Levantamento de 2026-09-04: `samples/` (4,0 MB) é demo do addon `softbody2d`;
+      `guide_examples/` (2,3 MB) é demo do addon `guide`; `antipixel_state_machine/` (132 KB) é
+      addon de terceiros solto fora de `addons/`, **não listado na estrutura do `CLAUDE.md`** e com
+      seu próprio `sample/` dentro. Os três já estão em `exclude_filter` nos dois presets de
+      export, ou seja, não são shipped — o custo é só de leitura e de busca. → Decidir: podar,
+      mover para fora do versionamento, ou documentar por que ficam. *Pronto:* decisão registrada
+      e busca por cena do jogo retornando só cenas do jogo.
+- [ ] **`addons/` tem nove addons; nenhum é referenciado pelo código do jogo.** Levantamento de
+      2026-09-04: `grep -rn "res://addons/"` em `app/ game/ ui/ tools/ tests/ content/ assets/`
+      retorna **zero** ocorrências — os únicos vínculos são (a) os dois autoloads de
+      `project.godot` (`addons/fennara/runtime/`, `addons/godot_ai/runtime/`), (b) o único plugin
+      de editor ligado (`addons/godot_ai/plugin.cfg`) e (c) caches gerados em `.godot/`. O
+      `export_filter` já exclui em bloco `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
+      `phantom_camera`, `softbody2d` e `yard`, e exclui `fennara`/`godot_ai` só parcialmente — o
+      que `PROJECT_CONTRACT.md` §Ownership já discute em prosa. Falta a **tabela**. → Registrar em
+      `docs/PROJECT_CONTRACT.md`. *Pronto:* tabela addon → consumidor → shipped/editor-only.
 
 ### P2 — integridade de contexto
 
@@ -130,6 +137,17 @@ Itens sem critério de pronto não entram aqui.
       vidas, ameaça crescente) é sentida ou apenas exibida. *Pronto:* a passagem conta uma
       progressão, não mostra um relatório.
 
+## Notas de ambiente (sandbox de nuvem)
+
+Verificado em 2026-09-04: o build Linux headless `4.7.2-stable` baixa sem bloqueio de rede e
+reporta `4.7.2.stable.official.ed1daf0bf`. O `--import` obrigatório roda até o fim (sai com 0,
+384 passos de reimport) e **não** exige mono. Suíte completa e `verify_m2_capture_route.gd`
+rodam em segundos. Ou seja: nesta sessão não há desculpa para PR sem verificação — se uma
+execução futura não rodou os comandos, o motivo tem que ser dito, não omitido.
+
+Ruído esperado na saída: o autoload de ferramental imprime
+`[godot_ai game_helper] registered mcp capture` ao final de todo script headless. Não é erro.
+
 ## Histórico
 
 **A tabela abaixo está congelada. Não apense nada a ela.** O histórico agora é um arquivo por
@@ -141,4 +159,5 @@ esquece o que tentou repete o que falhou.
 | Data (UTC) | Item | PR | Resultado |
 |---|---|---|---|
 | 2026-09-04 | P0 · portão de verificação headless em GitHub Actions | (este) | verde no runner real (134/0); sonda confirmou que o portão fica vermelho |
+| 2026-09-04 | P1: remoção de `node_2d.tscn` órfão da raiz + levantamento de addons/demos para o backlog | `ai/loop-20260904T*` | verde — 134 testes, 11489 asserções, 0 falhas; rota M2 825‰ |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
