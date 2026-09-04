@@ -1,5 +1,10 @@
 # Direção de arte — Lumen Cartography
 
+> **Verificado em** 2026-09-03 · commit `ab512ef` · autoria de G2, sem execução
+> **Alcance:** documento de intenção. A parte mecanizável dele — só `CLAIMED` revela o fundo,
+> paleta e máscara R8 — vive em `tests/unit/board_view_test.gd`; hierarquia, ritmo e leitura em
+> 240×320 continuam sem verificação automatizada, e ninguém na nuvem consegue ver o jogo.
+
 O G2 usa uma identidade original de **cartografia bioluminescente**: o jogador não
 “pinta” uma chapa sólida; ele estabiliza regiões de um mapa vivo e revela uma paisagem
 cósmica que estava encoberta. A leitura do estado continua imediata mesmo em 240×320.

@@ -68,6 +68,12 @@ tudo falha por razões que não são a sua mudança.
 Nunca escreva "passa", "verde" ou "corrigido" sem ter rodado e lido a saída. Se algo não pôde ser
 verificado, diga qual comando não rodou e por quê.
 
+A mesma regra vale para documento: todo `docs/*.md` declara logo abaixo do H1 **quando** foi
+verificado, **contra qual commit**, **em que ambiente** e com que **alcance** — inclusive o que
+ficou de fora. Documento sem data envelhece em silêncio e vira mentira confiante. Mexeu no doc,
+atualize o cabeçalho; não conseguiu reverificar, diga isso no alcance em vez de mudar a data.
+`tests/unit/doc_freshness_header_test.gd` recusa doc novo sem cabeçalho e ADR sem data.
+
 ## Trabalhando local vs. na nuvem
 
 | | Local (macOS) | Sessão de nuvem |
