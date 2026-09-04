@@ -11,6 +11,20 @@ const TRACK_COLOR := Color("17303a")
 const OBJECTIVE_WIDTH := 50.0
 const SHIELD_WIDTH := 86.0
 
+## Escada de denominações do contador de percentagem, adotada de `hud_area_pct_step`
+## (`reference/volfied/06-gameplay.md §6.3`): o contador fecha primeiro as dezenas de %, depois
+## as unidades, por fim os décimos — por isso uma conquista grande *rola* mais tempo que uma
+## pequena sem que a subida fique arrastada.
+const COUNTER_DECADE_STEP := 100  ## 10,0 %
+const COUNTER_UNIT_STEP := 10     ## 1,0 %
+## Atrasos entre passos, em ticks. No original eram 1 frame ou nenhum porque o contador corria
+## numa pausa dedicada de fim de ronda; aqui ele corre durante o jogo, então estes são os
+## números **deste** jogo: fecham uma conquista típica (~8 %) em ~24 ticks e o campo inteiro em
+## menos de um segundo, tempo bastante para a subida ser lida sem disputar a atenção do campo.
+const COUNTER_DECADE_DELAY := 3
+const COUNTER_UNIT_DELAY := 2
+const COUNTER_TENTH_DELAY := 1
+
 var _round_label: Label
 var _score_label: Label
 var _percent_label: Label
@@ -21,6 +35,8 @@ var _objective_fill: ColorRect
 var _shield_fill: ColorRect
 var _flash_message: String = ""
 var _flash_ticks: int = 0
+var _shown_permille: int = -1
+var _counter_delay: int = 0
 var _built: bool = false
 
 
@@ -78,12 +94,13 @@ func sync(source: Variant, paused: bool, events: Array[GameEvent]) -> void:
 	var target := maxi(1, simulation.rules.target_permille)
 	@warning_ignore("integer_division")
 	var target_percent := target / 10
-	_percent_label.text = "%04.1f/%02d" % [simulation.permille / 10.0, target_percent]
+	_advance_shown_permille(simulation.permille)
+	_percent_label.text = "%04.1f/%02d" % [_shown_permille / 10.0, target_percent]
 	_vitals_label.text = "L×%d  E%02d" % [simulation.lives, _shield_seconds(simulation)]
 	_round_title_label.text = visual.display_name if visual != null else "SETOR ATIVO"
 	_status_label.text = _status_text(simulation, session, paused)
 
-	var objective_ratio := clampf(float(simulation.permille) / float(target), 0.0, 1.0)
+	var objective_ratio := clampf(float(_shown_permille) / float(target), 0.0, 1.0)
 	_objective_fill.size.x = roundf(OBJECTIVE_WIDTH * objective_ratio)
 	var shield_ratio := clampf(float(simulation.shield_ticks) / float(maxi(1, simulation.rules.shield_ticks)), 0.0, 1.0)
 	_shield_fill.size.x = roundf(SHIELD_WIDTH * shield_ratio)
@@ -92,6 +109,30 @@ func sync(source: Variant, paused: bool, events: Array[GameEvent]) -> void:
 	)
 	if _flash_ticks > 0:
 		_flash_ticks -= 1
+
+
+## Aproxima o valor mostrado da percentagem **já confirmada** pelo domínio, um degrau por tick.
+## Só a subida é encenada: a primeira leitura e qualquer regressão (rodada nova, reinício)
+## assentam de imediato, porque um contador a descer devagar mostraria território que o jogador
+## já não tem. O contador nunca ultrapassa nem antecipa o domínio — ele atrasa (invariante 6).
+func _advance_shown_permille(target: int) -> void:
+	if _shown_permille < 0 or target <= _shown_permille:
+		_shown_permille = target
+		_counter_delay = 0
+		return
+	if _counter_delay > 0:
+		_counter_delay -= 1
+		return
+	var gap := target - _shown_permille
+	if gap >= COUNTER_DECADE_STEP:
+		_shown_permille += COUNTER_DECADE_STEP
+		_counter_delay = COUNTER_DECADE_DELAY
+	elif gap >= COUNTER_UNIT_STEP:
+		_shown_permille += COUNTER_UNIT_STEP
+		_counter_delay = COUNTER_UNIT_DELAY
+	else:
+		_shown_permille += 1
+		_counter_delay = COUNTER_TENTH_DELAY
 
 
 func _simulation_from(source: Variant) -> GameSimulation:
