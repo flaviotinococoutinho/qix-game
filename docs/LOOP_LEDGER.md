@@ -57,6 +57,28 @@ Itens sem critério de pronto não entram aqui.
       sobreposição que o git aceita e o teste reprova. → Rodar
       `tools/loop/merge_queue_report.sh --verify 15 <n>` (a ferramenta vive no ramo de #14).
       *Pronto:* os pares de #15 classificados como os de #14.
+### P0 — destrava a fila (nada abaixo importa enquanto isto não sair)
+
+> **Contexto (2026-09-04T17:00Z): 12 PRs abertos, zero mergeados.** O gargalo deixou de ser
+> produzir melhoria e passou a ser integrá-la. Ver a tabela da fila no PR #12, que ainda não
+> mergeou. Enquanto a fila não drenar, prefira verificar/integrar a abrir trabalho novo.
+
+- [x] **Nenhum PR rodava verificação automática.** Consultado em 2026-09-04, o repositório não
+      tinha `.github/` — nenhum dos doze PRs foi verificado por outra coisa senão uma execução do
+      loop rodando Godot à mão. É por isso que a colisão `#8`×`#11` sobreviveu a onze
+      verificações: cada uma olhou um PR contra `main`, e ninguém olhou dois juntos.
+      → **Feito** em `.github/workflows/verificacao.yml` (PR desta execução). O portão rodou sobre
+      o próprio PR que o introduz: `4.7.2.stable.official.ed1daf0bf`, **134 testes / 0 falhas** em
+      3122 ms, rota M2 com `errors: []`, job verde em 37 s. A partir daqui, "verifiquei à mão" e
+      "está verde" deixam de ser a mesma afirmação.
+- [ ] **`tests/unit/game_hud_test.gd` (PR #8) fixa píxeis em vez de derivar da constante.**
+      Confirmado nesta execução lendo os dois heads: `#8` afirma `size.x` literal `6`, `15` e `2`
+      (linhas 43, 52 e 68), derivados de `OBJECTIVE_WIDTH := 50.0`; `#11` alarga a constante para
+      `86.0`. O fill é `roundf(OBJECTIVE_WIDTH * objective_ratio)` nos dois, então nenhuma das
+      mudanças está errada — só o teste está afirmando um número que não é dono de afirmar.
+      → Derivar o esperado de `QixGameHud.OBJECTIVE_WIDTH`. *Pronto:* `#8` e `#11` juntos passam.
+      **Aplicar na branch do próprio `#8`** — um PR separado para isto recria o problema da fila.
+- [ ] **A fila precisa drenar antes de crescer.** *Pronto:* menos de três PRs abertos.
 
 ### P1 — higiene estrutural (barato, destrava o resto)
 
@@ -118,4 +140,5 @@ esquece o que tentou repete o que falhou.
 
 | Data (UTC) | Item | PR | Resultado |
 |---|---|---|---|
+| 2026-09-04 | P0 · portão de verificação headless em GitHub Actions | (este) | verde no runner real (134/0); sonda confirmou que o portão fica vermelho |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |

@@ -73,6 +73,24 @@ $G --path . --editor                       # abre o editor (liga godot-ai e fenn
 $G --path .                                # roda a cena principal
 ```
 
+## O que o portão automático cobre
+
+`.github/workflows/verificacao.yml` roda em todo PR contra `main` (e em todo push a `main`).
+Ele baixa o Godot 4.7.2-stable headless, confere a versão, importa e executa:
+
+| Comando | No portão | Por quê |
+|---|---|---|
+| `--import` | sim | sem ele não há cache de `class_name` e toda falha é falsa |
+| `tests/run_tests.gd` | sim | sai com 1 se houver falha — é o que torna o portão capaz de ficar vermelho |
+| `tools/verify_m2_capture_route.gd` | sim | protege a rota 17,9 → 82,5%, que nenhum teste unitário cobre inteira |
+| `tools/profile_board_view.gd` | não | orçamento de performance depende de GPU real; ver `docs/PERFORMANCE.md` |
+| `tools/build_campaign_content.gd` | não | gera conteúdo versionado; rodar no CI mascararia baseline desatualizado |
+| `tools/shipping/run_shipping_qa.sh` | não | exige SDKs e assinatura; permanece local (`docs/SHIPPING_PASS.md`) |
+
+O portão roda sobre o **merge do PR com a base**, não sobre o head isolado. Essa distinção é o
+ponto: onze PRs verificados um a um contra `main` não viram a regressão que só aparece quando
+dois deles coexistem.
+
 ## Ferramentas MCP observadas na sessão
 
 | Servidor | Versão | Estado no G1 |
