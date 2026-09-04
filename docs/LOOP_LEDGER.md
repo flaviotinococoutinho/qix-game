@@ -175,6 +175,19 @@ números ao dar ao HUD uma grade explícita. Nenhum dos dois PRs pode ver isso s
 6. **HUD, nesta ordem: #9, depois #11, e só então #8 rederivado.** #8 não pode entrar como está:
    o teste dele precisa ler as constantes de grade que #11 introduz em vez de repetir 6 e 15 à mão.
 7. **#12** — só ledger; superseded por esta seção. Fechar ou absorver.
+## Estado da fila — leia antes de escolher um item
+
+> **2026-09-04T21:00Z — todo o backlog abaixo já tem PR aberto. Não abra o 17.º.**
+>
+> Há 16 PRs abertos e zero merges. Cada item de P1, P2 e P3 desta lista está coberto por um deles
+> (#1–#11, #15), mais quatro de infraestrutura do loop (#12, #13, #14, #16). O gargalo deixou de
+> ser "o que fazer a seguir" e passou a ser **integração**.
+>
+> A fila foi medida de ponta a ponta em `docs/loop/2026-09-04-fila-verificada.md`: os 16 PRs
+> combinam-se verdes (174 testes, 0 falhas) com um patch de 4 linhas em
+> `tests/unit/game_hud_test.gd`, e há uma ordem de merge verificada. A próxima execução deve
+> **ajudar a drenar a fila** — aplicar o patch, confirmar a ordem, fechar o que ficou obsoleto —
+> e não acrescentar trabalho novo.
 
 ## Backlog — prioridade decrescente
 
@@ -625,6 +638,7 @@ O item de acessibilidade cromática foi entregue como o critério pedia — *med
 não como correção de paleta. Trocar cor de estado sem ver a tela seria escrever no rosto do jogo
 sem olhar para ele; os três itens que nasceram da medição estão no topo de P3 com o que falta.
 | 2026-09-04 | P3 envelopes de áudio, parte 1: cada cue declara intenção e prioridade; alocação de voz deixa de ser rodízio cego | `ai/loop-20260904T140000Z` | verde — 138 testes, 11555 asserções, 0 falhas; rota M2 byte-idêntica |
+| 2026-09-04 | Mede a fila inteira: ordem de merge verificada e a causa exata de #8 × #11 (`docs/loop/2026-09-04-fila-verificada.md`) | este | verde — 16 PRs combinam com um patch de 4 linhas |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
 
 ### Notas da execução de 2026-09-04T14Z
