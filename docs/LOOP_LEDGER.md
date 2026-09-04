@@ -139,10 +139,31 @@ Itens sem critério de pronto não entram aqui.
 - [ ] **Nenhum `docs/*.md` declara sua data de última verificação.** Documento sem data envelhece
       em silêncio e vira mentira confiante. → Cabeçalho padronizado com data e commit de
       verificação. *Pronto:* todo doc de `docs/` datado.
-- [ ] **Os invariantes do `CLAUDE.md` não têm teste que os defenda.** Um invariante só existe se
-      algo falha quando ele é violado. → Teste que varra `game/simulation`, `game/rules` e
-      `game/session` procurando `randi(`, `randf(`, `RandomNumberGenerator`, `Time.`, `Input.`,
-      `delta`, `Tween`. *Pronto:* teste vermelho ao introduzir a violação de propósito.
+- [ ] **O repositório não tem CI: `.github/workflows/` não existe.** Verificado em 2026-09-04 no
+      PR da guarda de invariantes — os checks do GitHub voltam `total_count: 0`. Consequência: toda
+      guarda deste projeto (a suíte inteira, e agora `domain_purity_test.gd`) só roda quando alguém
+      lembra de rodar. Um invariante defendido apenas na máquina de quem lembra é meio invariante —
+      e o loop de agente, que abre PR atrás de PR, é exatamente quem mais precisa de um verde
+      independente. → Workflow mínimo: baixar Godot 4.7.2 headless Linux, `--import`, `run_tests.gd`
+      e `verify_m2_capture_route.gd`. Atenção a dois fatos já conhecidos: os erros de
+      `libfennara.*.so` são esperados (binário não versionado) e não podem derrubar o job, e o
+      export/QA de shipping **não** roda em Linux. *Pronto:* PR do loop nasce com check verde ou
+      vermelho sem intervenção humana.
+- [ ] **Invariante 1, segunda metade: "só inteiros e ponto fixo 8.8" continua sem guarda.**
+      `tests/unit/domain_purity_test.gd` (histórico, 2026-09-04) cobre a primeira metade — símbolo
+      do mundo real citado no domínio. A varredura **não** procura `float` porque hoje ela ficaria
+      vermelha em código existente e legítimo: `GameSession.transition_progress()`
+      (`game/session/game_session.gd:37-41`) devolve `float` derivado de dois contadores inteiros
+      de tick. Isso não lê o mundo real, mas também não é ponto fixo 8.8 — é uma conveniência de
+      apresentação morando na camada de sessão. → Decidir: mover a conversão para quem apresenta
+      (a view já tem os dois inteiros) e então proibir `float` no domínio, ou declarar a exceção
+      por escrito no `CLAUDE.md`. *Pronto:* ou a regra `float` entra no scanner, ou a exceção está
+      escrita e justificada onde o invariante está enunciado.
+- [ ] **Invariante 6 ("apresentação observa, nunca muta") não tem guarda mecânica.** Mais difícil
+      que o 1 e o 4: não é um símbolo proibido, é uma direção de chamada. → Investigar se uma
+      varredura barata prova algo de útil (ex.: nenhuma view atribui a campo de `BoardState` ou
+      chama `step(`), ou se só um teste de comportamento resolve. *Pronto:* ou a guarda existe, ou
+      está registrado por escrito por que ela não é viável estaticamente.
 - [ ] **Checksum/replay não têm teste de regressão explícito contra mudança estética.** →
       Teste que roda uma rodada, guarda o checksum, e falha se ele mudar sem bump de versão
       declarado. *Pronto:* invariante 8 do `CLAUDE.md` mecanicamente defendido.
@@ -219,3 +240,27 @@ O que ficou provado e não precisa ser reinvestigado:
 - **O critério de pronto do item foi cumprido só em parte, e isso é deliberado.** Buscar por cena
   ainda devolve `addons/**` (101 cenas de vendor, item do PR #2) e `antipixel_state_machine/`
   (3 cenas, agora item próprio no backlog). O que sumiu foi a poluição que não tinha dono.
+| 2026-09-04 | P2 guarda mecânica dos invariantes 1 e 4: `tests/unit/domain_purity_test.gd` | (este) | verde — 138 testes / 11 547 asserções / 0 falhas; vermelho comprovado com violação plantada e revertida |
+| 2026-09-04 | P1 `addons/`: inventário addon → consumidor → destino no export | #2 | aberto por outra execução; não reivindicado aqui |
+| 2026-09-04 | P1 `node_2d.tscn` órfão | #1 | aberto por outra execução; não reivindicado aqui |
+| 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
+
+### Notas de execução — 2026-09-04 (guarda de invariantes)
+
+- **Escolha do item.** Os dois P1 restantes já tinham PR aberto (#1 e #2) e #2 reescreve o item
+  de poda de `samples/`/`guide_examples/` no backlog. Atacar qualquer um deles seria duplicar ou
+  conflitar, então esta execução subiu para o P2 disjunto de ambos.
+- **Por que o scanner limpa comentário e literal antes de casar.** A varredura ingênua sugerida no
+  backlog (`delta`, `Input.`, `Tween` como palavras cruas) acusa código legítimo: `delta` é o
+  **inteiro** de pontuação em `_add_score`, e o cabeçalho de `game_simulation.gd` cita "Input,
+  Tween" justamente para dizer que não os usa. Um teste que grita no código correto é desligado na
+  segunda semana — por isso `_strip_comments_and_strings` existe, e por isso `delta` cru não é
+  regra: quem entra é `_process`/`_physics_process`/`get_process_delta_time`, que é por onde o
+  delta de quadro realmente entraria.
+- **Por que o scanner testa a si mesmo.** Uma guarda estática que erra o caminho ou a regex vira um
+  teste verde permanente que não olha nada — falha silenciosa pior que a ausência do teste. Daí as
+  amostras positivas/negativas e a asserção de que a varredura encontrou arquivos.
+- **Ambiente.** Godot 4.7.2-stable Linux headless (não-mono) baixado no sandbox; `--import` rodado.
+  Os erros de `libfennara.linux.editor.x86_64.so` na saída são pré-existentes e esperados — o
+  binário do GDExtension não é versionado. `tools/profile_board_view.gd` **não** foi executado:
+  nada nesta mudança toca `BoardView`, a máscara R8 ou custo por quadro.

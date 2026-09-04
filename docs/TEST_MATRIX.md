@@ -14,7 +14,10 @@ cd /Users/flaviocoutinho/development/qiqix/qix-game
   --script res://tests/run_tests.gd
 ```
 
-Resultado atual: **134 testes, 11.489 asserções, 0 falhas e nenhum warning do jogo**.
+Resultado atual: **138 testes, 11.547 asserções, 0 falhas e nenhum warning do jogo** —
+medido em **2026-09-04**, Godot **4.7.2-stable.official** (build Linux headless, não-mono), em
+sandbox de nuvem. Os números de shipping acima continuam sendo os do run de macOS de 2026-09-03:
+export e QA de assinatura não rodam na nuvem, então essa evidência **não** foi refeita.
 Além da suíte Godot, os testes Python do parser Metal HUD passaram **10/10**. O subconjunto
 direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 
@@ -38,6 +41,7 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | shipping | ícone quadrado, presets sem segredo, filtros, dispatch pela cena principal, smoke de áudio com marker/watchdog, seleção segura do serial, frame pacing e contratos de framebuffer/Metal HUD |
 | integração | existência, carga, campanha/feedback/touch ligados, camadas obrigatórias da cena principal, permissão Android de vibração e 60 Hz persistidos no projeto |
 | captura de erros | o runner de testes falha por erro de script ocorrido depois de uma asserção, e limpa a janela entre testes |
+| invariantes 1 e 4 | varredura estática de `game/simulation`, `game/rules` e `game/session` por símbolo do mundo real (acaso global, relógio, `Input`, `Tween`, física, `await`, `_process`); o próprio scanner é validado contra amostras positivas e negativas, de modo que ele não pode passar sem olhar |
 
 ## Verificação de engine, gameplay e conteúdo
 
@@ -55,7 +59,8 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | geração autorável | WAL v3 finalizou 16 staged/16 committed; subconjunto direcionado passou 22 testes/353 asserções |
 | perfil isolado do board | R8 p50/p95 1/1 µs em 240 amostras; legado sintético 31.160/32.304 µs; speedup p95 32.304× e 4× menos bytes por refresh |
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
-| log final da suíte | 134 testes, 11.489 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 |
+| guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
+| log final da suíte | 138 testes, 11.547 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 (o parser não foi reexecutado na nuvem) |
 
 ## Matriz do shipping externo
 
