@@ -44,7 +44,10 @@ Itens sem critério de pronto não entram aqui.
       tinha `.github/` — nenhum dos doze PRs foi verificado por outra coisa senão uma execução do
       loop rodando Godot à mão. É por isso que a colisão `#8`×`#11` sobreviveu a onze
       verificações: cada uma olhou um PR contra `main`, e ninguém olhou dois juntos.
-      → **Feito** em `.github/workflows/verificacao.yml` (PR desta execução).
+      → **Feito** em `.github/workflows/verificacao.yml` (PR desta execução). O portão rodou sobre
+      o próprio PR que o introduz: `4.7.2.stable.official.ed1daf0bf`, **134 testes / 0 falhas** em
+      3122 ms, rota M2 com `errors: []`, job verde em 37 s. A partir daqui, "verifiquei à mão" e
+      "está verde" deixam de ser a mesma afirmação.
 - [ ] **`tests/unit/game_hud_test.gd` (PR #8) fixa píxeis em vez de derivar da constante.**
       Confirmado nesta execução lendo os dois heads: `#8` afirma `size.x` literal `6`, `15` e `2`
       (linhas 43, 52 e 68), derivados de `OBJECTIVE_WIDTH := 50.0`; `#11` alarga a constante para
@@ -111,5 +114,5 @@ repete o que falhou.
 
 | Data (UTC) | Item | PR | Resultado |
 |---|---|---|---|
-| 2026-09-04 | P0 · portão de verificação headless em GitHub Actions | (este) | verde; sonda confirmou que o portão fica vermelho |
+| 2026-09-04 | P0 · portão de verificação headless em GitHub Actions | (este) | verde no runner real (134/0); sonda confirmou que o portão fica vermelho |
 | 2026-09-03 | Fundação: repo git válido, `CLAUDE.md`, `reference/volfied/`, este ledger | — (commit inicial) | verde |
