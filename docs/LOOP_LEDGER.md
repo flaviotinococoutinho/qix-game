@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** só a **fila** foi medida nesta passagem (11 PRs abertos: 11/11 limpos um a um,
+> 3/11 limpos em sequência) e o P0 reescrito a partir dessa medição. O restante do backlog
+> herda a reconciliação à mão feita sobre a integração dos 18 PRs (#1–#18) e **não** foi
+> reconferido hoje. Nenhuma mudança de jogo nesta execução; o mérito estético continua sem
+> julgamento — o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,8 +69,34 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **Medido em 2026-09-05T15:01Z (11 PRs abertos): mesclar um a um contra `main` dá 11/11
+      limpos; mesclar em fila dá 3.** #20, #21 e #28 entram nessa ordem sem trabalho manual; os
+      outros 8 conflitam em `docs/LOOP_LEDGER.md` e reordenar não salva. Reproduza com
+      `tools/loop/merge_order_report.sh` — o relatório par a par não enxerga isto, por
+      construção. Detalhe em `docs/loop/runs/2026-09-05T150119Z.md`.
+
+- [ ] **O ledger conflita por construção, não por desacordo.** Causa medida do item acima: todo
+      par de execuções colide em dois pontos deste arquivo — (1) a linha `> **Alcance:**`, que
+      toda execução reescreve para narrar *o próprio* alcance, e (2) a lista do backlog, onde
+      cada execução troca `[ ]` por `[x]` com um parágrafo longo e insere itens vizinhos, o que
+      sobrepõe hunks mesmo entre execuções que trataram de assuntos sem relação. É o mesmo modo
+      de falha que o #14 corrigiu para o histórico (78 conflitos em 78 pares) com um arquivo por
+      execução. A intenção de manter o backlog compartilhado continua certa — duas execuções no
+      mesmo item *devem* se encontrar; o mecanismo é que não a implementa, e o ponto (1) nem
+      sequer é backlog. → Tirar deste arquivo o que é fato por execução (o alcance narrado já
+      vive em `docs/loop/runs/<carimbo>.md`) e avaliar estado por item fora da lista partilhada.
+      **Não aplicar antes da fila drenar:** a mudança conflita com cada um dos 8 PRs que já
+      conflitam. *Pronto:* dois PRs de execuções que tratam de itens diferentes mesclam em
+      sequência sem conflito, medido por `merge_order_report.sh`, sem que o backlog deixe de ser
+      o ponto de encontro de quem disputa o mesmo item.
 
 ### P1 — higiene estrutural
+
+- [ ] **Dois relatórios de fila onde deve haver um.** `merge_order_report.sh` nasceu como arquivo
+      novo porque o #30 estava mexendo em `merge_queue_report.sh`. Depois que o #30 mesclar, a
+      simulação cumulativa vira um modo (`--order`) do relatório existente e o arquivo separado
+      some. *Pronto:* um só script de fila, com o filtro de ancestralidade valendo para os dois
+      modos.
 
 - [ ] **`antipixel_state_machine/` é a última raiz de terceiros não decidida.** 3 cenas, 7
       scripts, 132 KB, e nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou
