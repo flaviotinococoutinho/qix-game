@@ -1,0 +1,91 @@
+# Portão de verificação headless.
+#
+# Existe porque, até 2026-09-04, nenhum PR deste repositório rodava verificação automática:
+# onze PRs foram verificados à mão, cada um contra `main` isoladamente, e mesmo assim a
+# regressão entre os PRs #8 e #11 sobreviveu a todas elas — ninguém rodou dois juntos.
+# Um portão que roda no *merge* do PR com a base é o que transforma "eu rodei aqui" em
+# evidência que o revisor não precisa reproduzir.
+#
+# O que este arquivo NÃO faz: export, QA de shipping e perfil de performance continuam
+# locais (precisam de SDKs, assinatura e GPU real). Ver docs/SHIPPING_PASS.md.
+
+name: Verificação
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Um push novo na mesma branch cancela a execução anterior: fila curta informa mais.
+concurrency:
+  group: verificacao-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Casado com docs/PROJECT_CONTRACT.md. Trocar aqui é trocar o alvo do projeto.
+  GODOT_VERSION: 4.7.2-stable
+
+jobs:
+  suite-headless:
+    # `env` não é um contexto disponível em `jobs.<id>.name`, por isso a versão aparece
+    # literal aqui e como variável no resto do arquivo.
+    name: Suíte headless (Godot 4.7.2-stable)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cacheia o binário do Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Baixa o Godot headless
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot-bin
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -q -o /tmp/godot.zip -d ~/godot-bin
+          chmod +x ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64
+
+      - name: Confirma a versão do Godot
+        run: |
+          set -euo pipefail
+          echo "$HOME/godot-bin" >> "$GITHUB_PATH"
+          GODOT=~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64
+          VERSAO="$("$GODOT" --version | tail -n 1)"
+          echo "godot --version: $VERSAO"
+          # Falha alto e cedo: uma suíte verde na engine errada não prova nada sobre o alvo.
+          case "$VERSAO" in
+            4.7.2.stable.official*) ;;
+            *) echo "::error::esperava 4.7.2.stable.official, obtive '$VERSAO'"; exit 1 ;;
+          esac
+
+      - name: Importa os assets (obrigatório 1× por checkout)
+        # Sem --import não existe cache de `class_name` e tudo falha por razões que não são
+        # a mudança do PR. O erro de `libfennara...so` ausente é esperado na nuvem
+        # (addons/fennara/bin/ não é versionado) e não é sinal de nada.
+        run: |
+          set -euo pipefail
+          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --import
+
+      - name: Suíte de testes
+        run: |
+          set -euo pipefail
+          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 \
+            --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd
+
+      - name: Rota de captura M2 (17,9 → 82,5%)
+        run: |
+          set -euo pipefail
+          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 \
+            --headless --path . --script res://tools/verify_m2_capture_route.gd

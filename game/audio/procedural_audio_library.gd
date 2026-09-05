@@ -6,18 +6,82 @@ const MIX_RATE := 22_050
 const MAX_S16 := 32_767.0
 const MUSIC_BEATS := 8
 
+## Cada cue declara, além da receita de síntese, **o que ele significa** (`intent`) e
+## **quanto ele pesa** (`priority`) quando duas coisas querem soar ao mesmo tempo.
+##
+## A escala de `priority` é a mesma de `QixHapticFeedback._pulse_for_event`: **maior
+## valor = mais importante**. Isso é deliberado — som e háptica descrevem o mesmo
+## acontecimento e não podem discordar sobre qual é o acontecimento do tick. Os cues
+## que já têm pulso háptico usam o número de lá; os que não têm (`trail`,
+## `round_start`) entram abaixo do menor pulso existente, porque são pontuação, não
+## consequência.
+const PRIORITY_IDLE := -1
+
 const CUE_RECIPES := {
-	&"trail": {"hz": 740.0, "end_hz": 920.0, "seconds": 0.055, "gain": 0.19, "wave": 1},
-	&"capture": {"hz": 392.0, "end_hz": 784.0, "seconds": 0.22, "gain": 0.30, "wave": 0},
-	&"reject": {"hz": 180.0, "end_hz": 110.0, "seconds": 0.16, "gain": 0.25, "wave": 2},
-	&"death": {"hz": 130.0, "end_hz": 44.0, "seconds": 0.42, "gain": 0.42, "wave": 2},
-	&"respawn": {"hz": 330.0, "end_hz": 660.0, "seconds": 0.24, "gain": 0.26, "wave": 0},
-	&"shield": {"hz": 880.0, "end_hz": 880.0, "seconds": 0.12, "gain": 0.22, "wave": 1},
-	&"round_start": {"hz": 262.0, "end_hz": 523.0, "seconds": 0.34, "gain": 0.28, "wave": 0},
-	&"round_clear": {"hz": 523.0, "end_hz": 1047.0, "seconds": 0.52, "gain": 0.34, "wave": 0},
-	&"game_over": {"hz": 220.0, "end_hz": 55.0, "seconds": 0.75, "gain": 0.34, "wave": 2},
-	&"campaign_complete": {"hz": 440.0, "end_hz": 1320.0, "seconds": 0.92, "gain": 0.34, "wave": 0},
+	&"trail": {
+		"intent": "pontua que a trilha começou; é o cue mais frequente e o mais barato de perder",
+		"priority": 10,
+		"hz": 740.0, "end_hz": 920.0, "seconds": 0.055, "gain": 0.19, "wave": 1,
+	},
+	&"round_start": {
+		"intent": "abre a rodada; anuncia, não reage",
+		"priority": 20,
+		"hz": 262.0, "end_hz": 523.0, "seconds": 0.34, "gain": 0.28, "wave": 0,
+	},
+	&"respawn": {
+		"intent": "devolve o controle ao jogador depois da morte",
+		"priority": 30,
+		"hz": 330.0, "end_hz": 660.0, "seconds": 0.24, "gain": 0.26, "wave": 0,
+	},
+	&"capture": {
+		"intent": "confirma território conquistado; a recompensa do laço",
+		"priority": 40,
+		"hz": 392.0, "end_hz": 784.0, "seconds": 0.22, "gain": 0.30, "wave": 0,
+	},
+	&"reject": {
+		"intent": "diz que o laço não fechou — erro de leitura, não punição",
+		"priority": 45,
+		"hz": 180.0, "end_hz": 110.0, "seconds": 0.16, "gain": 0.25, "wave": 2,
+	},
+	&"shield": {
+		"intent": "avisa que o escudo entrou no fim; é um relógio, não um impacto",
+		"priority": 50,
+		"hz": 880.0, "end_hz": 880.0, "seconds": 0.12, "gain": 0.22, "wave": 1,
+	},
+	&"round_clear": {
+		"intent": "fecha a rodada; carrega a continuidade para a próxima",
+		"priority": 80,
+		"hz": 523.0, "end_hz": 1047.0, "seconds": 0.52, "gain": 0.34, "wave": 0,
+	},
+	&"campaign_complete": {
+		"intent": "fecha a campanha inteira; o cue mais raro do jogo",
+		"priority": 90,
+		"hz": 440.0, "end_hz": 1320.0, "seconds": 0.92, "gain": 0.34, "wave": 0,
+	},
+	&"game_over": {
+		"intent": "encerra a tentativa; nada depois dele importa mais que ele",
+		"priority": 95,
+		"hz": 220.0, "end_hz": 55.0, "seconds": 0.75, "gain": 0.34, "wave": 2,
+	},
+	&"death": {
+		"intent": "a perda de vida; o acontecimento mais alto da sessão",
+		"priority": 100,
+		"hz": 130.0, "end_hz": 44.0, "seconds": 0.42, "gain": 0.42, "wave": 2,
+	},
 }
+
+
+static func priority_for(cue_name: StringName) -> int:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return int(recipe["priority"])
+
+
+## Quanto tempo o cue ocupa uma voz. O director usa isto para saber o que ainda
+## está a soar sem depender de `AudioStreamPlayer.playing`, que é sempre `false`
+## no runtime headless (ver `QixAudioDirector.runtime_allows_playback`).
+static func duration_msec(cue_name: StringName) -> int:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return maxi(1, int(round(float(recipe["seconds"]) * 1000.0)))
 
 
 static func cue(cue_name: StringName) -> AudioStreamWAV:

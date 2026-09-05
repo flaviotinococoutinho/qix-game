@@ -1,5 +1,10 @@
 # TEST_MATRIX
 
+> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** `tests/run_tests.gd` reexecutado (134 testes, 11.489 asserções, 0 falhas) e
+> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Os
+> testes Python do parser Metal HUD e o run de shipping não foram reexecutados.
+
 Última validação automatizada: **2026-09-03**, Godot
 **4.7.2-stable.mono.official** em macOS. Run de shipping:
 `20260903T065739Z-65912`, `runner_status=complete`, `runner_exit=0`, `overall_exit=0`.
@@ -14,7 +19,14 @@ cd /Users/flaviocoutinho/development/qiqix/qix-game
   --script res://tests/run_tests.gd
 ```
 
+Resultado atual: **138 testes, 11.547 asserções, 0 falhas e nenhum warning do jogo** —
+medido em **2026-09-04**, Godot **4.7.2-stable.official** (build Linux headless, não-mono), em
+sandbox de nuvem. Os números de shipping acima continuam sendo os do run de macOS de 2026-09-03:
+export e QA de assinatura não rodam na nuvem, então essa evidência **não** foi refeita.
 Resultado atual: **134 testes, 11.489 asserções, 0 falhas e nenhum warning do jogo**.
+Reexecução em 2026-09-04 no build Linux headless `4.7.2.stable.official` (sessão de nuvem, sem
+editor e sem `libfennara`): **140 testes, 11.552 asserções, 0 falhas** — os seis testes novos são
+os de exposição da trilha.
 Além da suíte Godot, os testes Python do parser Metal HUD passaram **10/10**. O subconjunto
 direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 
@@ -24,20 +36,26 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 |---|---|
 | `BoardState` | borda inicial, índices, mutações, contagem de área e bytes canônicos |
 | `BoardView` | máscara R8 byte a byte, shader/paleta, revelação exclusiva de `CLAIMED`, reutilização da textura, skip sem mudança, telemetria limitada e ausência de mutação do domínio |
+| exposição da trilha | curva monótona com piso em `new_segment_slow_px` e teto geométrico, guarda contra campo degenerado, projeção do uniforme `trail_exposure` no shader, nome do aviso no HUD e checksum idêntico ao de um universo sem `sync` |
 | RNG | sequência determinística e limites |
 | captura | corte cardinal, lado protegido pelo anchor, consolidação da trilha e rejeição pura de auto-interseção |
 | simulação | capturas sucessivas até mais de 80%, pontuação, percentual, arbitragem captura×contato nos dois modos, morte, rollback da trilha, reentrada, game over, vitória e bônus |
 | sessão | intro/clear temporizados, confirmação sem intent, simulação congelada após vitória, carry de score/vidas, board/replay novos, conclusão e reinício da campanha |
 | replay | reprodução determinística, checksum, round-trip binário e rejeição atômica de versão/seed/regras/geometria/estado inicial incompatíveis |
+| checksum dourado | valores literais fixados para `RULES_VERSION`, `SCHEMA_VERSION`, seed e `config_hash` das três rodadas de produção, e para o checksum inicial/final/serializado de uma rota de 177 ticks com o chefe ativo — falha quando o contrato de replay se move, verde quando só a apresentação muda (invariantes 7 e 8) |
 | entrada | teclado/InputMap, direção única/sobreposição, D-pad, stick com histerese, A/X/Start, estado independente por gamepad, deduplicação InputMap×raw de A/Start, multitouch, disconnect/reset e equivalência canônica gamepad×touch |
-| feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum |
+| feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum; intenção e prioridade declaradas por cue, escada de prioridade do som igual à da háptica, e alocação de voz que recusa cortar um cue mais importante |
 | boss | validação dos perfis WANDER/PURSUIT/SWEEP, octantes inteiros, jitter determinístico, reflexão, pulso de velocidade, limites seguros, hash de regras e replay incompatível rejeitado antes da mutação |
 | conteúdo | três rodadas ordenadas, IDs/seeds únicos, referências externas separadas, fundos 225×283 aprovados, alvo 80%, curva crescente e três perfis externos de boss |
 | geração transacional | shadow staging, lock exclusivo por projeto via loopback, WAL v3 ancorado ao SHA do manifest, hashes/tamanhos de payload/backup, state machine integral, targets terminais, rollback/cache e recovery após interrupção/processo morto |
 | apresentação | HUD de campanha, progresso até alvo, intro/clear/game over/campanha/pausa, VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
+| contraste cromático | luminância WCAG contra referências conhecidas, matrizes de dicromacia colapsando o eixo correto, swatches iguais às modulações do shader, catraca de regressão por par e dívida documentada coerente com a paleta autorada |
+| apresentação | HUD de campanha, progresso até alvo, contador de percentagem encenado em degraus (escada de denominações, teto e piso de duração, regressão instantânea), intro/clear/game over/campanha/pausa, VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
+| apresentação | HUD de campanha, progresso até alvo, intro/clear/game over/campanha/pausa, continuidade de score/vidas entre setores (carry-in na intro, ganho do setor no clear, setores estabilizados nas fases terminais, prompt herdando o acento do próximo setor), VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
 | shipping | ícone quadrado, presets sem segredo, filtros, dispatch pela cena principal, smoke de áudio com marker/watchdog, seleção segura do serial, frame pacing e contratos de framebuffer/Metal HUD |
 | integração | existência, carga, campanha/feedback/touch ligados, camadas obrigatórias da cena principal, permissão Android de vibração e 60 Hz persistidos no projeto |
 | captura de erros | o runner de testes falha por erro de script ocorrido depois de uma asserção, e limpa a janela entre testes |
+| invariantes 1 e 4 | varredura estática de `game/simulation`, `game/rules` e `game/session` por símbolo do mundo real (acaso global, relógio, `Input`, `Tween`, física, `await`, `_process`); o próprio scanner é validado contra amostras positivas e negativas, de modo que ele não pode passar sem olhar |
 
 ## Verificação de engine, gameplay e conteúdo
 
@@ -55,7 +73,10 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | geração autorável | WAL v3 finalizou 16 staged/16 committed; subconjunto direcionado passou 22 testes/353 asserções |
 | perfil isolado do board | R8 p50/p95 1/1 µs em 240 amostras; legado sintético 31.160/32.304 µs; speedup p95 32.304× e 4× menos bytes por refresh |
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
-| log final da suíte | 134 testes, 11.489 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 |
+| guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
+| log final da suíte | 138 testes, 11.547 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 (o parser não foi reexecutado na nuvem) |
+| log final da suíte | 138 testes, 11.515 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 |
+| guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo
 

@@ -58,6 +58,7 @@ $G --headless --path . --import                                        # 1× por
 $G --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd
 $G --headless --path . --script res://tools/verify_m2_capture_route.gd  # rota 17,9→82,5%
 $G --headless --path . --script res://tools/profile_board_view.gd       # perfil CPU/R8
+$G --headless --path . --script res://tools/verify_palette_contrast.gd  # contraste por estado
 $G --headless --path . --script res://tools/build_campaign_content.gd   # conteúdo transacional
 tools/shipping/run_shipping_qa.sh                                       # exports + probes (macOS)
 ```
@@ -67,6 +68,12 @@ tudo falha por razões que não são a sua mudança.
 
 Nunca escreva "passa", "verde" ou "corrigido" sem ter rodado e lido a saída. Se algo não pôde ser
 verificado, diga qual comando não rodou e por quê.
+
+A mesma regra vale para documento: todo `docs/*.md` declara logo abaixo do H1 **quando** foi
+verificado, **contra qual commit**, **em que ambiente** e com que **alcance** — inclusive o que
+ficou de fora. Documento sem data envelhece em silêncio e vira mentira confiante. Mexeu no doc,
+atualize o cabeçalho; não conseguiu reverificar, diga isso no alcance em vez de mudar a data.
+`tests/unit/doc_freshness_header_test.gd` recusa doc novo sem cabeçalho e ADR sem data.
 
 ## Trabalhando local vs. na nuvem
 

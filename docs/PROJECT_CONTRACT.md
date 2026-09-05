@@ -1,5 +1,10 @@
 # PROJECT_CONTRACT — QIX GAME (vertical slice)
 
+> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** engine, viewport, renderer e tick conferidos em `project.godot`; arquivos da
+> tabela de ownership conferidos por existência. Alvos, tamanhos de export e estado do
+> ferramental MCP seguem do run macOS de 2026-09-03 e não foram reexecutados.
+
 Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; título público ainda não definido.
 
 ## Engine e stack
@@ -31,6 +36,28 @@ Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; 
 - `reference_root`: `/Users/flaviocoutinho/development/qiqix` (`docs/00..08`, `docs/ACHADOS_ANOTACAO.md`, `reference/mame/`)
 - Não há `project.godot` nem `.git` em `reference_root`; nada ali é modificado por este projeto.
 
+### Raízes de terceiros
+
+A raiz do repositório hospeda diretórios que **não são do jogo**. A regra é: código de vendor que
+o runtime carrega fica versionado; material de estudo que só acompanha o vendor, não.
+
+| Diretório | O que é | Decisão |
+|---|---|---|
+| `addons/` | código de vendor; parte do runtime ou do ferramental de editor | versionado; inventário por addon é item aberto do loop |
+| `guide_examples/` | projeto-exemplo do addon GUIDE (32 cenas, 55 scripts) | **removido** do versionamento; ignorado |
+| `samples/` | projeto-exemplo do addon softbody2d (6 cenas, 6 scripts) | **removido** do versionamento; ignorado |
+| `antipixel_state_machine/` | máquina de estados de vendor na raiz (3 cenas, 7 scripts) | mantido por ora; nenhum arquivo do jogo o referencia — decisão pendente no loop |
+
+Os dois removidos eram demos: nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou
+`content/` os referenciava, e os cinco `uid://` que compartilhavam com `addons/` são **de posse dos
+addons** — a dependência apontava dos demos para o addon, nunca ao contrário. Custavam 38 das 43
+cenas do repositório e um `class_name` de vendor (`LaserProjectile`) no namespace global.
+
+Os `exclude_filter` de `export_presets.cfg` continuam listando `guide_examples/**` e `samples/**`,
+e `tests/integration/shipping_export_test.gd` continua exigindo isso. É defesa deliberada: um
+checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e o filtro garante que elas
+não entrem no payload mesmo assim. Filtro e `.gitignore` cobrem caminhos diferentes do mesmo risco.
+
 ## Ownership
 
 | Camada | Proprietário | Regra |
@@ -42,6 +69,7 @@ Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; 
 | Captura | `FloodFillCaptureResolver` | puro; devolve `CapturePlan` ou `CaptureError`; não muta nada |
 | Acaso | `DeterministicRng` | xorshift32 com seed explícita; único ponto de aleatoriedade |
 | Apresentação | `BoardView`, `PlayerView`, `EnemyView`, HUD, transição e VFX | observa snapshots/eventos confirmados; não muta a simulação |
+| Leitura de risco | `TrailExposure` (`game/board/trail_exposure.gd`) | funções puras de apresentação; traduzem o comprimento da trilha confirmada num escalar 0..1 consumido por `BoardView` e pelo HUD; nenhum valor volta ao domínio nem entra em hash |
 | Revelação | `BoardView` + shader R8 | `BoardState.cells` alimenta a máscara; somente `CLAIMED` revela o fundo |
 | Composição | `app/bootstrap.gd` | composition root; injeta campanha e dirige a sessão |
 | Entrada de dispositivo | `GameInputAdapter` + `QixTouchControls` | estado cru por gamepad, dedup InputMap/evento, teclado/touch agregados; entrega somente `MoveIntent` ao domínio |
@@ -58,6 +86,46 @@ runner `20260903T065739Z-65912` provaram que esse payload inicia sem referência
 distribuição real, a presença do helper Godot AI deve ser uma decisão explícita: removê-lo por
 completo ou mantê-lo junto de todo o fechamento necessário.
 
+## Addons — quem é jogo, quem é ferramenta
+
+Inventário verificado em **2026-09-04** contra o checkout de `main` em `74c173a`. Existe porque
+nove pastas em `addons/` não dizem, por si, quais participam do jogo: sem esta tabela, cada leitor
+refaz a mesma investigação e alguns concluem errado.
+
+| Addon | Versão | Habilitado em `[editor_plugins]` | Consumido pelo jogo | Destino no export |
+|---|---|---|---|---|
+| `godot_ai` | 3.2.4 | **sim** (único) | autoload `_mcp_game_helper` | `runtime/` embarca; `clients/`, `custom_tools/`, `debugger/`, `dock_panels/`, `export/`, `handlers/`, `testing/` excluídos |
+| `fennara` | 0.4.2 | não é plugin de editor — é `GDExtension` com bibliotecas `*.editor.*` | autoload `_fennara_game_capture` | `runtime/` embarca; `ai/`, `bin/`, `dist/` e o `.gdextension` excluídos |
+| `guide` (G.U.I.D.E) | 0.14.0 | não | **nenhum** | excluído em bloco |
+| `curved_lines_2d` (Scalable Vector Shapes 2D) | 2.33.3 | não | **nenhum** | excluído em bloco |
+| `phantom_camera` | 0.11.0.3 | não | **nenhum** | excluído em bloco |
+| `GDDraw` | 0.2.0 | não | **nenhum** | excluído em bloco |
+| `softbody2d` | 1.7.1 | não | **nenhum** | excluído em bloco |
+| `curve2collision` | 1.0.0 | não | **nenhum** | excluído em bloco |
+| `yard` | 1.2.0 | não | **nenhum** | excluído em bloco |
+
+Como "nenhum" foi verificado — dois testes independentes sobre `app/`, `game/`, `ui/`, `tools/`,
+`tests/`, `content/` e `assets/`:
+
+1. Nenhuma dessas árvores contém a string `res://addons/`.
+2. Dos 174 `class_name` declarados pelos nove addons, **nenhum** aparece como palavra nessas
+   árvores. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot`, não o
+   G.U.I.D.E.; a câmera é fixa em 240×320, não `phantom_camera`.
+
+Três pastas de terceiros vivem **fora** de `addons/` e também não têm consumidor: `samples/`
+(demos do `softbody2d`), `guide_examples/` (demos do `guide`) e `antipixel_state_machine/`.
+
+Consequência prática para quem lê o repositório: das **145** cenas do checkout, apenas **2** são
+do jogo — `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn`. Uma é a cena órfã da raiz, e as
+outras **142** são de terceiros: 101 em `addons/`, 32 em `guide_examples/`, 6 em `samples/` e 3 em
+`antipixel_state_machine/`. Procurar uma cena do jogo pelo nome é, hoje, uma operação com 98 % de
+ruído — é isso que o item de poda no `docs/LOOP_LEDGER.md` ataca.
+
+O que esta tabela **não** decide: se os sete addons dormentes devem ser removidos. Eles já não
+entram no payload (os `exclude_filter` de ambos os presets em `export_presets.cfg` listam os sete
+por nome), então o custo deles é de leitura e de busca, não de bytes entregues ao jogador. A
+remoção é uma decisão separada, com o seu próprio item no ledger.
+
 ## Comandos reais
 
 ```bash
@@ -68,10 +136,29 @@ $G --headless --path . --import            # obrigatório 1× por checkout (cach
 $G --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd # testes puros + integração
 $G --headless --path . --script res://tools/build_campaign_content.gd          # baseline transacional
 $G --headless --path . --script res://tools/profile_board_view.gd              # perfil CPU/R8
+$G --headless --path . --script res://tools/verify_palette_contrast.gd         # contraste por estado
 tools/shipping/run_shipping_qa.sh                                               # exports + probes
 $G --path . --editor                       # abre o editor (liga godot-ai e fennara)
 $G --path .                                # roda a cena principal
 ```
+
+## O que o portão automático cobre
+
+`.github/workflows/verificacao.yml` roda em todo PR contra `main` (e em todo push a `main`).
+Ele baixa o Godot 4.7.2-stable headless, confere a versão, importa e executa:
+
+| Comando | No portão | Por quê |
+|---|---|---|
+| `--import` | sim | sem ele não há cache de `class_name` e toda falha é falsa |
+| `tests/run_tests.gd` | sim | sai com 1 se houver falha — é o que torna o portão capaz de ficar vermelho |
+| `tools/verify_m2_capture_route.gd` | sim | protege a rota 17,9 → 82,5%, que nenhum teste unitário cobre inteira |
+| `tools/profile_board_view.gd` | não | orçamento de performance depende de GPU real; ver `docs/PERFORMANCE.md` |
+| `tools/build_campaign_content.gd` | não | gera conteúdo versionado; rodar no CI mascararia baseline desatualizado |
+| `tools/shipping/run_shipping_qa.sh` | não | exige SDKs e assinatura; permanece local (`docs/SHIPPING_PASS.md`) |
+
+O portão roda sobre o **merge do PR com a base**, não sobre o head isolado. Essa distinção é o
+ponto: onze PRs verificados um a um contra `main` não viram a regressão que só aparece quando
+dois deles coexistem.
 
 ## Ferramentas MCP observadas na sessão
 

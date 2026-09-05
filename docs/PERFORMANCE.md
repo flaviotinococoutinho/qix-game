@@ -1,5 +1,10 @@
 # Performance do board e probes de shipping
 
+> **Verificado em** 2026-09-03 · commit `ab512ef` · Godot 4.7.2-stable.mono, macOS/Apple M2
+> **Alcance:** números medidos na máquina local. Nada aqui foi remedido depois: frame pacing e
+> GPU dependem de hardware que a sessão de nuvem não tem, e um microbenchmark rodado em outra
+> máquina não substituiria estes valores — substituiria a pergunta.
+
 Medição final local em 2026-09-03, Godot 4.7.2-stable Mono, macOS/Apple M2. O
 microbenchmark do board é headless; frame pacing e GPU vêm do bundle macOS arm64 exportado no
 run `20260903T065739Z-65912` (`runner_status=complete`, `runner_exit=0`,

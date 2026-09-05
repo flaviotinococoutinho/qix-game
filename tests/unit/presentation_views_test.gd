@@ -16,7 +16,11 @@ func test_hud_reads_session_round_identity_and_target_progress() -> void:
 	eq((hud.get_node("Percent") as Label).text, "40.0/80")
 	eq((hud.get_node("RoundTitle") as Label).text, "ABYSSAL RELAY")
 	eq((hud.get_node("Vitals") as Label).text, "L×2  E05")
-	eq(int((hud.get_node("ObjectiveFill") as ColorRect).size.x), 25)
+	# 400‰ rumo a um alvo de 800‰ é exatamente meio trilho — o que se afirma é a proporção,
+	# não a largura da banda, que é decisão de layout e pode mudar sem quebrar isto.
+	eq(
+		int((hud.get_node("ObjectiveFill") as ColorRect).size.x),
+		int(roundf(QixGameHud.OBJECTIVE_WIDTH * 0.5)))
 	eq(session.simulation.state_checksum(), before, "a apresentação não altera a simulação")
 	hud.free()
 
@@ -65,6 +69,80 @@ func test_transition_overlay_covers_pause_game_over_and_campaign_complete() -> v
 	view.sync(session)
 	eq((view.get_node("Panel/Title") as Label).text, "CAMPANHA CONCLUÍDA")
 	eq(int((view.get_node("Panel/ProgressFill") as ColorRect).size.x), 160)
+	view.free()
+
+
+## A barra de qualidade de `docs/ART_DIRECTION.md` exige "continuidade clara de score/vidas"
+## na troca de rodada. O carry-in existe no domínio (`RoundStartState`) desde sempre; este teste
+## garante que ele também exista na tela, e que a passagem aponte para o setor seguinte.
+func test_transition_overlay_carries_score_and_lives_across_sectors() -> void:
+	var campaign := _campaign(10, 20)
+	campaign.rounds[0].visual.accent_color = Color("50e3c2")
+	campaign.rounds[1].visual.accent_color = Color("ffb454")
+	var session := GameSession.new(campaign)
+	var view := QixRoundTransitionView.new()
+	view._ready()
+	var before := session.simulation.state_checksum()
+
+	# Setor 1: não há o que trazer, e a linha diz isso em vez de mentir um zero.
+	view.sync(session, false, [])
+	eq((view.get_node("Panel/Continuity") as Label).text, "INCURSÃO NOVA  ·  L×3")
+
+	# O setor rendeu 900 e custou uma vida.
+	session.simulation.score = 900
+	session.simulation.lives = 2
+	session.phase = GameSession.Phase.ROUND_CLEAR
+	view.sync(session, false, [])
+	eq((view.get_node("Panel/Continuity") as Label).text, "+000900  ·  S 000900  ·  L×2")
+	eq((view.get_node("Panel/Prompt") as Label).text, "ENTER  ·  AURORA FOUNDRY")
+	eq(
+		(view.get_node("Panel/Prompt") as Label).get_theme_color("font_color"),
+		Color("ffb454"),
+		"o prompt herda o acento do próximo setor: a paleta vira na passagem",
+	)
+
+	# Confirmar avança pela via real da sessão, que é quem monta o RoundStartState do setor 2.
+	session.step(MoveIntent.none(), true)
+	eq(session.round_index, 1)
+	eq(session.phase, GameSession.Phase.ROUND_INTRO)
+	view.sync(session, false, [])
+	eq((view.get_node("Panel/Continuity") as Label).text, "TRAZIDO  S 000900  ·  L×2")
+	eq((view.get_node("Panel/Title") as Label).text, "AURORA FOUNDRY")
+
+	eq(
+		GameSession.new(_campaign(10, 20)).simulation.state_checksum(),
+		before,
+		"a leitura da transição não altera o checksum inicial de uma rodada equivalente",
+	)
+	view.free()
+
+
+func test_transition_overlay_reports_sectors_cleared_on_terminal_phases() -> void:
+	var session := GameSession.new(_campaign(0, 0))
+	var view := QixRoundTransitionView.new()
+	view._ready()
+
+	session.phase = GameSession.Phase.GAME_OVER
+	view.sync(session, false, [])
+	eq(
+		(view.get_node("Panel/Continuity") as Label).text,
+		"SETORES ESTABILIZADOS  00 / 02",
+		"morrer no primeiro setor não pode exibir progresso que não houve",
+	)
+
+	session.phase = GameSession.Phase.CAMPAIGN_COMPLETE
+	view.sync(session, false, [])
+	eq((view.get_node("Panel/Continuity") as Label).text, "SETORES ESTABILIZADOS  00 / 02")
+
+	session.simulation.score = 4200
+	session.simulation.lives = 1
+	session.phase = GameSession.Phase.PLAYING
+	view.sync(session, true, [])
+	eq(
+		(view.get_node("Panel/Continuity") as Label).text,
+		"S 004200  ·  L×1",
+		"a pausa mostra o estado corrente em vez de herdar texto da fase anterior",
+	)
 	view.free()
 
 

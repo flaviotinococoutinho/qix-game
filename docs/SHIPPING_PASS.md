@@ -1,5 +1,10 @@
 # SHIPPING_PASS — candidato de QA validado
 
+> **Verificado em** 2026-09-03 · commit `ab512ef` · Godot 4.7.2-stable.mono, macOS arm64 + Android
+> **Alcance:** run canônico `20260903T065739Z-65912`. Não reexecutado desde então: exports,
+> assinatura e emulador exigem SDKs e credenciais que não existem na sessão de nuvem. Qualquer
+> mudança em conteúdo, presets ou payload invalida este gate até um novo run local.
+
 Atualizado em 2026-09-03 para Godot 4.7.2-stable Mono, macOS arm64 e Android
 arm64. O run canônico `20260903T065739Z-65912` terminou com
 `runner_status=complete`, `runner_exit=0` e `overall_exit=0`.

@@ -23,6 +23,16 @@ build/
 # PDF do vendor do antipixel_state_machine: consultar na origem, não versionar.
 State Machine Antipixel Godot Documentation.pdf
 
+# ── Demos de addons de terceiros ─────────────────────────────────────────────
+# Projetos-exemplo que acompanham os addons GUIDE e softbody2d (~6 MB, 38 cenas).
+# Nada no jogo os referencia — a dependência aponta só para dentro de addons/ —
+# e os presets já os excluíam do export. Versionados, eram 38 das 43 cenas do
+# repositório: toda busca por cena do jogo devolvia demo de vendor. Um deles
+# ainda registrava `class_name LaserProjectile` no namespace global do projeto.
+# Consultar na origem do addon, não aqui. Ver docs/PROJECT_CONTRACT.md § Raízes.
+guide_examples/
+samples/
+
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
