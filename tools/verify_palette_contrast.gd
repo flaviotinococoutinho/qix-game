@@ -13,9 +13,19 @@ const CAMPAIGN_PATH := "res://content/campaigns/main_campaign.tres"
 func _initialize() -> void:
 	var failures := PackedStringArray()
 	var below_target := 0
-	for entry in _palettes():
+	var palettes := _palettes()
+	for entry in palettes:
 		var measurement: Dictionary = PaletteContrast.measure(entry["visual"])
-		_print_measurement(entry["label"], measurement)
+		_print_measurement("%s — campo" % entry["label"], measurement)
+		below_target += measurement["below_target"].size()
+		for regression in PaletteContrast.regressions(measurement):
+			failures.append("%s — %s" % [entry["label"], regression])
+
+	# O cursor sai numa tabela própria porque é outra pergunta: "onde está a borda" é uma leitura
+	# do campo, "onde eu estou" é uma leitura da silhueta contra o chão em que ela pousa.
+	for entry in palettes:
+		var measurement: Dictionary = PaletteContrast.measure_cursor(entry["visual"])
+		_print_measurement("%s — cursor sobre o chão" % entry["label"], measurement)
 		below_target += measurement["below_target"].size()
 		for regression in PaletteContrast.regressions(measurement):
 			failures.append("%s — %s" % [entry["label"], regression])
@@ -51,10 +61,10 @@ func _palettes() -> Array[Dictionary]:
 func _print_measurement(label: String, measurement: Dictionary) -> void:
 	print("")
 	print("== %s ==" % label)
-	print("  par                  pior  visão          tri   pro   deu   tri3  cromía  meta")
+	print("  par                        pior  visão          tri   pro   deu   tri3  cromía  meta")
 	for entry in measurement["pairs"]:
 		var by_vision: Dictionary = entry["by_vision"]
-		print("  %-18s %6.2f  %-13s %5.2f %5.2f %5.2f %5.2f  %5.0f%%  %s" % [
+		print("  %-24s %6.2f  %-13s %5.2f %5.2f %5.2f %5.2f  %5.0f%%  %s" % [
 			entry["pair"],
 			entry["worst_ratio"],
 			entry["worst_vision"],

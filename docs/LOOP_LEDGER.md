@@ -132,10 +132,25 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       Hoje o losango do chefe carrega sozinho a leitura. *Pronto:* ou o par sobe de 3:1, ou está
       escrito qual canal não cromático (contorno escuro, halo, cadência) garante a leitura, com
       teste que o defenda.
-- [ ] **O contorno do jogador é a mesma cor do chão em que ele anda.** `QixPlayerView` usa
-      `visual.boundary_color` como `_outer`; parado sobre `BOUNDARY`, a silhueta só se separa pelo
-      núcleo e pelo halo de `accent_color`. Achado colateral de #7, ainda não quantificado.
-      *Pronto:* contraste jogador × chão medido em `BOUNDARY` e em `FREE`, e decisão registrada.
+- [x] **O contorno do jogador é a mesma cor do chão em que ele anda.** Medido em 2026-09-05: a
+      suposição era otimista. Sobre `BOUNDARY` **nenhuma** camada opaca do cursor separa por
+      luminância em nenhuma paleta — contorno 1,00:1 (é a própria cor do chão, por construção),
+      acento 1,12–1,65:1 e **núcleo 1,04–1,12:1**. Não era só o contorno: o núcleo, que existe para
+      dar “centro inequívoco”, também some. Sobre `FREE` as três camadas passam com folga
+      (5,4:1 no pior caso), o que restringe o conserto — ver o item novo abaixo. Medição, catraca e
+      decisão em `docs/ART_DIRECTION.md` (“Contraste do cursor contra o chão”),
+      `PaletteContrast.CURSOR_FLOOR` e `tests/unit/cursor_contrast_test.gd`.
+- [ ] **Escolher de onde o cursor tira sua cor.** Nasceu da medição acima. Hoje `QixPlayerView.sync`
+      empresta as três camadas da paleta do campo (`boundary_color`, `accent_color`,
+      `trail_hot_color`), e é isso que trava `CURSOR_OUTER`×`BOUNDARY` em 1,00:1 para qualquer
+      paleta que alguém autore. A restrição medida: a candidata precisa subir os três
+      `CURSOR_*`×`BOUNDARY` acima de 3:1 **sem** derrubar os `CURSOR_*`×`FREE`, e os dois chãos
+      estão em extremos opostos da luminância — ou a cor fica no meio, ou a silhueta ganha uma
+      borda escura própria, que não venha da paleta do campo. Escolher entre as duas é decisão
+      estética e **pede olho humano na tela**; uma sessão headless mede a candidata, não a aprova.
+      *Pronto:* os três pares acima de 3:1 nas quatro paletas, com `CURSOR_FLOOR`,
+      `CURSOR_KNOWN_DEBT` e a seção de `ART_DIRECTION` reescritos no mesmo commit, e alguém
+      confirmou por captura que o cursor não virou um borrão claro sobre o campo.
 - [ ] **Forma do envelope por intenção.** Metade do item de envelopes ficou fora de #10:
       `QixProceduralAudioLibrary._attack_release` é **o mesmo envelope para os dez cues**, com
       attack e release proporcionais à duração. Consequência medível: `death` (0,42 s) só atinge
