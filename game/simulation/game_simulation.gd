@@ -6,8 +6,9 @@ extends RefCounted
 ## (`PlayerMotion`, `BossMotion`, `BossBehaviorController`, `FloodFillCaptureResolver`).
 ##
 ## Ordem do tick (prompt mestre, "Ordem do tick e determinismo"):
-##  1. canonicaliza o intent (trilha ativa força draw);
-##  2. subpassos do jogador: escreve trilha e testa contato contra o estado atual;
+##  1. canonicaliza o intent (trilha ativa força draw; fallback só vale se diferir do primário);
+##  2. subpassos do jogador: primário, ou fallback se o primário bloqueou; escreve trilha e
+##     testa contato contra o estado atual;
 ##  3. fechamento → CapturePlan, TRAIL fica ativa até a arbitragem;
 ##  4. inimigos em ordem estável (só o chefe no corte), testando todos os segmentos varridos;
 ##  5. arbitragem: LETHAL_CONTACT_WINS escolhe contato; caso contrário, captura válida vence;
@@ -184,10 +185,15 @@ func step(raw_intent: MoveIntent) -> Array[GameEvent]:
 		tick += 1
 		return events
 
-	# 1. canonicalizar
-	var intent := MoveIntent.make(raw_intent.direction, raw_intent.drawing or player.trail_active)
-	if intent.direction < MoveIntent.Dir.NONE or intent.direction > MoveIntent.Dir.LEFT:
+	# 1. canonicalizar (trilha ativa força draw; fallback igual ao primário não é fallback)
+	var intent := MoveIntent.make(
+		raw_intent.direction, raw_intent.drawing or player.trail_active, raw_intent.fallback
+	)
+	if not MoveIntent.is_valid_dir(intent.direction):
 		intent.direction = MoveIntent.Dir.NONE
+	if not MoveIntent.is_valid_dir(intent.fallback) or intent.fallback == intent.direction:
+		intent.fallback = MoveIntent.Dir.NONE
+	var fallback_intent := MoveIntent.make(intent.fallback, intent.drawing)
 
 	# 2/3. jogador
 	var lethal := false
@@ -196,6 +202,9 @@ func step(raw_intent: MoveIntent) -> Array[GameEvent]:
 	var substeps := _player_substeps()
 	for _s in substeps:
 		var result := PlayerMotion.substep(player, board, rules, intent, ledger, events)
+		if result == PlayerMotion.StepResult.BLOCKED and intent.fallback != MoveIntent.Dir.NONE:
+			# Buffer de curva: a curva pedida ainda não é legal, então a direção segurada continua.
+			result = PlayerMotion.substep(player, board, rules, fallback_intent, ledger, events)
 		if BossMotion.touches_player(boss, board, player):
 			lethal = true
 		if result == PlayerMotion.StepResult.CLOSED:

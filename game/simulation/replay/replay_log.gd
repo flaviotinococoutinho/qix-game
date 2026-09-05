@@ -2,7 +2,7 @@ class_name ReplayLog
 extends RefCounted
 ## Registro determinístico: cabeçalho + um intent por tick. Formato canônico binário, LE.
 ##  "QIXR" | u32 schema | u32 rules_version | u32 seed | 32 B round_hash | 32 B initial_checksum
-##  | u32 n | n bytes de intents (MoveIntent.to_byte)
+##  | u32 n | n bytes de intents (MoveIntent.to_byte: bits 0-2 direção, 3 draw, 4-6 fallback)
 ## Compatibilidade de replay: mesma schema + rules_version + round_hash. PRNG fixo (xorshift32).
 
 const MAGIC := "QIXR"
