@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** a reconciliação item a item do backlog é a de 2026-09-04 sobre `33c81e6` (integração
+> dos 18 PRs do loop, #1–#18) e **não** foi refeita aqui. O que esta data cobre é a medição em
+> `cba520a`, com o #19 já mesclado — 174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com
+> `errors: []` — e a reconferência de um único item, o da cobertura dourada por perfil de boss.
+> O mérito estético de cada mudança **não** foi julgado: o jogo não pode ser jogado nem visto num
+> sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -103,11 +105,14 @@ Itens sem critério de pronto não entram aqui.
       varredura barata prova algo útil (ex.: nenhuma view atribui a campo de `BoardState` ou chama
       `step(`), ou se só um teste de comportamento resolve. *Pronto:* ou a guarda existe, ou está
       registrado por escrito por que ela não é viável estaticamente.
-- [ ] **Cobertura dourada só alcança a rodada 1.** `replay_checksum_golden_test.gd` (#5) fixa o
-      `config_hash` das três rodadas, mas roda uma única rota (177 ticks, uma captura) na rodada 1.
-      R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
-      literal cobre. *Pronto:* cada perfil de boss de produção tem ao menos um checksum final
-      fixado, ou uma nota dizendo por que não precisa.
+- [x] **Cobertura dourada só alcança a rodada 1.** Fechado em `docs/loop/runs/2026-09-05T080204Z.md`:
+      os três perfis (WANDER, PURSUIT, SWEEP) ganharam checksum final fixado, medido sobre uma volta
+      de 506 ticks pelo perímetro com as regras de produção intactas. O buraco foi **demonstrado por
+      mutação**, não presumido: inverter o sinal do jitter de PURSUIT em
+      `boss_behavior_controller.gd` deixava os 174 testes anteriores verdes. Fica registrado o que a
+      medição ensinou — `boss_campaign_balance_test.gd` compara cada perfil consigo mesmo e por isso
+      acompanha qualquer deriva em silêncio; o `config_hash` pega edição de `.tres`, mas não pega
+      mudança de comportamento em código.
 - [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
       `phase = ROUND_CLEAR` num teste não arquiva a rodada — correto, mas não óbvio: custou uma
       asserção errada na execução de 19:00Z. Qualquer apresentação que conte rodadas depende disso.

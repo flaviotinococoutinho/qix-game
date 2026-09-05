@@ -55,6 +55,56 @@ const ROUTE := [
 	[MoveIntent.Dir.DOWN, true, 141],
 ]
 
+## Volta completa pelo perímetro, igual nas três rodadas (a geometria de produção é 225×283 nas
+## três). O jogador parte de (112,0), passa pelos quatro cantos e **fecha exatamente onde começou**
+## — nenhum trecho é bloqueado, nenhuma trilha é aberta, nenhuma captura acontece. Por isso o que
+## sobra no checksum final, tirando o jogador de volta ao ponto de partida e o escudo em contagem
+## regressiva, é a **trajetória do chefe**.
+##
+## São 506 ticks: mais que um período de pulso de `boss_pursuit` (360) e mais que dois de
+## `boss_sweep` (240), para que a janela de aceleração de cada perfil caia dentro do dourado.
+const BOSS_LAP_ROUTE := [
+	[MoveIntent.Dir.LEFT, 56],    # (112,0) → canto superior esquerdo
+	[MoveIntent.Dir.DOWN, 141],   # → canto inferior esquerdo
+	[MoveIntent.Dir.RIGHT, 112],  # → canto inferior direito
+	[MoveIntent.Dir.UP, 141],     # → canto superior direito
+	[MoveIntent.Dir.LEFT, 56],    # → de volta a (112,0)
+]
+
+const BOSS_LAP_TICKS := 506
+const BOSS_LAP_START := Vector2i(112, 0)
+
+## Um por perfil de boss de produção. `pulse_ticks` e `peak_speed_fp` não são decoração: são a
+## prova de que a janela de pulso do perfil **está dentro** da volta — sem eles o checksum final
+## poderia fixar 506 ticks de velocidade base e ninguém perceberia que o pulso saiu do dourado.
+## `boss_wander` não autora pulso (`pulse_period_ticks` = 0), então 0 ticks acelerados é o correto.
+const GOLDEN_BOSS_LAPS := [
+	{
+		"id": &"abyssal_relay",
+		"pattern": 0,  # WANDER
+		"peak_speed_fp": 96,
+		"pulse_ticks": 0,
+		"boss_cell": Vector2i(107, 82),
+		"final_checksum": "c0790abb74c1cff534218cc3546f1aa3e82f195bbc99e938c905924255ee38f7",
+	},
+	{
+		"id": &"aurora_foundry",
+		"pattern": 1,  # PURSUIT
+		"peak_speed_fp": 128,
+		"pulse_ticks": 60,
+		"boss_cell": Vector2i(177, 118),
+		"final_checksum": "037b6212a9f6a3be86735ec77ecaa314f3d5df9bb05dc17aea5a9cfca2a15bfc",
+	},
+	{
+		"id": &"verdant_singularity",
+		"pattern": 2,  # SWEEP
+		"peak_speed_fp": 160,
+		"pulse_ticks": 96,
+		"boss_cell": Vector2i(125, 127),
+		"final_checksum": "8a9e82d9918774311640e80c1a5eff97d066aea45f1cc98825205fa6bb7fab65",
+	},
+]
+
 const GOLDEN_TICKS := 177
 const GOLDEN_PERMILLE := 179
 const GOLDEN_SCORE := 2_490
@@ -149,6 +199,120 @@ func test_production_route_reproduces_the_pinned_checksums_with_the_boss_active(
 		GOLDEN_REPLAY_CHECKSUM,
 		"checksum do log serializado " + DRIFT_HINT,
 	)
+
+
+## A rota dourada acima corre só na rodada 1, com `boss_wander`. PURSUIT e SWEEP mudam a
+## trajetória do chefe — e a trajetória entra no checksum (`bx_fp`, `by_fp`, `bvx_fp`, `bvy_fp`,
+## `boss_dir_index`, `boss_effective_speed_fp`). Sem um literal por perfil, editar
+## `content/rules/boss_pursuit.tres` ou `boss_sweep.tres` invalida replays gravados **em silêncio**:
+## `boss_campaign_balance_test.gd` compara cada perfil consigo mesmo e continua verde.
+func test_each_production_boss_profile_has_a_pinned_final_checksum() -> void:
+	var campaign := load(CAMPAIGN_PATH) as CampaignDefinition
+	ok(campaign != null, "campanha de produção precisa carregar")
+	if campaign == null:
+		return
+	eq(campaign.rounds.size(), GOLDEN_BOSS_LAPS.size(), "número de rodadas de produção " + DRIFT_HINT)
+	if campaign.rounds.size() != GOLDEN_BOSS_LAPS.size():
+		return
+
+	for index in GOLDEN_BOSS_LAPS.size():
+		var golden: Dictionary = GOLDEN_BOSS_LAPS[index]
+		var content := campaign.rounds[index]
+		eq(content.round_id, golden.id, "identidade da rodada %d mudou" % index)
+		eq(
+			content.rules.boss_behavior.pattern,
+			golden.pattern,
+			"o padrão de boss da rodada %d mudou; o dourado abaixo é de outro perfil" % index,
+		)
+
+		# Regras de produção **sem duplicar nem afrouxar**: é o contrato que o jogo grava.
+		var simulation := GameSimulation.new(
+			content.rules, content.round_definition, content.seed_value
+		)
+		eq(Vector2i(simulation.px, simulation.py), BOSS_LAP_START, "partida da volta mudou")
+
+		var base_speed_fp: int = content.rules.boss_speed_fp
+		var peak_speed_fp := base_speed_fp
+		var pulse_ticks := 0
+		for segment in BOSS_LAP_ROUTE:
+			for _tick in int(segment[1]):
+				simulation.step(MoveIntent.make(segment[0], false))
+				if simulation.boss_effective_speed_fp > base_speed_fp:
+					pulse_ticks += 1
+					peak_speed_fp = maxi(peak_speed_fp, simulation.boss_effective_speed_fp)
+
+		eq(simulation.tick, BOSS_LAP_TICKS, "comprimento da volta mudou; a rota é parte do dourado")
+		# A volta tem de continuar sendo uma volta: se qualquer trecho passar a ser bloqueado, ou a
+		# geometria mudar, o jogador não fecha no ponto de partida e o dourado deixa de medir o boss.
+		eq(
+			Vector2i(simulation.px, simulation.py),
+			BOSS_LAP_START,
+			"a volta pelo perímetro da rodada %d não fechou; a geometria mudou" % index,
+		)
+		eq(simulation.phase, GameSimulation.Phase.PLAYING, "a volta não pode terminar em morte")
+		eq(simulation.fills_done, 0, "a volta não pode capturar território")
+		ok(not simulation.trail_active, "a volta não abre trilha")
+
+		eq(
+			peak_speed_fp,
+			golden.peak_speed_fp,
+			"velocidade de pico do chefe na rodada %d " % index + DRIFT_HINT,
+		)
+		eq(
+			pulse_ticks,
+			golden.pulse_ticks,
+			"ticks acelerados do chefe na rodada %d — a janela de pulso saiu da volta" % index,
+		)
+		eq(
+			simulation.boss_cell(),
+			golden.boss_cell,
+			"célula final do chefe na rodada %d " % index + DRIFT_HINT,
+		)
+		eq(
+			simulation.state_checksum().hex_encode(),
+			golden.final_checksum,
+			"checksum após a volta na rodada %d " % index + DRIFT_HINT,
+		)
+
+
+## O log gravado numa rodada com PURSUIT/SWEEP tem de reproduzir o mesmo checksum depois de passar
+## por disco. Cobre o invariante 7 na via que o jogo usa de verdade — `from_bytes` + `replay_into`.
+func test_each_boss_lap_survives_serialization_and_replays_bit_exact() -> void:
+	var campaign := load(CAMPAIGN_PATH) as CampaignDefinition
+	ok(campaign != null, "campanha de produção precisa carregar")
+	if campaign == null:
+		return
+	if campaign.rounds.size() != GOLDEN_BOSS_LAPS.size():
+		return
+
+	for index in GOLDEN_BOSS_LAPS.size():
+		var golden: Dictionary = GOLDEN_BOSS_LAPS[index]
+		var content := campaign.rounds[index]
+		var recorded := GameSimulation.new(
+			content.rules, content.round_definition, content.seed_value
+		)
+		var replay := ReplayLog.start(recorded)
+		for segment in BOSS_LAP_ROUTE:
+			for _tick in int(segment[1]):
+				var intent := MoveIntent.make(segment[0], false)
+				recorded.step(intent)
+				replay.record(intent)
+
+		var restored := ReplayLog.from_bytes(replay.to_bytes())
+		ok(restored != null, "o log da volta da rodada %d precisa sobreviver a to_bytes" % index)
+		if restored == null:
+			continue
+		var fresh := GameSimulation.new(content.rules, content.round_definition, content.seed_value)
+		eq(
+			restored.compatibility_error(fresh),
+			"",
+			"log da volta da rodada %d precisa ser compatível com o runtime" % index,
+		)
+		eq(
+			restored.replay_into(fresh).hex_encode(),
+			golden.final_checksum,
+			"reprodução da volta da rodada %d divergiu do checksum fixado " % index + DRIFT_HINT,
+		)
 
 
 func test_pinned_replay_still_reproduces_bit_exact_on_a_fresh_simulation() -> void:
