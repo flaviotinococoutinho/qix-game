@@ -34,14 +34,12 @@ func is_gameplay_active() -> bool:
 	return phase == Phase.PLAYING
 
 
-func transition_progress() -> float:
-	if transition_ticks_total <= 0:
-		return 1.0
-	return clampf(
-		1.0 - float(transition_ticks_left) / float(transition_ticks_total),
-		0.0,
-		1.0,
-	)
+## Quantos ticks da transição corrente já correram. O domínio conta ticks; transformar isso na
+## fração de uma barra é trabalho de quem desenha a barra — ver
+## `RoundTransitionView._transition_progress`. Invariante 1 do `CLAUDE.md`: aqui só entram
+## inteiros e ponto fixo 8.8, e `tests/unit/domain_purity_test.gd` recusa o contrário.
+func transition_elapsed_ticks() -> int:
+	return maxi(transition_ticks_total - transition_ticks_left, 0)
 
 
 ## Avança exatamente um tick da sessão. Intents só entram no replay durante PLAYING.

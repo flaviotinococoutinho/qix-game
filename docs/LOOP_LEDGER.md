@@ -1,10 +1,13 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o backlog foi reconciliado à mão em 2026-09-04 sobre a integração dos 18 PRs do
+> loop (#1–#18), item a item contra o código integrado. Em 2026-09-05 **só o item da guarda de
+> valor real foi reverificado** (execução de 09:00Z: 174 testes, 11857 asserções, 0 falhas; rota
+> M2 179→825‰ com `errors: []`); os demais itens seguem com a conferência de 2026-09-04, que
+> ainda vale porque `main` só andou pelo merge do #19 — a própria integração já medida. O mérito
+> estético de cada mudança **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox
+> headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -51,6 +54,7 @@ nos testes e mente para o leitor. A integração de 23:00Z produziu 703 linhas c
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
 | Histórico do loop é um arquivo por execução | `docs/loop/runs/README.md` |
 | `samples/` e `guide_examples/` podados; `exclude_filter` fica | `docs/loop/runs/`, poda dos demos |
+| O domínio não usa ponto flutuante; a fração da barra de passagem mora na view | `tests/unit/domain_purity_test.gd`, `docs/loop/runs/2026-09-05T090000Z.md` |
 
 ## Backlog — prioridade decrescente
 
@@ -89,15 +93,17 @@ Itens sem critério de pronto não entram aqui.
       dormente é decisão adiada, não estado neutro, e o próximo leitor não tem como saber se
       `phantom_camera` é lixo ou plano. → ADR curta: remover, ou declarar quais ficam como
       reserva e por quê. *Pronto:* nenhuma pasta em `addons/` sem uma linha que diga por que está lá.
-- [ ] **Invariante 1, segunda metade: "só inteiros e ponto fixo 8.8" continua sem guarda.**
-      `domain_purity_test.gd` (#3) cobre a primeira metade — símbolo do mundo real citado no
-      domínio. A varredura **não** procura `float` porque hoje ficaria vermelha em código legítimo:
-      `GameSession.transition_progress()` (`game/session/game_session.gd:37-41`) devolve `float`
-      derivado de dois contadores inteiros de tick. Não lê o mundo real, mas também não é ponto
-      fixo 8.8 — é conveniência de apresentação morando na sessão. → Mover a conversão para quem
-      apresenta (a view já tem os dois inteiros) e então proibir `float` no domínio, ou declarar a
-      exceção por escrito no `CLAUDE.md`. *Pronto:* ou a regra entra no scanner, ou a exceção está
-      escrita onde o invariante está enunciado.
+- [ ] **`docs/TEST_MATRIX.md` não menciona a segunda metade do invariante 1.** A guarda existe
+      desde a execução de 09:00Z; a matriz não a registra porque o #21 estava reconciliando esse
+      arquivo à mão e editá-lo em paralelo garantiria conflito. Item de uma linha, para depois que
+      o #21 mesclar. *Pronto:* a matriz cita as regras de valor real de `domain_purity_test.gd`.
+- [ ] **`round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
+      É um Resource só-de-apresentação sob `game/rules/` — declara no cabeçalho que "nunca entra
+      no hash", e por isso está dentro do escopo da varredura sem merecer estar. Hoje passa (as
+      cores são literais em string, que o scanner remove), mas um `@export var glow: float = 0.5`
+      legítimo o deixaria vermelho. A saída certa é tirá-lo de `game/rules/`, **não** afrouxar a
+      varredura. Não é urgente: nada pede esse `@export` hoje. *Pronto:* ou o arquivo mora onde a
+      apresentação mora, ou está escrito por que ele fica.
 - [ ] **Invariante 6 ("apresentação observa, nunca muta") não tem guarda mecânica.** Mais difícil
       que o 1 e o 4: não é um símbolo proibido, é uma direção de chamada. → Investigar se uma
       varredura barata prova algo útil (ex.: nenhuma view atribui a campo de `BoardState` ou chama
