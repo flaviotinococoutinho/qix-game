@@ -1,10 +1,13 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o mapa da fila foi refeito nesta execução por `git diff --name-only
+> origin/main...<ramo>` nos 15 PRs abertos (#20–#34) — nenhum item do backlog está livre. O
+> **texto** dos itens P0–P3 abaixo é o da reconciliação de 2026-09-04 sobre a integração dos 18
+> primeiros PRs (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`); não
+> foi reconferido item a item aqui. Os marcadores `[~]`/`[!]` de cobertura por PR aberto vivem
+> no ramo do #34, ainda não mesclado. O mérito estético de cada mudança **não** foi julgado: o
+> jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -170,6 +173,18 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       `custom_minimum_size` explícito ou um `Theme` do HUD com tamanho de fonte definido, para que
       a altura não dependa de quando `_ready` corre. *Pronto:* altura correta medida dentro do
       runner, sem a ressalva que `game_hud_layout_test.gd` documenta hoje.
+- [~] **Reivindicado pelo PR desta execução (19:00Z)** — **A proa do cursor apontava para baixo
+      em três das quatro direções.** Achado fora do backlog, aberto porque nenhum item estava
+      livre: `QixPlayerView._draw` desenhava o traço de rumo em `(0,3)→(0,5)` literal, ignorando
+      `simulation.pdir`, que o domínio mantém e já inclui no checksum. Corrigido em
+      `game/player/player_view.gd` + `tests/unit/player_view_facing_test.gd` (arquivo novo, sem
+      colisão com a fila), com controle negativo registrado. Ver
+      `docs/loop/runs/2026-09-05T190000Z.md`.
+- [ ] **A proa aponta para a frente por hipótese, não por medida.** Consequência aberta do item
+      acima: escolhi apontar para onde a linha *vai* (a célula que ainda compromete) em vez de
+      para a trilha já desenhada, e não sei se 2 px a 3–5 px do centro se leem na tela em cada
+      rumo. Uma sessão headless mede geometria, não legibilidade. *Pronto:* alguém joga com a
+      trilha ativa nos quatro rumos e confirma (ou inverte) o sentido e o comprimento do traço.
 
 ## Notas de ambiente (sandbox de nuvem)
 
