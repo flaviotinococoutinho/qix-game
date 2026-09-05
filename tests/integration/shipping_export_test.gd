@@ -91,6 +91,10 @@ func test_shipping_probes_and_runner_are_exported_but_build_outputs_are_not() ->
 		ok(excluded.contains("guide_examples/**"), "%s não leva exemplos de plugins" % section)
 		ok(excluded.contains("samples/**"), "%s não leva amostras de desenvolvimento" % section)
 		ok(
+			excluded.contains("antipixel_state_machine/**"),
+			"%s não leva a máquina de estados de vendor" % section,
+		)
+		ok(
 			not excluded.contains("addons/fennara/runtime/**"),
 			"%s preserva o autoload e dependências Fennara" % section,
 		)

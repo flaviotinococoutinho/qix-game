@@ -19,8 +19,19 @@ build/
 .claude/.cc-writes/
 .claude/settings.local.json
 
-# ── Documentação de terceiros redistribuída ──────────────────────────────────
-# PDF do vendor do antipixel_state_machine: consultar na origem, não versionar.
+# ── Biblioteca de terceiros sem consumidor ───────────────────────────────────
+# Máquina de estados da Antipixel (3 cenas, 7 scripts, 132 KB). Removida do
+# versionamento: nada em game/, ui/, app/, tools/, tests/ ou content/ a
+# referenciava, nenhum dos seus 12 uid:// era citado de fora, e ela nunca foi
+# instalada onde os próprios arquivos dela se esperam — as cenas e os @icon
+# apontam para res://addons/antipixel_state_machine/, caminho que não existe.
+# Custava cinco class_name genéricos no namespace global do projeto (State,
+# StateMachine, StateComponent, NodeState, PackedSceneState), e o domínio deste
+# jogo não pode consumi-la de todo modo: é `extends Node`, e o invariante 1
+# proíbe Node/Tween/física em game/simulation/. Consultar na origem.
+# Ver docs/PROJECT_CONTRACT.md § Raízes.
+antipixel_state_machine/
+# PDF do vendor, que acompanhava a pasta: consultar na origem, não versionar.
 State Machine Antipixel Godot Documentation.pdf
 
 # ── Demos de addons de terceiros ─────────────────────────────────────────────
