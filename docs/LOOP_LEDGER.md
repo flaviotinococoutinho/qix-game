@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** herda a reconciliação à mão feita sobre a integração dos 18 PRs do loop (#1–#18);
+> só o item de envelopes de áudio foi reconferido nesta passagem, contra medida verde neste ramo
+> (179 testes, 11959 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). Os demais itens do
+> backlog **não** foram reconferidos hoje. O mérito estético de qualquer mudança continua sem
+> julgamento: o jogo não pode ser jogado nem visto num sandbox headless — o onset dos cues foi
+> medido no PCM, não ouvido.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -136,20 +138,24 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       `visual.boundary_color` como `_outer`; parado sobre `BOUNDARY`, a silhueta só se separa pelo
       núcleo e pelo halo de `accent_color`. Achado colateral de #7, ainda não quantificado.
       *Pronto:* contraste jogador × chão medido em `BOUNDARY` e em `FREE`, e decisão registrada.
-- [ ] **Forma do envelope por intenção.** Metade do item de envelopes ficou fora de #10:
-      `QixProceduralAudioLibrary._attack_release` é **o mesmo envelope para os dez cues**, com
-      attack e release proporcionais à duração. Consequência medível: `death` (0,42 s) só atinge
-      amplitude cheia ~34 ms depois do início, e `game_over` (0,75 s) ~60 ms — um impacto com
-      fade-in não é um impacto. Os cues curtos (`trail`, `shield`) não sofrem disso. → Attack e
-      release autorados por cue na receita, ao lado de `intent` e `priority`; ataque em
-      milissegundos absolutos, não em fração da duração. *Pronto:* teste que mede o frame de pico
-      do PCM e exige que os cues de impacto piquem em ≤ 8 ms, mantendo a subida suave dos de anúncio.
+- [x] **Forma do envelope por intenção.** — entregue na execução de 2026-09-05T04:20Z
+      (`docs/loop/runs/2026-09-05T042000Z.md`). `CUE_RECIPES` agora autora `onset`, `attack_ms` e
+      `release_ms` por cue, em milissegundos absolutos. Medido no PCM (tempo até 90% do próprio
+      pico): `death` 31,34 → 7,53 ms, `game_over` 51,25 → 4,44 ms, `capture` 14,29 → 4,35 ms;
+      os quatro cues de anúncio ficaram onde estavam (±1 ms). `tests/unit/audio_envelope_test.gd`
+      defende o teto de 8 ms para impacto e o piso de 12 ms para anúncio.
+- [ ] **`docs/TEST_MATRIX.md` ainda não descreve o onset dos cues.** Dívida deliberada da mesma
+      execução: o PR #21 estava reconciliando a matriz à mão e uma segunda edição no mesmo arquivo
+      desfaria esse trabalho. → Depois de #21 mesclar, a linha `feedback` ganha a cláusula de
+      onset (impacto ≤ 8 ms, anúncio ≥ 12 ms, medidos no PCM). *Pronto:* a matriz cita
+      `audio_envelope_test.gd`.
 - [ ] **Ritmo do risco: som e háptica da exposição.** O canal visual foi feito em #9
       (`TrailExposure`: o pulso da trilha acelera e clareia, o HUD nomeia o limiar). Faltam os
       outros dois canais do item original — um cue que suba com a exposição e um toque háptico ao
-      cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes acima, que define
-      prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com prioridade
-      declarada, **sem alterar checksum**.
+      cruzar `TrailExposure.WARNING_RATIO`. O item de envelopes de que ele dependia está entregue:
+      um cue de exposição nasce declarando `onset` (provavelmente `announce`, por ser aviso e não
+      consequência), `attack_ms` e `release_ms`. *Pronto:* cruzar o limiar é audível e tátil, com
+      prioridade declarada, **sem alterar checksum**.
 - [ ] **Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Os dois números são justificáveis no papel e **não foram vistos em jogo**.
