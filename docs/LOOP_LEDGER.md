@@ -1,9 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o backlog foi reconciliado à mão em 2026-09-04 sobre a integração dos 18 PRs do
+> loop (#1–#18) e **não** foi reconferido item a item desta vez. O que esta revisão mediu é outra
+> coisa: o estado da fila (17 PRs abertos, #20–#36) e quais arquivos cada um disputa — daí a
+> atualização do P0 e os dois itens novos em P3. Medida desta execução: 178 testes, 11914
+> asserções, 0 falhas; rota M2 179→825‰ com `errors: []`. O mérito estético de cada mudança
 > **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -68,6 +70,11 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      *Meia vitória em 2026-09-05:* o #19 mesclou e `main` saiu do commit de fundação (`cba520a`),
+      mas a fila voltou a **17** (#20–#36), um PR por hora. A metade "≤ 2 PRs abertos" continua
+      aberta, e é ela que importa: em 2026-09-05T21:00Z **todo** item do backlog abaixo tinha PR
+      aberto ou colidia em arquivo com um, e a execução teve de sair do backlog para achar
+      trabalho. Mapa de arquivos disputados por PR em `docs/loop/runs/2026-09-05T210000Z.md`.
 
 ### P1 — higiene estrutural
 
@@ -164,6 +171,19 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       vidas e o próximo setor, mas a barra de progresso é linear em ticks e nada enfatiza o
       instante em que o número de continuidade aparece. É animação de apresentação, não texto.
       *Pronto:* a passagem tem um acento perceptível no momento da continuidade, sem tocar domínio.
+- [ ] **A floritura da captura não está escrita em `ART_DIRECTION`.** A execução de 21:00Z fez o
+      recorte da captura acontecer sobre a trilha que fechou a região (`QixCaptureVfx.focus_rect`,
+      piso `MIN_FOCUS_SIDE` de 24 px), mas não descreveu o cue como parte da identidade *Lumen
+      Cartography*: `docs/ART_DIRECTION.md` estava disputado por #28 e um conflito de documentação
+      custa mais que a linha vale. *Pronto:* depois de #28 mesclar, a seção de arte diz o que a
+      captura encena — moldura no campo (o território mudou), varredura e marcas no traço (a mão
+      do jogador esteve ali) — e por que os dois canais são separados.
+- [ ] **O piso de 24 px do foco da captura não foi visto em jogo.** Mesma classe do item de
+      calibrar a curva de exposição: `MIN_FOCUS_SIDE` é justificável no papel (uma trilha reta tem
+      1 px e precisa de área para a floritura caber) e nunca esteve numa tela. Junto disso, a
+      varredura e a moldura ainda compartilham os mesmos 28 ticks, e agora a varredura percorre
+      uma faixa muito mais curta — o ritmo relativo mudou e não foi ajustado.
+      *Pronto:* alguém joga uma rodada e confirma (ou corrige) o piso e a duração da varredura.
 - [ ] **A geometria do HUD depende da ordem de construção.** `_add_label` só obtém o retângulo
       pedido porque atribui `size` depois de entrar na árvore; antes do primeiro frame o mínimo do
       `Label` ainda é o do tema (23 px). Funciona, mas é frágil e invisível. → Avaliar
@@ -192,6 +212,12 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
   antes de a árvore processar um frame, e a altura de um `Label` fica presa a um mínimo obsoleto
   (23 px). Depois do primeiro frame assenta no valor pedido. O comentário `# evita os 23 px padrão`
   em `_add_label` está correto no runtime real; não o "corrija" pelo que o runner mostra.
+- **Geometria calculada dentro de `_draw` é invisível para o loop.** Sem tela, o único jeito de
+  afirmar *onde* algo é desenhado é a apresentação expor a posição num método consultável
+  (`QixCaptureVfx.marker_positions()` nasceu disso). Foi essa invisibilidade — não a dificuldade
+  do cálculo — que deixou as marcas da captura caírem fora da moldura em campo autorado pequeno,
+  por várias execuções, com a suíte verde o tempo todo. Ao mexer em qualquer `_draw`, pergunte
+  primeiro qual número dele um teste consegue ler.
 - **A descoberta de testes em `run_tests.gd` varre diretório.** Dois PRs podem acrescentar arquivos
   de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem. Prefira arquivo novo a edição
   em arquivo disputado.
