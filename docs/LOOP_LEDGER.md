@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o backlog vem da reconciliação à mão de 2026-09-04 sobre a integração dos 18 PRs
+> do loop (#1–#18), item a item contra o código integrado. Em 2026-09-05T17:01Z acrescentou-se
+> **só** a medição de tomada da fila no P0 (quais itens têm PR aberto) e o item novo do stick de
+> toque; nenhum outro item foi reconferido nesta data. Medida verde na mesma data: 178 testes,
+> 11863 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`. O mérito estético de cada
+> mudança **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +70,10 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **Medido em 2026-09-05T17:01Z: 13 PRs abertos (#20–#32) e a fila tomou o backlog inteiro.**
+      A matriz item→PR está em `docs/loop/runs/2026-09-05T170147Z.md`. Dos 14 itens abaixo, 13
+      têm PR aberto e 1 exige jogar. Foi por isso que aquela execução trabalhou fora do backlog:
+      não havia item livre para escolher, e o P0 deixou de ser conselho e virou constatação.
 
 ### P1 — higiene estrutural
 
@@ -170,6 +176,14 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       `custom_minimum_size` explícito ou um `Theme` do HUD com tamanho de fonte definido, para que
       a altura não dependa de quando `_ready` corre. *Pronto:* altura correta medida dentro do
       runner, sem a ressalva que `game_hud_layout_test.gd` documenta hoje.
+- [ ] **A âncora flutuante do stick precisa de um polegar de verdade.** A execução de 17:01Z
+      trocou o centro fixo do stick de toque pela âncora no ponto de pouso (medido: antes,
+      pousar em qualquer lugar da zona menos um disco de 11 px já pedia um passo). O defeito está
+      fechado e testado; o que **não** dá para decidir headless é se a âncora flutuante sente
+      melhor, e se o anel desenhado parcialmente fora da tela — pouso a menos de 42 px da borda —
+      incomoda. Recentrar o anel foi recusado de propósito: afastar a âncora do dedo traz o
+      defeito de volta em miniatura. *Pronto:* alguém segura o aparelho em retrato, joga uma
+      rodada, e confirma (ou corrige) as duas coisas.
 
 ## Notas de ambiente (sandbox de nuvem)
 

@@ -10,6 +10,15 @@ const STICK_DEAD_ZONE := 11.0
 const ACTION_CENTER_FROM_BOTTOM := Vector2(48.0, 54.0)
 const ACTION_RADIUS := 39.0
 
+## A zona de ancoragem do stick é bem maior que o anel desenhado — um polegar em retrato não
+## acerta um alvo de 42 px. Por isso o anel **segue a âncora**: onde o dedo pousa vira o centro
+## (`_stick_origin`), e a direção nasce do deslocamento a partir dali, não da distância até um
+## centro fixo. Com centro fixo, a zona toda menos um disco de 11 px produzia direção no próprio
+## toque — o primeiro quadro de contato já era um passo que o jogador não pediu, e num jogo de
+## gramática Qix sair da moldura sem querer é uma trilha que você não escolheu abrir.
+const STICK_ZONE_RIGHT_RATIO := 0.55
+const STICK_ZONE_TOP_RATIO := 0.48
+
 @export var touch_enabled: bool = true:
 	set(value):
 		touch_enabled = value
@@ -19,6 +28,7 @@ const ACTION_RADIUS := 39.0
 
 var _roles: Dictionary = {}
 var _stick_touch: int = -1
+var _stick_origin := Vector2.ZERO
 var _stick_position := Vector2.ZERO
 var _draw_touches: Dictionary = {}
 var _direction: int = MoveIntent.Dir.NONE
@@ -80,7 +90,8 @@ func clear_state() -> void:
 	_roles.clear()
 	_draw_touches.clear()
 	_stick_touch = -1
-	_stick_position = _stick_center()
+	_stick_origin = _stick_center()
+	_stick_position = _stick_origin
 	_direction = MoveIntent.Dir.NONE
 	_confirm_queued = false
 	_pause_queued = false
@@ -92,6 +103,7 @@ func presentation_state() -> Dictionary:
 		"direction": _direction,
 		"drawing": is_drawing(),
 		"stick_touch": _stick_touch,
+		"stick_origin": _stick_anchor(),
 		"active_touches": _roles.size(),
 	}
 
@@ -108,11 +120,14 @@ func _press(index: int, position: Vector2) -> bool:
 		_confirm_queued = true
 		queue_redraw()
 		return true
-	if position.x <= _layout_size().x * 0.55 and position.y >= _layout_size().y * 0.48:
+	var layout := _layout_size()
+	if position.x <= layout.x * STICK_ZONE_RIGHT_RATIO and position.y >= layout.y * STICK_ZONE_TOP_RATIO:
 		if _stick_touch < 0:
 			_stick_touch = index
+			_stick_origin = position
 			_stick_position = position
 			_roles[index] = 1
+			# Deslocamento zero: pousar o dedo nunca é um passo. Só o arrasto pede direção.
 			_update_direction()
 			queue_redraw()
 			return true
@@ -126,7 +141,8 @@ func _release(index: int) -> bool:
 	_roles.erase(index)
 	if role == 1 and _stick_touch == index:
 		_stick_touch = -1
-		_stick_position = _stick_center()
+		_stick_origin = _stick_center()
+		_stick_position = _stick_origin
 		_direction = MoveIntent.Dir.NONE
 	elif role == 2:
 		_draw_touches.erase(index)
@@ -135,7 +151,7 @@ func _release(index: int) -> bool:
 
 
 func _update_direction() -> void:
-	var delta := _stick_position - _stick_center()
+	var delta := _stick_position - _stick_origin
 	if delta.length() < STICK_DEAD_ZONE:
 		_direction = MoveIntent.Dir.NONE
 	elif absf(delta.x) > absf(delta.y):
@@ -148,6 +164,12 @@ func _layout_size() -> Vector2:
 	if size.x > 1.0 and size.y > 1.0:
 		return size
 	return FALLBACK_SIZE
+
+
+## Onde o stick está ancorado no momento: o canto de descanso quando nenhum dedo o segura,
+## o ponto de pouso enquanto segura.
+func _stick_anchor() -> Vector2:
+	return _stick_origin if _stick_touch >= 0 else _stick_center()
 
 
 func _stick_center() -> Vector2:
@@ -171,12 +193,16 @@ func _draw() -> void:
 	var cyan := Color(0.38, 0.97, 0.82, 0.24)
 	var hot := Color(1.0, 0.52, 0.66, 0.28)
 	var line := Color(0.78, 1.0, 0.96, 0.62)
-	draw_circle(_stick_center(), STICK_RADIUS, cyan)
-	draw_arc(_stick_center(), STICK_RADIUS, 0.0, TAU, 48, line, 1.25, true)
-	var knob := _stick_position if _stick_touch >= 0 else _stick_center()
-	var delta := knob - _stick_center()
+	# O anel mostra onde a âncora está agora: em repouso, o canto de descanso; com o dedo em
+	# campo, o ponto onde ele pousou. Desenhar sempre no canto mentiria sobre de onde a direção
+	# está sendo medida.
+	var anchor := _stick_anchor()
+	draw_circle(anchor, STICK_RADIUS, cyan)
+	draw_arc(anchor, STICK_RADIUS, 0.0, TAU, 48, line, 1.25, true)
+	var knob := _stick_position if _stick_touch >= 0 else anchor
+	var delta := knob - anchor
 	if delta.length() > STICK_RADIUS - 8.0:
-		knob = _stick_center() + delta.normalized() * (STICK_RADIUS - 8.0)
+		knob = anchor + delta.normalized() * (STICK_RADIUS - 8.0)
 	draw_circle(knob, 13.0, Color(0.75, 1.0, 0.95, 0.42))
 	draw_circle(_action_center(), ACTION_RADIUS, hot)
 	draw_arc(_action_center(), ACTION_RADIUS, 0.0, TAU, 48, line, 1.5, true)
