@@ -1,10 +1,10 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** backlog reconferido item a item contra o código já em `main` — a integração dos 18
+> PRs do loop, medida verde (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com
+> `errors: []`) e mesclada em 2026-09-05T02:57Z. O mérito estético de cada mudança **não** foi
+> julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -61,13 +61,18 @@ Itens sem critério de pronto não entram aqui.
 > pelos PRs #1–#18. O que resta abaixo **nasceu das próprias execuções** — é dívida que só ficou
 > visível depois que o trabalho foi feito. Confira a fila antes de escolher.
 
-### P0 — a fila (nada abaixo importa enquanto isto não anda)
+### P0 — a fila
 
-- [ ] **Drenar a fila de PRs abertos.** Só um humano mescla; o loop não mescla o próprio PR.
-      Enquanto `main` não andar, cada execução ou duplica um item já coberto ou trabalha na fila
-      em vez de no jogo. A integração dos 18 está medida e verde — ver
-      `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
-      *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+- [x] **Drenar a fila de PRs abertos.** Resolvido em 2026-09-05T02:57Z: o PR #19 levou a fila
+      integrada para `main`, e os 18 heads passaram a ancestrais — `#1`–`#18` fecharam como merged
+      de uma vez. `main` foi de 2 para 44 commits (`74c173a` → `cba520a`), e a árvore de `main` é
+      **byte-idêntica** à que foi medida verde (`eb7d0bc`). **Zero PRs abertos.**
+      Ver `docs/loop/runs/2026-09-04T230000Z.md`.
+
+**A fila está vazia — a próxima execução volta ao trabalho normal: um item do backlog abaixo, um
+PR pequeno.** O que travou o loop por 18 execuções foi ter deixado a fila crescer sem que ninguém
+mesclasse. O protocolo acima (passo 2: liste os PRs abertos antes de escolher) existe por isso;
+se a fila voltar a passar de dois ou três PRs, o item a atacar é a fila, não o backlog.
 
 ### P1 — higiene estrutural
 
