@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o #19 mesclou; `main` saiu do commit de fundação. A fila foi remedida com o
+> relatório corrigido (10 PRs abertos, nenhum conflito fora do ledger) e o backlog foi cruzado
+> arquivo a arquivo contra a posse da fila. Suíte verde na base (174 testes, 11837 asserções, 0
+> falhas; rota M2 com `errors: []`). O mérito estético de cada mudança **não** foi julgado: o jogo
+> não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -17,6 +18,10 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
    mesmo com o checkbox vazio: o backlog só reflete o que chegou a `main`. Use
    `tools/loop/merge_queue_report.sh` — ele diz, além disso, em que arquivos a sua mudança vai
    colidir em silêncio com a fila. Foi por não olhar a fila que o par `#8×#11` nasceu.
+   A resposta direta à sua pergunta ("o arquivo que preciso tocar já tem dono?") é
+   `tools/loop/merge_queue_report.sh --claims`, que lista arquivo → PRs que o reivindicam.
+   O relatório desconta sozinho os refs de PRs já mesclados; até 2026-09-05 ele os contava como
+   fila e anunciava 29 PRs onde havia 10.
 3. **Escolha exatamente UM item** — o de maior prioridade que caiba num PR pequeno e revisável.
    Um PR grande não é produtividade: é uma revisão que não vai acontecer.
 4. **Escreva o relato em `docs/loop/runs/<carimbo>.md`** — arquivo novo, seu. Não apense a uma
@@ -61,13 +66,27 @@ Itens sem critério de pronto não entram aqui.
 > pelos PRs #1–#18. O que resta abaixo **nasceu das próprias execuções** — é dívida que só ficou
 > visível depois que o trabalho foi feito. Confira a fila antes de escolher.
 
+> ⚠️ **Saturação medida em 2026-09-05 (`--claims` sobre os 10 PRs abertos): quase todo item
+> abaixo já tem dono.** O P1 está no #22; os quatro P2 restantes estão em #29, #25, #26 e #24; três
+> P3 estão em #23, #27 e #28. Dos itens sem PR, os que sobram tocam arquivo já reivindicado
+> (`game/session/game_session.gd` e `ui/round_transition_view.gd` no #25, `ui/game_hud.gd` no #27,
+> `game/audio/procedural_audio_library.gd` no #23, `docs/ART_DIRECTION.md` e as ferramentas de
+> paleta no #28) **ou** exigem olho humano na tela, que uma sessão headless não tem.
+> Consequência para a próxima execução: rode `--claims` primeiro; se nada estiver livre, **não
+> invente item nem duplique um em voo** — abra um PR só de ledger, como o protocolo permite. Isto
+> se resolve drenando a fila, não escrevendo mais backlog.
+
 ### P0 — a fila (nada abaixo importa enquanto isto não anda)
 
 - [ ] **Drenar a fila de PRs abertos.** Só um humano mescla; o loop não mescla o próprio PR.
-      Enquanto `main` não andar, cada execução ou duplica um item já coberto ou trabalha na fila
-      em vez de no jogo. A integração dos 18 está medida e verde — ver
-      `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
-      *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      Metade feita: o **#19 mesclou** e `main` está em `cba520a`, além do commit de fundação. Mas a
+      fila voltou a **10 PRs** (#20–#29) à razão de um por hora, e agora ela **consome o backlog**
+      (ver o aviso de saturação abaixo).
+      Boa notícia medida em 2026-09-05 com o relatório corrigido: **os 10 não colidem entre si em
+      nada além do ledger** — nenhum conflito real, nenhuma sobreposição silenciosa. Podem ser
+      mesclados em qualquer ordem; o único trabalho é reconciliar este arquivo à mão, como o #19 já
+      fez. Ver `docs/loop/runs/2026-09-05T140118Z.md`.
+      *Pronto:* fila em ≤ 2 PRs abertos.
 
 ### P1 — higiene estrutural
 
