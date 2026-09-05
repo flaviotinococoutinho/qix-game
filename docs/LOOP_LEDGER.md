@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
 > **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** backlog reconferido item a item contra o código já em `main` — a integração dos 18
-> PRs do loop, medida verde (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com
-> `errors: []`) e mesclada em 2026-09-05T02:57Z. O mérito estético de cada mudança **não** foi
-> julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Alcance:** reconciliado à mão sobre a integração dos PRs #20–#35, medida verde (211 testes,
+> 12383 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`; catraca de contraste sem par
+> abaixo do piso). Cada item do backlog foi reconferido contra o código integrado, não contra
+> `main` sozinho. O mérito **estético** de qualquer mudança continua sem julgamento: o jogo não
+> pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -34,6 +35,19 @@ recusa doc sem cabeçalho. E **não resolva este arquivo por união automática*
 nos testes e mente para o leitor. A integração de 23:00Z produziu 703 linhas com cinco seções de
 "estado da fila" contraditórias e três ordens de merge concorrentes. Backlog reconcilia-se à mão.
 
+### A marcação de posse é ruído, não sinal
+
+As execuções de 10:00Z (#26) e 18:00Z (#34) tentaram resolver "o backlog diz livre em item que já
+tem dono" escrevendo a posse **dentro do backlog**: `[ocupado pelo PR #22]`, `[~] Reivindicado
+pelo PR #29`, `[!] Livre de PR, bloqueado pelo arquivo`. A integração desta execução mostra por
+que isso não funciona: no instante em que a fila drena, **toda** marcação vira mentira de uma vez,
+e quem lê o backlog não tem como distinguir posse viva de posse fóssil. Pior, a marcação é escrita
+no ponto exato do arquivo que mais conflita.
+
+A posse mora no GitHub, que sabe a verdade sem que ninguém a transcreva. O passo 2 do protocolo já
+manda consultá-la. Esta reconciliação **removeu** as marcações e não as reintroduz — se uma futura
+execução sentir falta delas, o item a atacar é o passo 2, não o backlog.
+
 ## Decisões fechadas — não reabrir sem argumento novo
 
 | Decisão | Onde |
@@ -47,151 +61,132 @@ nos testes e mente para o leitor. A integração de 23:00Z produziu 703 linhas c
 | Perfis de boss autoráveis | `docs/decisions/ADR-0007` |
 | Transação de conteúdo | `docs/decisions/ADR-0008` |
 | Contador de percentagem sobe em degraus | `docs/decisions/ADR-0009` |
+| Destino dos addons dormentes | `docs/decisions/ADR-0010` |
+| Ameaça lê-se por forma, não por cor | `docs/decisions/ADR-0011` |
 | Identidade visual é *Lumen Cartography* | `docs/ART_DIRECTION.md` |
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
 | Histórico do loop é um arquivo por execução | `docs/loop/runs/README.md` |
 | `samples/` e `guide_examples/` podados; `exclude_filter` fica | `docs/loop/runs/`, poda dos demos |
+| `antipixel_state_machine/` podada — sem consumidor | `docs/loop/runs/2026-09-05T035826Z.md` |
+| Posse de item não se escreve no backlog | seção acima |
 
 ## Backlog — prioridade decrescente
 
 Cada item diz **o que**, **por que importa para a experiência** e **como saber que ficou bom**.
 Itens sem critério de pronto não entram aqui.
 
-> **O backlog herdado acabou.** Todos os itens P1, P2 e P3 do ledger de fundação foram entregues
-> pelos PRs #1–#18. O que resta abaixo **nasceu das próprias execuções** — é dívida que só ficou
-> visível depois que o trabalho foi feito. Confira a fila antes de escolher.
+### P0 — a fila (nada abaixo importa enquanto isto não anda)
 
-### P0 — a fila
+- [ ] **Drenar a fila de PRs abertos — segunda vez.** O #19 drenou os 18 primeiros e `main` andou
+      até `cba520a`. Em dezassete horas a fila voltou a **16 PRs** (#20–#35) e `main` não andou
+      mais. Esta execução mediu a fila inteira: mesclados em ordem numérica, os 16 **não têm um
+      único conflito de código** — o único conflito em qualquer par é este arquivo, que é
+      mecânico e esperado por contrato. A árvore integrada dá 211 testes / 12383 asserções / 0
+      falhas contra 174 / 11837 em `main` sozinho.
+      Enquanto `main` não andar, cada execução nova ou duplica um item já coberto ou colide com a
+      fila: os 16 PRs abertos **já reivindicam todos os itens herdados do backlog**.
+      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+      Ver `docs/loop/runs/2026-09-05T200000Z.md` para a medição e a ordem verificada.
 
-- [x] **Drenar a fila de PRs abertos.** Resolvido em 2026-09-05T02:57Z: o PR #19 levou a fila
-      integrada para `main`, e os 18 heads passaram a ancestrais — `#1`–`#18` fecharam como merged
-      de uma vez. `main` foi de 2 para 44 commits (`74c173a` → `cba520a`), e a árvore de `main` é
-      **byte-idêntica** à que foi medida verde (`eb7d0bc`). **Zero PRs abertos.**
-      Ver `docs/loop/runs/2026-09-04T230000Z.md`.
-
-**A fila está vazia — a próxima execução volta ao trabalho normal: um item do backlog abaixo, um
-PR pequeno.** O que travou o loop por 18 execuções foi ter deixado a fila crescer sem que ninguém
-mesclasse. O protocolo acima (passo 2: liste os PRs abertos antes de escolher) existe por isso;
-se a fila voltar a passar de dois ou três PRs, o item a atacar é a fila, não o backlog.
+- [ ] **A cadência do loop excede a cadência de revisão, e isso é um problema de projeto.** Duas
+      drenagens em dois dias, ambas por integração de emergência, dizem que uma execução por hora
+      produz mais do que um humano mescla. Não é falha de nenhuma execução: é a taxa. Enquanto não
+      for resolvida, toda madrugada termina em fila saturada e o loop gasta execuções a medir a
+      própria fila em vez de melhorar o jogo. → Opções a avaliar num PR curto: baixar a frequência
+      do agendamento; deixar o loop **empilhar** o trabalho num único ramo de longa duração em vez
+      de abrir um PR por execução; ou dar ao loop critério explícito para não abrir PR quando a
+      fila passa de N. *Pronto:* a taxa de produção do loop e a de revisão estão declaradas por
+      escrito, com a regra que as concilia.
 
 ### P1 — higiene estrutural
 
-- [ ] **`antipixel_state_machine/` é a última raiz de terceiros não decidida.** 3 cenas, 7
-      scripts, 132 KB, e nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou
-      `content/` o referencia (grep de 2026-09-04). O `.gitignore` já recusa o PDF do vendor, o
-      que sugere que a pasta entrou sem decisão. Ficou de fora da poda dos demos por disciplina de
-      "uma pasta por vez" e porque, ao contrário de `samples/`/`guide_examples/`, ela não é demo
-      de um addon presente em `addons/` — pode ser dependência real adormecida.
-      *Pronto:* mantida com consumidor nomeado, ou removida com a mesma evidência de posse de
-      `uid://` usada na poda.
+- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+      tomada (`guide`, `curved_lines_2d`, `phantom_camera`, `GDDraw`, `softbody2d`,
+      `curve2collision`, `yard` saem; `fennara` e `godot_ai` ficam como ferramental). Falta
+      executá-la. `addons/README.md` e `tests/unit/addons_manifest_test.gd` já guardam o estado,
+      então uma remoção que esqueça o manifesto quebra o teste — o que é o comportamento desejado.
+      *Pronto:* cada pasta removida com a mesma evidência de posse de `uid://` usada na poda de
+      `antipixel_state_machine/`, e o manifesto atualizado no mesmo commit.
 
 ### P2 — integridade de contexto
 
-- [ ] **A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.**
-      `doc_freshness_header_test.gd` (#6) exige a linha `> **Verificado em**` e fica verde com ela
-      presente — mesmo quando o corpo do documento mente. A integração de 23:00Z resolveu
-      `docs/TEST_MATRIX.md` por união automática e o resultado passava em tudo enquanto afirmava
-      **quatro** contagens de suíte concorrentes (138, 134, 140 e o cabeçalho em 134), nenhuma
-      igual à real (174), com a linha `apresentação` triplicada e `log final da suíte` duplicada.
-      A execução de 03:00Z corrigiu esse arquivo — ver `docs/loop/runs/2026-09-05T030000Z.md` —
-      mas **os demais docs de `docs/` passaram pela mesma união e não foram auditados**.
-      → Duas frentes: (a) auditar os outros documentos contra o código integrado; (b) decidir se
-      alguma guarda barata pega contradição interna (ex.: recusar duas linhas de tabela com a
-      mesma primeira coluna, ou dois "resultado atual" no mesmo doc). *Pronto:* nenhum doc de
-      `docs/` com duas afirmações concorrentes sobre o mesmo fato, e a decisão sobre (b) escrita.
-- [ ] **Sete addons dormentes, 11,5 MB, 101 cenas** — `guide`, `curved_lines_2d`,
-      `phantom_camera`, `GDDraw`, `softbody2d`, `curve2collision`, `yard`. O inventário (#2)
-      provou que nenhum é habilitado, nenhum é referenciado e todos já saem no `export_filter`.
-      Não é P1 porque `addons/` é pasta que todo leitor de Godot sabe ignorar — mas dependência
-      dormente é decisão adiada, não estado neutro, e o próximo leitor não tem como saber se
-      `phantom_camera` é lixo ou plano. → ADR curta: remover, ou declarar quais ficam como
-      reserva e por quê. *Pronto:* nenhuma pasta em `addons/` sem uma linha que diga por que está lá.
-- [ ] **Invariante 1, segunda metade: "só inteiros e ponto fixo 8.8" continua sem guarda.**
-      `domain_purity_test.gd` (#3) cobre a primeira metade — símbolo do mundo real citado no
-      domínio. A varredura **não** procura `float` porque hoje ficaria vermelha em código legítimo:
-      `GameSession.transition_progress()` (`game/session/game_session.gd:37-41`) devolve `float`
-      derivado de dois contadores inteiros de tick. Não lê o mundo real, mas também não é ponto
-      fixo 8.8 — é conveniência de apresentação morando na sessão. → Mover a conversão para quem
-      apresenta (a view já tem os dois inteiros) e então proibir `float` no domínio, ou declarar a
-      exceção por escrito no `CLAUDE.md`. *Pronto:* ou a regra entra no scanner, ou a exceção está
-      escrita onde o invariante está enunciado.
-- [ ] **Invariante 6 ("apresentação observa, nunca muta") não tem guarda mecânica.** Mais difícil
-      que o 1 e o 4: não é um símbolo proibido, é uma direção de chamada. → Investigar se uma
-      varredura barata prova algo útil (ex.: nenhuma view atribui a campo de `BoardState` ou chama
-      `step(`), ou se só um teste de comportamento resolve. *Pronto:* ou a guarda existe, ou está
-      registrado por escrito por que ela não é viável estaticamente.
-- [ ] **Cobertura dourada só alcança a rodada 1.** `replay_checksum_golden_test.gd` (#5) fixa o
-      `config_hash` das três rodadas, mas roda uma única rota (177 ticks, uma captura) na rodada 1.
-      R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
-      literal cobre. *Pronto:* cada perfil de boss de produção tem ao menos um checksum final
-      fixado, ou uma nota dizendo por que não precisa.
+- [ ] **`docs/TEST_MATRIX.md` está devendo quatro linhas — dívida acumulada de três execuções.**
+      Nenhum dos testes novos entrou na matriz: `audio_envelope_test.gd` (#23, onset dos cues),
+      a segunda metade do invariante 1 em `domain_purity_test.gd` (#25),
+      `presentation_purity_test.gd` (#26), `addons_manifest_test.gd` (#29),
+      `enemy_silhouette_contrast_test.gd` (#32), `cursor_contrast_test.gd` (#28),
+      `touch_stick_anchor_test.gd` (#33), `player_view_facing_test.gd` (#35). Três execuções
+      registaram a mesma dívida separadamente, o que é o sintoma: a matriz é o único doc que toda
+      execução deveria tocar e nenhuma toca. → Um PR só de matriz, depois da drenagem.
+      *Pronto:* todo arquivo em `tests/` tem linha na matriz, e o número de testes que ela declara
+      bate com a saída do runner.
 - [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
       `phase = ROUND_CLEAR` num teste não arquiva a rodada — correto, mas não óbvio: custou uma
-      asserção errada na execução de 19:00Z. Qualquer apresentação que conte rodadas depende disso.
-      → Documentar a regra no cabeçalho de `GameSession`. *Pronto:* o contrato de `records`
-      legível sem ler `_archive_current_round`.
+      asserção errada na execução de 19:00Z (do dia 4). Qualquer apresentação que conte rodadas
+      depende disso. → Documentar a regra no cabeçalho de `GameSession`. *Pronto:* o contrato de
+      `records` legível sem ler `_archive_current_round`.
+- [ ] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance do guarda.**
+      Achado de #26: o controlador decide trajetória de chefe e obedece às regras do domínio, mas
+      não mora em `game/simulation/`, `game/rules/` nem `game/session/`, que é o que
+      `domain_purity_test.gd` varre. Ou o alcance do guarda cresce, ou o arquivo muda de pasta, ou
+      está escrito por que ele é exceção. *Pronto:* uma das três, decidida por escrito.
+- [ ] **`round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
+      Previsto por #25: é `Resource` autorável em `game/rules/` que carrega números estéticos, e a
+      guarda de `float` no domínio vai encontrá-lo assim que alguém lhe acrescentar um campo
+      contínuo. *Pronto:* ou a guarda distingue "regra que o domínio lê" de "regra que só a
+      apresentação lê", ou a exceção está escrita antes de alguém tropeçar nela.
+- [ ] **A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.** Achado de
+      #21: `doc_freshness_header_test.gd` recusa doc sem `> **Verificado em**`, mas nada impede
+      que a data seja antiga, o commit não exista ou o alcance minta. Foi assim que a matriz de
+      teste passou em tudo afirmando quatro contagens concorrentes. → Avaliar uma verificação
+      barata: o commit citado existe? a data é ≤ hoje? *Pronto:* ou a guarda cresce, ou está
+      registado por que a veracidade não é verificável mecanicamente.
+- [ ] **Dois relatórios de fila onde deve haver um.** `merge_order_report.sh` (#31) nasceu como
+      arquivo novo para não colidir com `merge_queue_report.sh` (#30) na própria fila que ambos
+      medem — decisão certa no momento, dívida agora. *Pronto:* um script, com a ordem de merge e
+      a matriz de sobreposição, e o outro removido.
 
 ### P3 — experiência e estética (o alvo real)
 
-Os itens abaixo nasceram das execuções que entregaram HUD, áudio, contraste e transição. Os três
-primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova.
+Os primeiros itens **exigem olho humano na tela**: uma sessão headless mede, não aprova.
 
 - [ ] **`BOUNDARY`×`TRAIL` a 1,04:1 — a decisão mais cara do jogo no canal mais frágil.** A
       medição de #7 (`docs/ART_DIRECTION.md`, "Contraste medido") mostra contorno e trilha com a
       mesma luminância nas quatro paletas; "estou protegido" × "estou desenhando" depende de matiz
-      mais o glint/pulso do shader. Caminhos: baixar a luminância de `BOUNDARY`, subir a de
-      `TRAIL`, ou dar ao contorno trama espacial mais grossa que sobreviva a 1 px.
-      *Pronto:* par acima de 3:1 nas quatro paletas, `PAIR_FLOOR`/`KNOWN_DEBT` e a seção de
-      `ART_DIRECTION` reescritos no mesmo commit, e alguém confirmou por captura que o campo não
-      ficou lavado.
-- [ ] **Ameaça sobre borda e trilha depende de forma, não de luminância.** Mesma medição:
-      `BOUNDARY`×`THREAT` 1,28–1,42:1 e `TRAIL`×`THREAT` 1,83–2,04:1 no pior caso (deuteranopia).
-      Hoje o losango do chefe carrega sozinho a leitura. *Pronto:* ou o par sobe de 3:1, ou está
-      escrito qual canal não cromático (contorno escuro, halo, cadência) garante a leitura, com
-      teste que o defenda.
-- [x] **O contorno do jogador é a mesma cor do chão em que ele anda.** Medido em 2026-09-05: a
-      suposição era otimista. Sobre `BOUNDARY` **nenhuma** camada opaca do cursor separa por
-      luminância em nenhuma paleta — contorno 1,00:1 (é a própria cor do chão, por construção),
-      acento 1,12–1,65:1 e **núcleo 1,04–1,12:1**. Não era só o contorno: o núcleo, que existe para
-      dar “centro inequívoco”, também some. Sobre `FREE` as três camadas passam com folga
-      (5,4:1 no pior caso), o que restringe o conserto — ver o item novo abaixo. Medição, catraca e
-      decisão em `docs/ART_DIRECTION.md` (“Contraste do cursor contra o chão”),
-      `PaletteContrast.CURSOR_FLOOR` e `tests/unit/cursor_contrast_test.gd`.
-- [ ] **Escolher de onde o cursor tira sua cor.** Nasceu da medição acima. Hoje `QixPlayerView.sync`
-      empresta as três camadas da paleta do campo (`boundary_color`, `accent_color`,
-      `trail_hot_color`), e é isso que trava `CURSOR_OUTER`×`BOUNDARY` em 1,00:1 para qualquer
-      paleta que alguém autore. A restrição medida: a candidata precisa subir os três
-      `CURSOR_*`×`BOUNDARY` acima de 3:1 **sem** derrubar os `CURSOR_*`×`FREE`, e os dois chãos
-      estão em extremos opostos da luminância — ou a cor fica no meio, ou a silhueta ganha uma
-      borda escura própria, que não venha da paleta do campo. Escolher entre as duas é decisão
-      estética e **pede olho humano na tela**; uma sessão headless mede a candidata, não a aprova.
-      *Pronto:* os três pares acima de 3:1 nas quatro paletas, com `CURSOR_FLOOR`,
-      `CURSOR_KNOWN_DEBT` e a seção de `ART_DIRECTION` reescritos no mesmo commit, e alguém
-      confirmou por captura que o cursor não virou um borrão claro sobre o campo.
-- [ ] **Forma do envelope por intenção.** Metade do item de envelopes ficou fora de #10:
-      `QixProceduralAudioLibrary._attack_release` é **o mesmo envelope para os dez cues**, com
-      attack e release proporcionais à duração. Consequência medível: `death` (0,42 s) só atinge
-      amplitude cheia ~34 ms depois do início, e `game_over` (0,75 s) ~60 ms — um impacto com
-      fade-in não é um impacto. Os cues curtos (`trail`, `shield`) não sofrem disso. → Attack e
-      release autorados por cue na receita, ao lado de `intent` e `priority`; ataque em
-      milissegundos absolutos, não em fração da duração. *Pronto:* teste que mede o frame de pico
-      do PCM e exige que os cues de impacto piquem em ≤ 8 ms, mantendo a subida suave dos de anúncio.
+      mais o glint/pulso do shader. **É o último item herdado que nenhuma execução atacou**, e a
+      razão é honesta: o critério de pronto exige captura de tela. Caminhos: baixar a luminância
+      de `BOUNDARY`, subir a de `TRAIL`, ou dar ao contorno trama espacial mais grossa que
+      sobreviva a 1 px. *Pronto:* par acima de 3:1 nas quatro paletas, `PAIR_FLOOR`/`KNOWN_DEBT` e
+      a seção de `ART_DIRECTION` reescritos no mesmo commit, e alguém confirmou por captura que o
+      campo não ficou lavado.
+- [ ] **Escolher de onde o cursor tira sua cor.** Nasceu da medição de #28: sobre `BOUNDARY`
+      nenhuma camada opaca do cursor separa (`CURSOR_OUTER×BOUNDARY` a 1,00:1 nas quatro paletas,
+      por construção — `QixPlayerView` usa `visual.boundary_color` como `_outer`). O núcleo e o
+      halo carregam sozinhos a leitura. *Pronto:* o cursor tem cor própria declarada ou uma razão
+      escrita para partilhar a do chão, e o par medido acima do piso.
+- [ ] **Confirmar o anel de tinta numa tela.** `ADR-0011` (#32) dá à ameaça um contorno que não
+      depende de cor e está **medido, não visto**. Duas perguntas para o olho: o anel lê-se a 1 px
+      sobre `TRAIL`? e some no fundo revelado? *Pronto:* alguém olhou e a ADR ganhou a nota.
+- [ ] **`docs/ART_DIRECTION.md` ainda não aponta para a `ADR-0011`.** A seção "Contraste medido"
+      continua a descrever a leitura da ameaça como problema aberto. Uma linha. *Pronto:* a seção
+      remete para a ADR.
+- [ ] **A proa do cursor aponta para a frente por hipótese, não por medida.** #35 corrigiu a proa
+      que apontava para baixo em três das quatro direções; que a proa *à frente* seja a leitura
+      certa para este jogo continua por confirmar com olho. *Pronto:* visto em jogo, ou a
+      alternativa (proa que segue a trilha) avaliada por escrito.
+- [ ] **A âncora flutuante do stick precisa de um polegar de verdade.** #33 tirou o passo espúrio
+      no instante em que o dedo pousa; o raio morto e a posição da âncora foram escolhidos no
+      papel. *Pronto:* alguém jogou com o polegar e confirmou (ou corrigiu) os dois números.
 - [ ] **Ritmo do risco: som e háptica da exposição.** O canal visual foi feito em #9
       (`TrailExposure`: o pulso da trilha acelera e clareia, o HUD nomeia o limiar). Faltam os
-      outros dois canais do item original — um cue que suba com a exposição e um toque háptico ao
-      cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes acima, que define
-      prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com prioridade
-      declarada, **sem alterar checksum**.
+      outros dois canais — um cue que suba com a exposição e um toque háptico ao cruzar
+      `TrailExposure.WARNING_RATIO`. **A dependência caiu:** #23 entregou envelope e prioridade
+      autorados por cue, que era o que faltava. *Pronto:* cruzar o limiar é audível e tátil, com
+      prioridade declarada, **sem alterar checksum**.
 - [ ] **Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Os dois números são justificáveis no papel e **não foram vistos em jogo**.
       *Pronto:* alguém joga as três rodadas e confirma (ou corrige) onde o aviso deve nascer.
-- [ ] **A pontuação não acompanha a subida do contador.** `06-gameplay.md §6.3` mostra que no
-      original cada degrau do contador **paga pontos**, e é isso que faz o número na barra superior
-      pulsar junto com a área. Aqui o score é domínio e chega inteiro num tick, então só a
-      percentagem é encenada — o rótulo `S ######` continua saltando. → Avaliar se o HUD pode
-      encenar a subida do score pelos mesmos degraus, lendo o valor já confirmado.
-      *Pronto:* score e percentagem sobem juntos, sem que o HUD toque no domínio.
 - [ ] **O tempo da transição entre rodadas não tem ritmo.** #15 fez a passagem carregar score,
       vidas e o próximo setor, mas a barra de progresso é linear em ticks e nada enfatiza o
       instante em que o número de continuidade aparece. É animação de apresentação, não texto.
@@ -205,7 +200,7 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
 
 ## Notas de ambiente (sandbox de nuvem)
 
-Verificado em 2026-09-04: o build Linux headless `4.7.2-stable` baixa sem bloqueio de rede e
+Verificado em 2026-09-05: o build Linux headless `4.7.2-stable` baixa sem bloqueio de rede e
 reporta `4.7.2.stable.official.ed1daf0bf`. O `--import` obrigatório roda até o fim e **não** exige
 mono. Suíte completa e `verify_m2_capture_route.gd` rodam em segundos. Nesta sessão não há
 desculpa para PR sem verificação — se uma execução não rodou os comandos, o motivo tem que ser
@@ -219,14 +214,15 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - `[godot_ai game_helper] registered mcp capture` ao final de todo script headless é o autoload de
   ferramental. Não é erro.
 - `--import` é obrigatório **também depois de cada troca de branch** que traga script novo, senão
-  o cache de `class_name` não conhece a classe e a falha não é a sua mudança.
+  o cache de `class_name` não conhece a classe e a falha não é a sua mudança. Vale igualmente para
+  um worktree novo: o `.godot/` não viaja com ele.
 - **Medir X no runtime do runner é fiável; medir Y não é.** Tudo corre dentro de `_initialize()`,
   antes de a árvore processar um frame, e a altura de um `Label` fica presa a um mínimo obsoleto
   (23 px). Depois do primeiro frame assenta no valor pedido. O comentário `# evita os 23 px padrão`
   em `_add_label` está correto no runtime real; não o "corrija" pelo que o runner mostra.
 - **A descoberta de testes em `run_tests.gd` varre diretório.** Dois PRs podem acrescentar arquivos
-  de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem. Prefira arquivo novo a edição
-  em arquivo disputado.
+  de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem, e é por isso que os 16 PRs
+  desta fila integram sem um conflito de código. Prefira arquivo novo a edição em arquivo disputado.
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.
