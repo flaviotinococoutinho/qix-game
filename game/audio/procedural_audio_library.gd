@@ -17,55 +17,82 @@ const MUSIC_BEATS := 8
 ## consequência.
 const PRIORITY_IDLE := -1
 
+## Forma do envelope, autorada ao lado de `intent`. Até aqui os dez cues dividiam um
+## único envelope proporcional à duração (attack = 8% do cue), e a consequência era
+## audível: `death` só chegava a amplitude cheia ~34 ms depois de começar e
+## `game_over` ~60 ms. **Um impacto com fade-in não é um impacto** — ele chega como
+## um "uuf" em vez de um golpe, e chega tarde demais para pertencer ao tick que o
+## causou. Agora attack e release são **milissegundos absolutos**: um cue longo pode
+## ter cauda longa sem por isso demorar a começar.
+##
+## `onset` diz de que tipo é a subida, e é o que o teste verifica:
+##   `&"impact"`   — a coisa aconteceu **agora**. Sobe dentro de
+##                   `IMPACT_ATTACK_CEILING_MS` e o pico do PCM cai no começo do cue.
+##   `&"announce"` — a coisa **vai** acontecer, ou acabou de mudar de estado. Sobe com
+##                   folga; um anúncio que estala soa como erro.
+## `release_ms` foi mantido em ~45% da duração de cada cue, que é onde o envelope
+## proporcional antigo já começava a cair: a cauda de cada cue não mudou de caráter.
+const IMPACT_ATTACK_CEILING_MS := 8.0
+
 const CUE_RECIPES := {
 	&"trail": {
 		"intent": "pontua que a trilha começou; é o cue mais frequente e o mais barato de perder",
 		"priority": 10,
+		"onset": &"impact", "attack_ms": 2.0, "release_ms": 25.0,
 		"hz": 740.0, "end_hz": 920.0, "seconds": 0.055, "gain": 0.19, "wave": 1,
 	},
 	&"round_start": {
 		"intent": "abre a rodada; anuncia, não reage",
 		"priority": 20,
+		"onset": &"announce", "attack_ms": 28.0, "release_ms": 153.0,
 		"hz": 262.0, "end_hz": 523.0, "seconds": 0.34, "gain": 0.28, "wave": 0,
 	},
 	&"respawn": {
 		"intent": "devolve o controle ao jogador depois da morte",
 		"priority": 30,
+		"onset": &"announce", "attack_ms": 20.0, "release_ms": 108.0,
 		"hz": 330.0, "end_hz": 660.0, "seconds": 0.24, "gain": 0.26, "wave": 0,
 	},
 	&"capture": {
 		"intent": "confirma território conquistado; a recompensa do laço",
 		"priority": 40,
+		"onset": &"impact", "attack_ms": 4.0, "release_ms": 99.0,
 		"hz": 392.0, "end_hz": 784.0, "seconds": 0.22, "gain": 0.30, "wave": 0,
 	},
 	&"reject": {
 		"intent": "diz que o laço não fechou — erro de leitura, não punição",
 		"priority": 45,
+		"onset": &"impact", "attack_ms": 3.0, "release_ms": 72.0,
 		"hz": 180.0, "end_hz": 110.0, "seconds": 0.16, "gain": 0.25, "wave": 2,
 	},
 	&"shield": {
 		"intent": "avisa que o escudo entrou no fim; é um relógio, não um impacto",
 		"priority": 50,
+		"onset": &"impact", "attack_ms": 5.0, "release_ms": 54.0,
 		"hz": 880.0, "end_hz": 880.0, "seconds": 0.12, "gain": 0.22, "wave": 1,
 	},
 	&"round_clear": {
 		"intent": "fecha a rodada; carrega a continuidade para a próxima",
 		"priority": 80,
+		"onset": &"announce", "attack_ms": 42.0, "release_ms": 234.0,
 		"hz": 523.0, "end_hz": 1047.0, "seconds": 0.52, "gain": 0.34, "wave": 0,
 	},
 	&"campaign_complete": {
 		"intent": "fecha a campanha inteira; o cue mais raro do jogo",
 		"priority": 90,
+		"onset": &"announce", "attack_ms": 74.0, "release_ms": 414.0,
 		"hz": 440.0, "end_hz": 1320.0, "seconds": 0.92, "gain": 0.34, "wave": 0,
 	},
 	&"game_over": {
 		"intent": "encerra a tentativa; nada depois dele importa mais que ele",
 		"priority": 95,
+		"onset": &"impact", "attack_ms": 3.0, "release_ms": 337.0,
 		"hz": 220.0, "end_hz": 55.0, "seconds": 0.75, "gain": 0.34, "wave": 2,
 	},
 	&"death": {
 		"intent": "a perda de vida; o acontecimento mais alto da sessão",
 		"priority": 100,
+		"onset": &"impact", "attack_ms": 3.0, "release_ms": 189.0,
 		"hz": 130.0, "end_hz": 44.0, "seconds": 0.42, "gain": 0.42, "wave": 2,
 	},
 }
@@ -84,6 +111,36 @@ static func duration_msec(cue_name: StringName) -> int:
 	return maxi(1, int(round(float(recipe["seconds"]) * 1000.0)))
 
 
+## De que tipo é a subida do cue: `&"impact"` ou `&"announce"`. Ver `CUE_RECIPES`.
+static func onset_for(cue_name: StringName) -> StringName:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return recipe["onset"]
+
+
+## Tempo, em milissegundos, até o envelope chegar a amplitude cheia.
+static func attack_msec(cue_name: StringName) -> float:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return float(recipe["attack_ms"])
+
+
+## Duração, em milissegundos, da cauda que fecha o cue.
+static func release_msec(cue_name: StringName) -> float:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return float(recipe["release_ms"])
+
+
+## O envelope do cue num instante, isolado do portador. Existe para que o teste
+## possa afirmar a forma da subida sem ter de separar envelope de onda no PCM.
+static func envelope_at_msec(cue_name: StringName, elapsed_msec: float) -> float:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return _attack_release(
+		elapsed_msec,
+		float(recipe["seconds"]) * 1000.0,
+		float(recipe["attack_ms"]),
+		float(recipe["release_ms"]),
+	)
+
+
 static func cue(cue_name: StringName) -> AudioStreamWAV:
 	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
 	return _tone(
@@ -92,6 +149,8 @@ static func cue(cue_name: StringName) -> AudioStreamWAV:
 		float(recipe["seconds"]),
 		float(recipe["gain"]),
 		int(recipe["wave"]),
+		float(recipe["attack_ms"]),
+		float(recipe["release_ms"]),
 	)
 
 
@@ -150,8 +209,11 @@ static func _tone(
 	seconds: float,
 	gain: float,
 	wave: int,
+	attack_ms: float,
+	release_ms: float,
 ) -> AudioStreamWAV:
 	var frame_count := maxi(1, int(round(seconds * MIX_RATE)))
+	var total_ms := seconds * 1000.0
 	var bytes := PackedByteArray()
 	bytes.resize(frame_count * 2)
 	var phase := 0.0
@@ -164,7 +226,7 @@ static func _tone(
 			raw = 1.0 if raw >= 0.0 else -1.0
 		elif wave == 2:
 			raw = 2.0 * phase - 1.0
-		var envelope := _attack_release(progress)
+		var envelope := _attack_release(progress * total_ms, total_ms, attack_ms, release_ms)
 		var harmonic := sin(TAU * phase * 2.0) * 0.18
 		_write_s16(bytes, frame, (raw + harmonic) * gain * envelope)
 	var stream := AudioStreamWAV.new()
@@ -175,9 +237,18 @@ static func _tone(
 	return stream
 
 
-static func _attack_release(progress: float) -> float:
-	var attack := smoothstep(0.0, 0.08, progress)
-	var release := 1.0 - smoothstep(0.55, 1.0, progress)
+## Attack e release em tempo absoluto, não em fração da duração. `smoothstep` mantém
+## a subida sem canto vivo — mesmo os 2 ms de `trail` sobem em curva, não em degrau,
+## e por isso o transiente é um golpe e não um estalo de amostra.
+static func _attack_release(
+	elapsed_ms: float,
+	total_ms: float,
+	attack_ms: float,
+	release_ms: float,
+) -> float:
+	var attack := smoothstep(0.0, maxf(attack_ms, 0.01), elapsed_ms)
+	var release_start := maxf(0.0, total_ms - release_ms)
+	var release := 1.0 - smoothstep(release_start, maxf(total_ms, release_start + 0.01), elapsed_ms)
 	return attack * release
 
 
