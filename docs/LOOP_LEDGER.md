@@ -1,7 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** esta revisão (12:58Z) reconferiu **só** o item dos addons dormentes — fechado pela
+> ADR-0010 — e a medição da fila do P0, com os nove PRs abertos conferidos commit a commit contra
+> `origin/main`. O restante do backlog **não** foi reconferido nesta passagem, e continua valendo
+> com o alcance da revisão anterior: reconciliado à mão sobre a integração dos 18 PRs do loop
+> (#1–#18) em `33c81e6`, medida verde
 > (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
 > foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
 > **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
@@ -51,6 +55,7 @@ nos testes e mente para o leitor. A integração de 23:00Z produziu 703 linhas c
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
 | Histórico do loop é um arquivo por execução | `docs/loop/runs/README.md` |
 | `samples/` e `guide_examples/` podados; `exclude_filter` fica | `docs/loop/runs/`, poda dos demos |
+| Pasta em `addons/` declara estado no manifesto | `docs/decisions/ADR-0010` |
 
 ## Backlog — prioridade decrescente
 
@@ -68,6 +73,14 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **Medido em 2026-09-05 12:58Z:** metade feita — `main` está em `cba520a` (o #19 mesclou),
+      mas a fila subiu para **9 PRs abertos** (#20–#28) e cresce um por hora. A boa notícia da
+      medição: cada um é **exatamente 1 commit** sobre `origin/main`, pequeno e de escopo claro, e
+      o **único** arquivo que todos disputam é `docs/LOOP_LEDGER.md` — colisão de propósito, não
+      acidente. Não há um segundo `#8×#11` escondido. Quem for mesclar: ordem indiferente, espere
+      conflito só no backlog deste arquivo, e resolva-o à mão (nunca por união automática).
+      Atenção a um par real: **#25 e #27 tocam `ui/`** (`round_transition_view.gd` e `game_hud.gd`,
+      arquivos distintos), e **#22 é a única poda de arquivos**.
 
 ### P1 — higiene estrutural
 
@@ -82,13 +95,16 @@ Itens sem critério de pronto não entram aqui.
 
 ### P2 — integridade de contexto
 
-- [ ] **Sete addons dormentes, 11,5 MB, 101 cenas** — `guide`, `curved_lines_2d`,
-      `phantom_camera`, `GDDraw`, `softbody2d`, `curve2collision`, `yard`. O inventário (#2)
-      provou que nenhum é habilitado, nenhum é referenciado e todos já saem no `export_filter`.
-      Não é P1 porque `addons/` é pasta que todo leitor de Godot sabe ignorar — mas dependência
-      dormente é decisão adiada, não estado neutro, e o próximo leitor não tem como saber se
-      `phantom_camera` é lixo ou plano. → ADR curta: remover, ou declarar quais ficam como
-      reserva e por quê. *Pronto:* nenhuma pasta em `addons/` sem uma linha que diga por que está lá.
+- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+      tomada e o inventário é mecânico (`addons/README.md` + `tests/unit/addons_manifest_test.gd`),
+      mas as 11,5 MB continuam no disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
+      `phantom_camera`, `softbody2d`, `yard`, todas em `a-remover`. Removê-las de uma vez violaria
+      "uma pasta por vez", e a poda de `antipixel_state_machine/` (#22) ainda não foi revista —
+      espere um humano ver como a poda anterior ficou antes de repetir o gesto sete vezes.
+      Ao remover uma pasta, apague **também** a linha dela no manifesto e a entrada correspondente
+      dos dois `exclude_filter`: o teste exige a linha só enquanto a pasta existe.
+      *Pronto:* cada PR remove uma pasta com evidência de posse de `uid://`, e a suíte fica verde
+      sem que o manifesto precise de exceção.
 - [ ] **Invariante 1, segunda metade: "só inteiros e ponto fixo 8.8" continua sem guarda.**
       `domain_purity_test.gd` (#3) cobre a primeira metade — símbolo do mundo real citado no
       domínio. A varredura **não** procura `float` porque hoje ficaria vermelha em código legítimo:
