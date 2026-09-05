@@ -41,7 +41,11 @@ func test_touch_and_gamepad_paths_produce_identical_canonical_intent() -> void:
 
 	var touch := QixTouchControls.new()
 	touch.size = Vector2(240, 320)
+	# O toque pede UP como um jogador pede: pousa o dedo e arrasta para cima. Antes bastava
+	# pousar em (52, 230) — 36 px acima do centro fixo — porque a âncora não seguia o dedo; a
+	# convergência entre dispositivos era medida sobre uma direção que ninguém tinha pedido.
 	touch.handle_event(_touch(1, true, Vector2(52, 230)))
+	touch.handle_event(_drag(1, Vector2(52, 200)))
 	touch.handle_event(_touch(2, true, Vector2(192, 266)))
 	var touch_adapter := GameInputAdapter.new()
 	touch_adapter.attach_touch_controls(touch)
@@ -54,5 +58,12 @@ func _touch(index: int, pressed: bool, position: Vector2) -> InputEventScreenTou
 	var event := InputEventScreenTouch.new()
 	event.index = index
 	event.pressed = pressed
+	event.position = position
+	return event
+
+
+func _drag(index: int, position: Vector2) -> InputEventScreenDrag:
+	var event := InputEventScreenDrag.new()
+	event.index = index
 	event.position = position
 	return event
