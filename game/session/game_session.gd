@@ -1,6 +1,12 @@
 class_name GameSession
 extends RefCounted
 ## Máquina determinística de campanha. Uma GameSimulation e um ReplayLog por rodada.
+##
+## Contrato de `records`: uma rodada só é arquivada pela via PLAYING → vitória/derrota
+## (`_archive_current_round`). Forçar `phase` num teste não arquiva nada. Quem conta rodadas
+## concluídas conta `records` com `completed == true`.
+## Progresso da transição é (total − restantes) / total: a conversão para float é da view
+## (`QixRoundTransitionView.transition_progress`), porque o domínio só fala em inteiros.
 
 enum Phase { ROUND_INTRO, PLAYING, ROUND_CLEAR, GAME_OVER, CAMPAIGN_COMPLETE }
 
@@ -32,16 +38,6 @@ func current_round_number() -> int:
 
 func is_gameplay_active() -> bool:
 	return phase == Phase.PLAYING
-
-
-func transition_progress() -> float:
-	if transition_ticks_total <= 0:
-		return 1.0
-	return clampf(
-		1.0 - float(transition_ticks_left) / float(transition_ticks_total),
-		0.0,
-		1.0,
-	)
 
 
 ## Avança exatamente um tick da sessão. Intents só entram no replay durante PLAYING.

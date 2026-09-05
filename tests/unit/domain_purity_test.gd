@@ -54,6 +54,12 @@ const RULES: Array = [
 	["\\bmove_and_collide\\b", 1, "colisão é da engine; o domínio resolve em células"],
 	["\\bPhysicsServer2D\\b", 1, "colisão é da engine; o domínio resolve em células"],
 	["\\bawait\\b", 1, "espera assíncrona torna a ordem do tick indeterminada"],
+	# Invariante 1, segunda metade — só inteiros e ponto fixo 8.8.
+	["\\bfloat\\b", 1, "o domínio só fala em inteiros e ponto fixo 8.8; float é apresentação"],
+	["\\bclampf\\s*\\(", 1, "aritmética de float é apresentação"],
+	["\\blerpf\\s*\\(", 1, "aritmética de float é apresentação"],
+	["\\bVector2\\s*\\(", 1, "Vector2 é float; o domínio usa Vector2i"],
+	["\\bsnappedf\\s*\\(", 1, "aritmética de float é apresentação"],
 ]
 
 ## Trechos que a varredura **tem** de acusar. Sem eles, um erro no scanner viraria um teste que
@@ -67,6 +73,9 @@ const POSITIVE_SAMPLES: Array[String] = [
 	"create_tween().tween_property(self, \"position\", alvo, 0.2)",
 	"directions.shuffle()",
 	"await get_tree().process_frame",
+	"func transition_progress() -> float:",
+	"\treturn clampf(1.0 - float(a) / float(b), 0.0, 1.0)",
+	"\tvar target := Vector2(px, py)",
 ]
 
 ## Trechos legítimos que a varredura **não** pode acusar: `delta` inteiro de pontuação, os nomes
@@ -79,6 +88,8 @@ const NEGATIVE_SAMPLES: Array[String] = [
 	"\tvar msg := \"não use Input.is_action_pressed aqui\"  # Tween também não",
 	"\treturn next_u32() % n",
 	"\tvar rand_slot := 3  # 'rand' sem parêntese não é chamada",
+	"\tvar cell := Vector2i(x_fp >> 8, y_fp >> 8)",
+	"\t@export var speed_fp: int = 96  ## ponto fixo 8.8, nunca float",
 ]
 
 

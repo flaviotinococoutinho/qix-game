@@ -97,7 +97,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			_result_label.text = "OBJETIVO  %02d%%" % target_percent
 			_continuity_label.text = _carry_in_line(session)
 			_prompt_label.text = "ENTER  ·  INICIAR AGORA"
-			_set_progress(session.transition_progress())
+			_set_progress(transition_progress(session))
 		GameSession.Phase.ROUND_CLEAR:
 			visible = true
 			_phase_label.text = "ROTA SEGURA  %02d / %02d" % [session.current_round_number(), session.campaign.rounds.size()]
@@ -111,7 +111,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			# (ciano → âmbar → lima, `docs/ART_DIRECTION.md`) acontece na passagem, não
 			# depois dela. É a ameaça crescente aparecendo antes de ser enfrentada.
 			_prompt_label.add_theme_color_override("font_color", _next_accent(session, accent))
-			_set_progress(session.transition_progress())
+			_set_progress(transition_progress(session))
 		GameSession.Phase.GAME_OVER:
 			visible = true
 			_edge.color = threat
@@ -187,6 +187,18 @@ func _next_accent(session: GameSession, fallback: Color) -> Color:
 		return fallback
 	var next_visual := session.campaign.rounds[next_index].visual
 	return next_visual.accent_color if next_visual != null else fallback
+
+
+## Fração concluída da transição atual, derivada dos dois contadores inteiros da sessão.
+## Mora aqui, e não em `GameSession`, porque o domínio não fala em float (invariante 1).
+static func transition_progress(session: GameSession) -> float:
+	if session.transition_ticks_total <= 0:
+		return 1.0
+	return clampf(
+		1.0 - float(session.transition_ticks_left) / float(session.transition_ticks_total),
+		0.0,
+		1.0,
+	)
 
 
 func _set_progress(value: float) -> void:
