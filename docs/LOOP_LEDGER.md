@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o P0 foi remedido contra a fila real de 2026-09-05T16:00Z (12 PRs abertos, mapa
+> item → PR por `git diff --name-only`), e o item da ameaça não cromática foi fechado por
+> `ADR-0011` com suíte verde (179 testes, 11908 asserções, 0 falhas; rota M2 179→825‰ com
+> `errors: []`). O restante do backlog é herdado da reconciliação de 2026-09-04 sobre `33c81e6`
+> e **não** foi reconferido item a item nesta execução. O mérito estético de nenhuma mudança foi
+> julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -64,10 +66,31 @@ Itens sem critério de pronto não entram aqui.
 ### P0 — a fila (nada abaixo importa enquanto isto não anda)
 
 - [ ] **Drenar a fila de PRs abertos.** Só um humano mescla; o loop não mescla o próprio PR.
-      Enquanto `main` não andar, cada execução ou duplica um item já coberto ou trabalha na fila
-      em vez de no jogo. A integração dos 18 está medida e verde — ver
-      `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
-      *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      `main` andou (o #19 mesclou os 18 primeiros e está em `cba520a`), mas a fila voltou a
+      encher: **12 PRs abertos em 2026-09-05T16:00Z**, um por execução da madrugada em diante.
+      *Pronto:* fila em ≤ 2 PRs abertos.
+
+      **Mapa item → PR, medido em 2026-09-05T16:00Z** (`git diff --name-only origin/main...`).
+      Um item com PR aberto **não está livre**, mesmo com o checkbox vazio — o backlog só reflete
+      o que chegou a `main`. Refaça este mapa antes de escolher; ele envelhece a cada hora.
+
+      | Item do backlog | PR | Arquivos em disputa |
+      |---|---|---|
+      | `antipixel_state_machine/` (P1) | #22 | a pasta, `PROJECT_CONTRACT`, `shipping_export_test` |
+      | Addons dormentes (P2) | #29 | `addons/README.md`, `ADR-0010`, teste novo |
+      | Invariante 1, `float` no domínio (P2) | #25 | `game/session/game_session.gd`, `ui/round_transition_view.gd`, `domain_purity_test` |
+      | Invariante 6, guarda mecânica (P2) | #26 | só teste novo |
+      | Checksum dourado por perfil de boss (P2) | #24 | `replay_checksum_golden_test` |
+      | Contorno do jogador × chão (P3) | #28 | `ART_DIRECTION`, `tools/palette_contrast.gd`, `verify_palette_contrast` |
+      | Envelope de áudio por cue (P3) | #23 | `procedural_audio_library.gd`, teste novo |
+      | Score sobe junto com a percentagem (P3) | #27 | `ui/game_hud.gd`, `ADR-0009` |
+      | — (ferramental de fila) | #30, #31 | `tools/loop/*.sh` |
+      | — (fecho do P0 anterior) | #20, #21 | `LOOP_LEDGER`, `TEST_MATRIX` |
+
+      **Consequência para quem escolher agora:** `session.records` (P2), o ritmo da transição (P3)
+      e a geometria do HUD (P3) parecem livres pelo checkbox e **não estão** — colidem com #25,
+      #25 e #27 respectivamente. O contraste `BOUNDARY`×`TRAIL` (P3) colide com #28. Antes de
+      abrir o 13.º PR, considere que a fila é o gargalo, não a falta de itens.
 
 ### P1 — higiene estrutural
 
@@ -127,11 +150,12 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       *Pronto:* par acima de 3:1 nas quatro paletas, `PAIR_FLOOR`/`KNOWN_DEBT` e a seção de
       `ART_DIRECTION` reescritos no mesmo commit, e alguém confirmou por captura que o campo não
       ficou lavado.
-- [ ] **Ameaça sobre borda e trilha depende de forma, não de luminância.** Mesma medição:
-      `BOUNDARY`×`THREAT` 1,28–1,42:1 e `TRAIL`×`THREAT` 1,83–2,04:1 no pior caso (deuteranopia).
-      Hoje o losango do chefe carrega sozinho a leitura. *Pronto:* ou o par sobe de 3:1, ou está
-      escrito qual canal não cromático (contorno escuro, halo, cadência) garante a leitura, com
-      teste que o defenda.
+- [x] **Ameaça sobre borda e trilha depende de forma, não de luminância.** Fechado em 2026-09-05
+      por `ADR-0011` e `tests/unit/enemy_silhouette_contrast_test.gd`: o canal não cromático é um
+      anel de tinta de 1 px sob o corpo do chefe, na cor `free_color` da rodada — ≥ 8,93:1 contra
+      `BOUNDARY`, ≥ 11,23:1 contra `TRAIL` e 3,73:1 contra o próprio corpo, nas quatro visões e
+      nas quatro paletas. Os pares **cromáticos** continuam em `KNOWN_DEBT` de propósito: eles não
+      melhoraram, a leitura é que deixou de depender deles. Falta o olho humano — ver abaixo.
 - [ ] **O contorno do jogador é a mesma cor do chão em que ele anda.** `QixPlayerView` usa
       `visual.boundary_color` como `_outer`; parado sobre `BOUNDARY`, a silhueta só se separa pelo
       núcleo e pelo halo de `accent_color`. Achado colateral de #7, ainda não quantificado.
@@ -150,6 +174,16 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes acima, que define
       prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com prioridade
       declarada, **sem alterar checksum**.
+- [ ] **Confirmar o anel de tinta numa tela.** `ADR-0011` está medido, não visto. Duas perguntas
+      que só uma captura responde: sobre `FREE` a tinta e o chão são quase a mesma cor e o anel
+      deve *desaparecer* — some mesmo, ou vira uma orla suja? E o anel de 1 px sobrevive ao
+      upscale do retrato 240×320, ou some no filtro? *Pronto:* captura das três rodadas com o
+      chefe sobre `FREE`, `BOUNDARY` e `TRAIL`, e o veredicto escrito na ADR.
+- [ ] **`docs/ART_DIRECTION.md` ainda não aponta para a `ADR-0011`.** A seção "Contraste medido"
+      descreve `BOUNDARY`×`THREAT` e `TRAIL`×`THREAT` como dívida sem dizer que a leitura já é
+      garantida por outro canal. Ficou de fora de propósito: o PR #28 edita esse arquivo e a
+      colisão seria silenciosa. *Pronto:* depois de #28 mesclar, uma linha na seção de dívida
+      remetendo à ADR.
 - [ ] **Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Os dois números são justificáveis no papel e **não foram vistos em jogo**.
