@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** medida verde sobre `main` com a guarda do invariante 6 acrescentada (178 testes,
+> 11900 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). Os itens do backlog foram
+> anotados com o PR que os cobre, levantado por `git diff --name-only origin/main...pr/N` sobre
+> os seis PRs abertos. O mérito estético de cada mudança **não** foi julgado: o jogo não pode ser
+> jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,10 +69,14 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **Metade feito:** o #19 mesclou e `main` está em `cba520a`. A fila voltou a encher —
+      #20–#25 abertos em 2026-09-05, um por hora. Enquanto ela crescer mais rápido do que é
+      drenada, **anote o PR que cobre cada item** ao escolher (foi o que esta linha de tabela
+      passou a fazer no backlog abaixo): sem isso a próxima execução escolhe um item ocupado.
 
 ### P1 — higiene estrutural
 
-- [ ] **`antipixel_state_machine/` é a última raiz de terceiros não decidida.** 3 cenas, 7
+- [ ] **[ocupado pelo PR #22]** **`antipixel_state_machine/` é a última raiz de terceiros não decidida.** 3 cenas, 7
       scripts, 132 KB, e nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou
       `content/` o referencia (grep de 2026-09-04). O `.gitignore` já recusa o PDF do vendor, o
       que sugere que a pasta entrou sem decisão. Ficou de fora da poda dos demos por disciplina de
@@ -89,7 +94,7 @@ Itens sem critério de pronto não entram aqui.
       dormente é decisão adiada, não estado neutro, e o próximo leitor não tem como saber se
       `phantom_camera` é lixo ou plano. → ADR curta: remover, ou declarar quais ficam como
       reserva e por quê. *Pronto:* nenhuma pasta em `addons/` sem uma linha que diga por que está lá.
-- [ ] **Invariante 1, segunda metade: "só inteiros e ponto fixo 8.8" continua sem guarda.**
+- [ ] **[ocupado pelo PR #25]** **Invariante 1, segunda metade: "só inteiros e ponto fixo 8.8" continua sem guarda.**
       `domain_purity_test.gd` (#3) cobre a primeira metade — símbolo do mundo real citado no
       domínio. A varredura **não** procura `float` porque hoje ficaria vermelha em código legítimo:
       `GameSession.transition_progress()` (`game/session/game_session.gd:37-41`) devolve `float`
@@ -98,17 +103,38 @@ Itens sem critério de pronto não entram aqui.
       apresenta (a view já tem os dois inteiros) e então proibir `float` no domínio, ou declarar a
       exceção por escrito no `CLAUDE.md`. *Pronto:* ou a regra entra no scanner, ou a exceção está
       escrita onde o invariante está enunciado.
-- [ ] **Invariante 6 ("apresentação observa, nunca muta") não tem guarda mecânica.** Mais difícil
-      que o 1 e o 4: não é um símbolo proibido, é uma direção de chamada. → Investigar se uma
-      varredura barata prova algo útil (ex.: nenhuma view atribui a campo de `BoardState` ou chama
-      `step(`), ou se só um teste de comportamento resolve. *Pronto:* ou a guarda existe, ou está
-      registrado por escrito por que ela não é viável estaticamente.
-- [ ] **Cobertura dourada só alcança a rodada 1.** `replay_checksum_golden_test.gd` (#5) fixa o
+- [x] **Invariante 6 ("apresentação observa, nunca muta") tem guarda mecânica.**
+      `tests/unit/presentation_purity_test.gd` (2026-09-05T10:00Z) acusa três formas de escrita
+      da apresentação no domínio: chamada de mutador (`step`, `reset_round`, `set_cell`, …, mais
+      `next_u32`/`next_below`, que desincronizam o replay sem escrever em nada), atribuição a
+      membro de identificador tipado como domínio, e escrita por cast anônimo
+      `(source as GameSession).x = …`. Provada por mutação em `player_view.gd` e `game_hud.gd`,
+      não só por amostras plantadas. **A metade semântica continua sem guarda e é assim de
+      propósito:** *"feedback nunca antecipa resultado do domínio"* é comportamento, não sintaxe —
+      está escrito no cabeçalho do teste, junto com as outras duas lacunas (escrita por `Variant`
+      nunca anotado; escrita indireta através de um método da própria view).
+- [ ] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance do guarda do
+      invariante 1.** `GameSimulation` o carrega por `preload` e o consulta dentro do tick, com o
+      `DeterministicRng` na mão — é domínio puro —, mas mora em `game/enemies/` e por isso
+      `domain_purity_test.gd` (que varre só `simulation/`, `rules/` e `session/`) nunca o lê. Hoje
+      ele está limpo; nada impede que amanhã não esteja. Achado colateral da guarda do invariante
+      6, que precisou isentá-lo explicitamente para não ficar vermelha. → Ou acrescentar o arquivo
+      a `DOMAIN_DIRS`/`DOMAIN_FILES` do guarda do invariante 1, ou mover o arquivo para
+      `game/simulation/`. A segunda opção mexe num `preload` e num `uid`; a primeira é de uma
+      linha. *Pronto:* o arquivo é varrido pelo guarda do invariante 1, aconteça isso por lista ou
+      por mudança de pasta.
+- [ ] **[ocupado pelo PR #24]** **Cobertura dourada só alcança a rodada 1.** `replay_checksum_golden_test.gd` (#5) fixa o
       `config_hash` das três rodadas, mas roda uma única rota (177 ticks, uma captura) na rodada 1.
       R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
       literal cobre. *Pronto:* cada perfil de boss de produção tem ao menos um checksum final
       fixado, ou uma nota dizendo por que não precisa.
-- [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
+- [ ] **`docs/TEST_MATRIX.md` está devendo duas linhas.** `tests/unit/audio_envelope_test.gd`
+      (do #23) e `tests/unit/presentation_purity_test.gd` (do #26) foram acrescentados sem entrada
+      na matriz, nos dois casos porque o #21 está reescrevendo esse arquivo inteiro e uma linha
+      nova conflitaria com a reconciliação em curso. É dívida deliberada, não esquecimento.
+      *Pronto:* depois que o #21 mesclar, as duas linhas entram — e a próxima execução que
+      acrescentar teste com a matriz livre volta a atualizá-la no mesmo commit.
+- [ ] **[colide com o PR #25 em `game_session.gd`]** **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
       `phase = ROUND_CLEAR` num teste não arquiva a rodada — correto, mas não óbvio: custou uma
       asserção errada na execução de 19:00Z. Qualquer apresentação que conte rodadas depende disso.
       → Documentar a regra no cabeçalho de `GameSession`. *Pronto:* o contrato de `records`
@@ -136,7 +162,7 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       `visual.boundary_color` como `_outer`; parado sobre `BOUNDARY`, a silhueta só se separa pelo
       núcleo e pelo halo de `accent_color`. Achado colateral de #7, ainda não quantificado.
       *Pronto:* contraste jogador × chão medido em `BOUNDARY` e em `FREE`, e decisão registrada.
-- [ ] **Forma do envelope por intenção.** Metade do item de envelopes ficou fora de #10:
+- [ ] **[ocupado pelo PR #23]** **Forma do envelope por intenção.** Metade do item de envelopes ficou fora de #10:
       `QixProceduralAudioLibrary._attack_release` é **o mesmo envelope para os dez cues**, com
       attack e release proporcionais à duração. Consequência medível: `death` (0,42 s) só atinge
       amplitude cheia ~34 ms depois do início, e `game_over` (0,75 s) ~60 ms — um impacto com
@@ -192,6 +218,15 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
   antes de a árvore processar um frame, e a altura de um `Label` fica presa a um mínimo obsoleto
   (23 px). Depois do primeiro frame assenta no valor pedido. O comentário `# evita os 23 px padrão`
   em `_add_label` está correto no runtime real; não o "corrija" pelo que o runner mostra.
+- **`tools/loop/merge_queue_report.sh` reporta a fila inteira, mesclados inclusive.** Em
+  2026-09-05 ele listava "PRs na fila: 1 … 25" e centenas de pares de conflito entre PRs que já
+  estão em `main` — ruído que enterra os pares que importam. Enquanto ele não filtrar por estado,
+  o levantamento útil é direto e cabe numa linha:
+  `for n in <abertos>; do git fetch -q origin pull/$n/head:pr/$n; git diff --name-only origin/main...pr/$n; done`
+- **Guarda estática só vale provada por mutação.** Amostras plantadas em constante provam a regex;
+  não provam que a varredura chega aos arquivos reais. Plante a violação num arquivo da árvore,
+  confirme o `FAIL` com caminho e linha, reverta e confirme `git diff --quiet`. Foi assim que
+  `presentation_purity_test.gd` se provou nos seus dois caminhos de código distintos.
 - **A descoberta de testes em `run_tests.gd` varre diretório.** Dois PRs podem acrescentar arquivos
   de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem. Prefira arquivo novo a edição
   em arquivo disputado.
