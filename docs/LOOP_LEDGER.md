@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** backlog reconferido contra `main` e contra a fila aberta (#20–#26) antes de escolher
+> o item desta execução; medida verde (178 testes, 11873 asserções, 0 falhas; rota M2 179→825‰ com
+> `errors: []`). Só o item da pontuação do HUD foi reexaminado em profundidade — os demais foram
+> conferidos apenas quanto a estarem ou não cobertos por um PR aberto. O mérito estético de cada
+> mudança **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -154,12 +155,15 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Os dois números são justificáveis no papel e **não foram vistos em jogo**.
       *Pronto:* alguém joga as três rodadas e confirma (ou corrige) onde o aviso deve nascer.
-- [ ] **A pontuação não acompanha a subida do contador.** `06-gameplay.md §6.3` mostra que no
-      original cada degrau do contador **paga pontos**, e é isso que faz o número na barra superior
-      pulsar junto com a área. Aqui o score é domínio e chega inteiro num tick, então só a
-      percentagem é encenada — o rótulo `S ######` continua saltando. → Avaliar se o HUD pode
-      encenar a subida do score pelos mesmos degraus, lendo o valor já confirmado.
-      *Pronto:* score e percentagem sobem juntos, sem que o HUD toque no domínio.
+- [x] **A pontuação não acompanha a subida do contador.** Feito em
+      `docs/loop/runs/2026-09-05T110131Z.md`: `QixGameHud._advance_shown_score` fecha, a cada tick,
+      a mesma fração do intervalo de pontuação que o contador de área já fechou, então os dois
+      pousam no valor confirmado **no mesmo tick**. Fronteiras declaradas e testadas: fora de uma
+      subida de área a pontuação assenta de imediato (o gotejo da trilha seria ruído contínuo), e o
+      valor mostrado nunca desce. Registrado como "Extensão de 2026-09-05" em ADR-0009; defendido
+      por `tests/unit/game_hud_score_counter_test.gd`. **Fica em aberto:** listar esse arquivo em
+      `docs/TEST_MATRIX.md` — o PR #21 estava a reconciliar esse doc à mão e escrever nele agora
+      seria colidir de propósito.
 - [ ] **O tempo da transição entre rodadas não tem ritmo.** #15 fez a passagem carregar score,
       vidas e o próximo setor, mas a barra de progresso é linear em ticks e nada enfatiza o
       instante em que o número de continuidade aparece. É animação de apresentação, não texto.
@@ -195,6 +199,11 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - **A descoberta de testes em `run_tests.gd` varre diretório.** Dois PRs podem acrescentar arquivos
   de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem. Prefira arquivo novo a edição
   em arquivo disputado.
+- **Os dois contadores do HUD são um par, não dois instrumentos.** `_shown_permille` e
+  `_shown_score` partem dos mesmos âncoras e pousam no mesmo tick por construção: a pontuação não
+  tem calibragem própria, segue a fração de área já fechada. Mexer nos atrasos de ADR-0009 move os
+  dois juntos, e isso é intencional. Encená-los separadamente foi exatamente o defeito corrigido em
+  `2026-09-05T110131Z` — se quiser desacoplá-los, isso é ADR, não ajuste.
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.
