@@ -87,6 +87,18 @@ se a fila voltar a passar de dois ou três PRs, o item a atacar é a fila, não 
 
 ### P2 — integridade de contexto
 
+- [ ] **A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.**
+      `doc_freshness_header_test.gd` (#6) exige a linha `> **Verificado em**` e fica verde com ela
+      presente — mesmo quando o corpo do documento mente. A integração de 23:00Z resolveu
+      `docs/TEST_MATRIX.md` por união automática e o resultado passava em tudo enquanto afirmava
+      **quatro** contagens de suíte concorrentes (138, 134, 140 e o cabeçalho em 134), nenhuma
+      igual à real (174), com a linha `apresentação` triplicada e `log final da suíte` duplicada.
+      A execução de 03:00Z corrigiu esse arquivo — ver `docs/loop/runs/2026-09-05T030000Z.md` —
+      mas **os demais docs de `docs/` passaram pela mesma união e não foram auditados**.
+      → Duas frentes: (a) auditar os outros documentos contra o código integrado; (b) decidir se
+      alguma guarda barata pega contradição interna (ex.: recusar duas linhas de tabela com a
+      mesma primeira coluna, ou dois "resultado atual" no mesmo doc). *Pronto:* nenhum doc de
+      `docs/` com duas afirmações concorrentes sobre o mesmo fato, e a decisão sobre (b) escrita.
 - [ ] **Sete addons dormentes, 11,5 MB, 101 cenas** — `guide`, `curved_lines_2d`,
       `phantom_camera`, `GDDraw`, `softbody2d`, `curve2collision`, `yard`. O inventário (#2)
       provou que nenhum é habilitado, nenhum é referenciado e todos já saem no `export_filter`.
