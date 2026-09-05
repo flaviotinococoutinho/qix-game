@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o P0 e o backlog foram reconferidos contra a fila real de 2026-09-05T22:00Z (18 PRs
+> abertos, #20–#37, e os arquivos que cada um edita); a medida de `main` é 180 testes, 11858
+> asserções, 0 falhas, e rota M2 179→825‰ com `errors: []`. O corpo do backlog herdado **não** foi
+> reconferido item a item nesta passagem — a reconciliação linha a linha de 2026-09-04 (commit
+> `33c81e6`, integração dos PRs #1–#18) continua sendo a última. O mérito estético de qualquer
+> mudança segue não julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +70,14 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+
+      **Estado em 2026-09-05T22:00Z:** meio pronto e piorando. `main` andou (`74c173a`→`cba520a`,
+      o #19 mesclou), mas a fila **voltou a 18** — #20 a #37, todos baseados em `cba520a`. O #36
+      já integra 16 deles numa branch só e mede verde; é o único PR que, mesclado, drena a fila.
+      Consequência prática já medida nesta execução: **todo item livre do backlog abaixo tem PR
+      aberto**, e cada um cai num arquivo que a fila edita. A próxima execução que insistir num
+      item do backlog vai abrir um conflito, não uma entrega. Enquanto isso, prefira defeito real
+      em arquivo que a fila não toca — foi o que a execução de 22:00Z fez.
 
 ### P1 — higiene estrutural
 
@@ -150,6 +160,14 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes acima, que define
       prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com prioridade
       declarada, **sem alterar checksum**.
+- [ ] **Calibrar `ANALOG_AXIS_SWITCH_MARGIN` com um polegar.** A execução de 22:00Z corrigiu o
+      stick analógico: o eixo era reavaliado a cada `InputEventJoypadMotion` e um stick parado
+      perto de 45° trocava de direção com o ruído do potenciômetro — quatro trocas em oito
+      amostras a ±0.02, cada uma um canto novo na trilha e exposição que o jogador não pediu. A
+      margem de 0.18 está justificada em graus (~7° no fim de curso, ~18° perto do limiar de
+      pressão) e **não** foi sentida: nenhum sandbox segura um controle. *Pronto:* alguém joga com
+      gamepad e confirma que a trava não engasga uma virada deliberada. Mesma dependência do item
+      da curva de exposição — vale calibrar os dois na mesma sessão com controle na mão.
 - [ ] **Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Os dois números são justificáveis no papel e **não foram vistos em jogo**.
