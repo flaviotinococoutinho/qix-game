@@ -1,7 +1,7 @@
 extends TestCase
 
-const BossBehaviorProfileScript = preload("res://game/enemies/boss_behavior_profile.gd")
-const BossBehaviorControllerScript = preload("res://game/enemies/boss_behavior_controller.gd")
+const BossBehaviorProfileScript = preload("res://game/rules/boss_behavior_profile.gd")
+const BossBehaviorControllerScript = preload("res://game/simulation/enemies/boss_behavior_controller.gd")
 
 
 func test_nearest_direction_uses_fixed_point_octants_without_floats() -> void:

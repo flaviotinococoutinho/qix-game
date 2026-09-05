@@ -62,7 +62,7 @@ não entrem no payload mesmo assim. Filtro e `.gitignore` cobrem caminhos difere
 
 | Camada | Proprietário | Regra |
 |---|---|---|
-| Território | `BoardState` (`game/simulation/board_state.gd`) | única autoridade; `PackedByteArray`; estados `FREE/BOUNDARY/TRAIL/CLAIMED` |
+| Território | `BoardState` (`game/simulation/board/board_state.gd`) | única autoridade; `PackedByteArray`; estados `FREE/BOUNDARY/TRAIL/CLAIMED` |
 | Regras | `GameRules` (`game/rules/game_rules.gd`) | `Resource` imutável em runtime |
 | Campanha | `CampaignDefinition` + `RoundContent` | ordem, transições e referências autoráveis; uma simulação/replay por rodada |
 | Tick | `GameSimulation.step(intent)` | sem `delta`; ordem fixa documentada no arquivo |

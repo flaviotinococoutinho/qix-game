@@ -115,7 +115,7 @@ func test_scanner_ignores_legitimate_code() -> void:
 
 
 func test_deterministic_rng_is_the_only_source_of_chance() -> void:
-	var text := FileAccess.get_file_as_string("res://game/simulation/deterministic_rng.gd")
+	var text := FileAccess.get_file_as_string("res://game/simulation/replay/deterministic_rng.gd")
 	ok(text != "", "não foi possível ler deterministic_rng.gd")
 	ok(
 		_violations(text).is_empty(),

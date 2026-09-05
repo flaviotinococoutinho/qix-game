@@ -2,7 +2,7 @@ class_name BossBehaviorController
 extends RefCounted
 ## Decisões puras do chefe. Não lê relógio, Input, física nem estado de apresentação.
 
-const BossBehaviorProfileScript = preload("res://game/enemies/boss_behavior_profile.gd")
+const BossBehaviorProfileScript = preload("res://game/rules/boss_behavior_profile.gd")
 
 const DIRECTION_X := [
 	256, 237, 181, 98, 0, -98, -181, -237,

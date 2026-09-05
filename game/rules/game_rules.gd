@@ -5,7 +5,7 @@ extends Resource
 
 ## Incrementar sempre que uma regra mude de forma que altere checksums de replay.
 const RULES_VERSION := 2
-const BossBehaviorProfileScript = preload("res://game/enemies/boss_behavior_profile.gd")
+const BossBehaviorProfileScript = preload("res://game/rules/boss_behavior_profile.gd")
 
 enum PercentMode {
 	EXACT,       ## permille = owned * 1000 / interior  (DESIGN_DECISION do remake)

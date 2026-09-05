@@ -1,7 +1,7 @@
 extends TestCase
 
 const CAMPAIGN_PATH := "res://content/campaigns/main_campaign.tres"
-const BossBehaviorProfileScript = preload("res://game/enemies/boss_behavior_profile.gd")
+const BossBehaviorProfileScript = preload("res://game/rules/boss_behavior_profile.gd")
 
 
 func test_campaign_uses_three_distinct_authorable_boss_profiles() -> void:

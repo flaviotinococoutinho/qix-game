@@ -5,8 +5,8 @@ extends Node2D
 const DEFAULT_BODY := Color("ff4d6d")
 const DEFAULT_CORE := Color("ffd166")
 const DEFAULT_ACCENT := Color("6ca8b5")
-const BossBehaviorControllerScript = preload("res://game/enemies/boss_behavior_controller.gd")
-const BossBehaviorProfileScript = preload("res://game/enemies/boss_behavior_profile.gd")
+const BossBehaviorControllerScript = preload("res://game/simulation/enemies/boss_behavior_controller.gd")
+const BossBehaviorProfileScript = preload("res://game/rules/boss_behavior_profile.gd")
 
 var _body := DEFAULT_BODY
 var _core := DEFAULT_CORE

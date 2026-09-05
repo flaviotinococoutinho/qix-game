@@ -16,7 +16,7 @@ extends RefCounted
 enum Phase { PLAYING, DYING, ROUND_WON, GAME_OVER }
 enum DeathReason { BOSS_CONTACT, SHIELD_EXPIRED }
 
-const BossBehaviorControllerScript = preload("res://game/enemies/boss_behavior_controller.gd")
+const BossBehaviorControllerScript = preload("res://game/simulation/enemies/boss_behavior_controller.gd")
 
 const DX := [0, 0, 1, 0, -1]   # indexado por MoveIntent.Dir
 const DY := [0, -1, 0, 1, 0]
