@@ -1,9 +1,11 @@
 # PROJECT_CONTRACT — QIX GAME (vertical slice)
 
-> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** engine, viewport, renderer e tick conferidos em `project.godot`; arquivos da
-> tabela de ownership conferidos por existência. Alvos, tamanhos de export e estado do
-> ferramental MCP seguem do run macOS de 2026-09-03 e não foram reexecutados.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** a seção § Raízes foi remedida nesta data — contagem de cenas, `uid://` e
+> `class_name` de `antipixel_state_machine/` conferidos por `grep` e pelo cache de classes
+> globais antes da remoção. Engine, viewport, renderer e tick seguem conferidos em
+> `project.godot`; a tabela de ownership, por existência de arquivo. Alvos, tamanhos de export e
+> estado do ferramental MCP seguem do run macOS de 2026-09-03 e **não** foram reexecutados.
 
 Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; título público ainda não definido.
 
@@ -46,17 +48,41 @@ o runtime carrega fica versionado; material de estudo que só acompanha o vendor
 | `addons/` | código de vendor; parte do runtime ou do ferramental de editor | versionado; inventário por addon é item aberto do loop |
 | `guide_examples/` | projeto-exemplo do addon GUIDE (32 cenas, 55 scripts) | **removido** do versionamento; ignorado |
 | `samples/` | projeto-exemplo do addon softbody2d (6 cenas, 6 scripts) | **removido** do versionamento; ignorado |
-| `antipixel_state_machine/` | máquina de estados de vendor na raiz (3 cenas, 7 scripts) | mantido por ora; nenhum arquivo do jogo o referencia — decisão pendente no loop |
+| `antipixel_state_machine/` | máquina de estados de vendor na raiz (3 cenas, 7 scripts) | **removido** do versionamento; ignorado |
 
-Os dois removidos eram demos: nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou
-`content/` os referenciava, e os cinco `uid://` que compartilhavam com `addons/` são **de posse dos
-addons** — a dependência apontava dos demos para o addon, nunca ao contrário. Custavam 38 das 43
-cenas do repositório e um `class_name` de vendor (`LaserProjectile`) no namespace global.
+`guide_examples/` e `samples/` eram demos: nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`,
+`tests/` ou `content/` os referenciava, e os cinco `uid://` que compartilhavam com `addons/` são
+**de posse dos addons** — a dependência apontava dos demos para o addon, nunca ao contrário.
+Custavam 38 das 43 cenas do repositório e um `class_name` de vendor (`LaserProjectile`) no
+namespace global.
 
-Os `exclude_filter` de `export_presets.cfg` continuam listando `guide_examples/**` e `samples/**`,
-e `tests/integration/shipping_export_test.gd` continua exigindo isso. É defesa deliberada: um
-checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e o filtro garante que elas
-não entrem no payload mesmo assim. Filtro e `.gitignore` cobrem caminhos diferentes do mesmo risco.
+`antipixel_state_machine/` não era demo de addon nenhum, e por isso ficou de fora daquela poda:
+podia ser dependência real adormecida. Não era, e a medição de 2026-09-05 mostra por quê — quatro
+fatos independentes:
+
+1. **Sem consumidor.** Nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou `content/`
+   citava o caminho, e nenhum dos **12 `uid://`** declarados dentro da pasta aparecia fora dela.
+   A posse era toda interna: só as próprias cenas de amostra consumiam os próprios scripts.
+2. **Nunca foi instalada.** As cenas de amostra e os três `@icon` apontam para
+   `res://addons/antipixel_state_machine/…` — caminho que **não existe** no repositório. A pasta
+   foi extraída na raiz em vez de em `addons/`; os `@icon`, que são string literal sem `uid://`,
+   ficavam quebrados desde o commit inicial.
+3. **Não era addon.** Sem `plugin.cfg` e ausente de `editor_plugins` em `project.godot`: era uma
+   biblioteca de scripts solta, não um plugin que o editor pudesse habilitar.
+4. **O domínio não poderia consumi-la.** É `extends Node` de ponta a ponta, e o invariante 1
+   proíbe `Node`, `Tween` e física em `game/simulation/`, `game/rules/` e `game/session/`. Como
+   máquina de estados do domínio ela estava descartada por contrato, não por preferência.
+
+O custo era maior que os 132 KB: cinco `class_name` genéricos — `State`, `StateMachine`,
+`StateComponent`, `NodeState`, `PackedSceneState` — ocupando o namespace global do projeto, que já
+hospeda `BoardState` e `RoundStartState`. O nome mais óbvio para um tipo de domínio futuro estava
+tomado por vendor que ninguém chamava.
+
+Os `exclude_filter` de `export_presets.cfg` continuam listando `guide_examples/**`, `samples/**` e
+`antipixel_state_machine/**`, e `tests/integration/shipping_export_test.gd` exige os três. É defesa
+deliberada: um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e o filtro
+garante que elas não entrem no payload mesmo assim. Filtro e `.gitignore` cobrem caminhos
+diferentes do mesmo risco.
 
 ## Ownership
 
@@ -112,14 +138,15 @@ Como "nenhum" foi verificado — dois testes independentes sobre `app/`, `game/`
    árvores. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot`, não o
    G.U.I.D.E.; a câmera é fixa em 240×320, não `phantom_camera`.
 
-Três pastas de terceiros vivem **fora** de `addons/` e também não têm consumidor: `samples/`
-(demos do `softbody2d`), `guide_examples/` (demos do `guide`) e `antipixel_state_machine/`.
+Nenhuma pasta de terceiros vive mais **fora** de `addons/`. As três que viviam — `samples/`
+(demos do `softbody2d`), `guide_examples/` (demos do `guide`) e `antipixel_state_machine/` —
+foram removidas do versionamento, a última em 2026-09-05.
 
-Consequência prática para quem lê o repositório: das **145** cenas do checkout, apenas **2** são
-do jogo — `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn`. Uma é a cena órfã da raiz, e as
-outras **142** são de terceiros: 101 em `addons/`, 32 em `guide_examples/`, 6 em `samples/` e 3 em
-`antipixel_state_machine/`. Procurar uma cena do jogo pelo nome é, hoje, uma operação com 98 % de
-ruído — é isso que o item de poda no `docs/LOOP_LEDGER.md` ataca.
+Consequência prática para quem lê o repositório: das **103** cenas do checkout, **2** são do jogo
+— `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn` — e as outras **101** são de terceiros,
+todas em `addons/`. Isso vale como regra de leitura, não só como contagem: **um `.tscn` fora de
+`addons/` é do jogo.** Antes da poda eram 2 em 145, espalhadas por quatro raízes, e procurar uma
+cena do jogo pelo nome devolvia 98 % de ruído.
 
 O que esta tabela **não** decide: se os sete addons dormentes devem ser removidos. Eles já não
 entram no payload (os `exclude_filter` de ambos os presets em `export_presets.cfg` listam os sete

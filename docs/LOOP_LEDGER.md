@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** medido nesta data — 174 testes, **11839** asserções, 0 falhas (eram 11837 em
+> `main`; as duas novas são a guarda de `exclude_filter` desta execução), rota M2 179→825‰ com
+> `errors: []`. Só o item P1 foi reconferido contra o código; o resto do backlog segue da
+> reconciliação de 2026-09-04 sobre a integração dos PRs #1–#18. O mérito estético de cada
+> mudança **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -51,6 +52,7 @@ nos testes e mente para o leitor. A integração de 23:00Z produziu 703 linhas c
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
 | Histórico do loop é um arquivo por execução | `docs/loop/runs/README.md` |
 | `samples/` e `guide_examples/` podados; `exclude_filter` fica | `docs/loop/runs/`, poda dos demos |
+| `antipixel_state_machine/` podado; `exclude_filter` fica | `docs/PROJECT_CONTRACT.md` § Raízes |
 
 ## Backlog — prioridade decrescente
 
@@ -71,14 +73,20 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **`antipixel_state_machine/` é a última raiz de terceiros não decidida.** 3 cenas, 7
-      scripts, 132 KB, e nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou
-      `content/` o referencia (grep de 2026-09-04). O `.gitignore` já recusa o PDF do vendor, o
-      que sugere que a pasta entrou sem decisão. Ficou de fora da poda dos demos por disciplina de
-      "uma pasta por vez" e porque, ao contrário de `samples/`/`guide_examples/`, ela não é demo
-      de um addon presente em `addons/` — pode ser dependência real adormecida.
-      *Pronto:* mantida com consumidor nomeado, ou removida com a mesma evidência de posse de
-      `uid://` usada na poda.
+- [x] **`antipixel_state_machine/` era a última raiz de terceiros não decidida.** Resolvido em
+      2026-09-05: **removida**. A hipótese de "dependência real adormecida" foi refutada com
+      quatro medições independentes — sem consumidor (12 `uid://`, nenhum citado de fora); nunca
+      instalada (as próprias cenas e os `@icon` apontam para `res://addons/antipixel_state_machine/`,
+      caminho inexistente); não era addon (sem `plugin.cfg`, ausente de `editor_plugins`); e
+      inutilizável pelo domínio de todo modo, porque é `extends Node` e o invariante 1 proíbe
+      `Node` em `game/simulation|rules|session/`. Custava cinco `class_name` genéricos no namespace
+      global (`State`, `StateMachine`, `StateComponent`, `NodeState`, `PackedSceneState`).
+      Evidência e raciocínio em `docs/PROJECT_CONTRACT.md` § Raízes; relato em
+      `docs/loop/runs/2026-09-05T035826Z.md`.
+
+**P1 está vazio.** Com esta poda, **todo `.tscn` fora de `addons/` é do jogo** — são exatamente
+dois, `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn`, contra 101 de terceiros. Essa regra
+de leitura é o que a higiene estrutural comprou; a próxima execução sobe para P2.
 
 ### P2 — integridade de contexto
 
