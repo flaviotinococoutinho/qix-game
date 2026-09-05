@@ -1,9 +1,13 @@
 # Direção de arte — Lumen Cartography
 
-> **Verificado em** 2026-09-03 · commit `ab512ef` · autoria de G2, sem execução
+> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
 > **Alcance:** documento de intenção. A parte mecanizável dele — só `CLAIMED` revela o fundo,
 > paleta e máscara R8 — vive em `tests/unit/board_view_test.gd`; hierarquia, ritmo e leitura em
 > 240×320 continuam sem verificação automatizada, e ninguém na nuvem consegue ver o jogo.
+> Nesta data acrescentou-se a seção “Contraste do cursor contra o chão”, medida por
+> `tools/verify_palette_contrast.gd`. A tabela do campo em “Contraste medido” **não** foi
+> remedida: continua com a data de 2026-09-04 impressa nela, e nada nesta execução mexeu na
+> paleta autorada.
 
 O G2 usa uma identidade original de **cartografia bioluminescente**: o jogador não
 “pinta” uma chapa sólida; ele estabiliza regiões de um mapa vivo e revela uma paisagem
@@ -21,8 +25,10 @@ cósmica que estava encoberta. A leitura do estado continua imediata mesmo em 24
 5. `FREE` permanece sob uma cobertura azul-noturna para proteger a legibilidade.
 6. HUD e overlays vivem fora do campo e não escondem decisões de movimento.
 
-O item 1 é **intenção, não estado medido**: em 2026-09-04 `TRAIL` e `BOUNDARY` têm praticamente a
-mesma luminância (1,04:1). Ver “Contraste medido” abaixo antes de tratar a hierarquia como fato.
+Os itens 1 e 2 são **intenção, não estado medido**. Em 2026-09-04 `TRAIL` e `BOUNDARY` têm
+praticamente a mesma luminância (1,04:1); em 2026-09-05 o “núcleo contrastante” do jogador mediu
+1,04–1,12:1 contra `BOUNDARY`, o chão onde ele passa a maior parte da partida. Ver “Contraste
+medido” e “Contraste do cursor contra o chão” abaixo antes de tratar a hierarquia como fato.
 
 ## Arco das três rodadas
 
@@ -75,6 +81,47 @@ humano sobre a tela — nenhuma sessão headless pode aprovar essa troca. `Palet
 guarda os números como catraca e `tests/unit/palette_contrast_test.gd` falha se algum par piorar
 **ou** se algum deles for consertado sem que esta seção seja reescrita junto.
 
+## Contraste do cursor contra o chão
+
+Medido em **2026-09-05** pelo mesmo comando e pela mesma métrica da seção acima. O que se mede
+aqui são as três camadas **opacas** da silhueta 5×5 de `QixPlayerView._draw`, de fora para dentro,
+contra os dois chãos em que o jogador realmente anda. O halo fica de fora de propósito: é
+desenhado com alfa sobre o campo, então a cor que chega ao olho depende do que está atrás e não é
+um valor que esta medição possa afirmar.
+
+| Camada | Cor autorada | Padrão | Abyssal | Aurora | Verdant | Meta 3:1 |
+|---|---|---|---|---|---|---|
+| `CURSOR_OUTER`×`FREE` | `boundary_color` | 12,19 | 13,08 | 12,28 | 13,67 | ok |
+| `CURSOR_ACCENT`×`FREE` | `accent_color` | 6,52 | 6,49 | 5,38 | 8,89 | ok |
+| `CURSOR_CORE`×`FREE` | `trail_hot_color` | 15,33 | 16,35 | 15,99 | 15,87 | ok |
+| `CURSOR_OUTER`×`BOUNDARY` | `boundary_color` | 1,00 | 1,00 | 1,00 | 1,00 | **abaixo** |
+| `CURSOR_ACCENT`×`BOUNDARY` | `accent_color` | 1,37 | 1,46 | 1,65 | 1,12 | **abaixo** |
+| `CURSOR_CORE`×`BOUNDARY` | `trail_hot_color` | 1,10 | 1,09 | 1,12 | 1,04 | **abaixo** |
+
+Leitura:
+
+- **Enquanto desenha, o cursor está resolvido.** Sobre `FREE` as três camadas passam da meta em
+  todos os quatro modelos de visão, com folga de 5,4:1 no pior caso. A pergunta “onde eu estou”
+  não tem problema no momento em que ela é mais tensa.
+- **Enquanto anda protegido, nenhuma camada opaca separa.** Sobre `BOUNDARY` as três ficam entre
+  1,00 e 1,65:1 em todas as paletas. Isto é mais forte do que se supunha: não é só o contorno que
+  some no chão — o núcleo, que existe para dar “centro inequívoco”, mede 1,04–1,12:1. O que
+  sustenta a leitura hoje é o halo pulsante de `accent_color` desenhado **fora** da silhueta, mais
+  o fato de o cursor se mover.
+- **`CURSOR_OUTER`×`BOUNDARY` a 1,00:1 é estrutural, não autoral.** `QixPlayerView.sync` atribui
+  `_outer = visual.boundary_color`: a camada externa *é* a cor do chão, por construção. Nenhuma
+  paleta que alguém escreva conserta esse par — só mudar de onde a view tira a cor.
+  `tests/unit/cursor_contrast_test.gd` fixa essa dependência, para que ela não seja desfeita sem
+  que a dívida seja revista.
+
+Como na seção acima, isto é **medição registrada, não correção**. Escolher a cor nova do cursor é
+decisão estética com olho humano na tela: a restrição que a medição impõe é que a candidata suba
+`CURSOR_*`×`BOUNDARY` acima de 3:1 **sem** derrubar os `CURSOR_*`×`FREE` que hoje passam — os dois
+chãos estão em extremos opostos da escala de luminância, então uma cor só os satisfaz no meio, ou
+a silhueta precisa de uma borda escura que não venha da paleta do campo.
+`PaletteContrast.CURSOR_FLOOR` guarda os números como catraca e `CURSOR_KNOWN_DEBT` faz o conserto
+de qualquer um dos três pares **falhar** o teste até que esta seção seja reescrita junto.
+
 ## Barra de qualidade do slice
 
 - Sem texto embutido, assinatura, watermark ou IP de terceiros.
@@ -83,6 +130,9 @@ guarda os números como catraca e `tests/unit/palette_contrast_test.gd` falha se
   canal para ameaça e segurança. **Parcialmente atendido**: verdadeiro para `FREE` contra
   `BOUNDARY` e `TRAIL`; ainda não para `BOUNDARY`×`TRAIL` nem para a ameaça sobre esses dois
   chãos. Ver “Contraste medido”.
+- Jogador e chefe com “núcleos contrastantes” e leitura em 1×. **Parcialmente atendido**:
+  verdadeiro para o cursor sobre `FREE` (5,4:1 no pior caso); sobre `BOUNDARY` nenhuma camada
+  opaca do cursor separa por luminância. Ver “Contraste do cursor contra o chão”.
 - Mudanças de rodada têm intro, resultado, confirmação opcional e continuidade clara de
   score/vidas.
 - Feedback de captura nasce de eventos confirmados e nunca antecipa resultado do domínio.

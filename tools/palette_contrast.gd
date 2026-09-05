@@ -70,6 +70,30 @@ const PAIRS := [
 	["TRAIL", "THREAT"],
 ]
 
+## As três camadas opacas da silhueta 5×5 de `QixPlayerView._draw`, de fora para dentro. O halo de
+## `accent_color` fica de fora de propósito: é desenhado com alfa sobre o chão, então a cor que
+## chega ao olho depende do que está atrás — não é um valor que esta medição possa afirmar.
+## `tests/unit/cursor_contrast_test.gd` amarra este mapa ao `presentation_colors()` real da view,
+## para que renomear a cor de uma camada não deixe a medição medindo outra coisa.
+const CURSOR_LAYERS := [
+	["CURSOR_OUTER", "boundary_color"],
+	["CURSOR_ACCENT", "accent_color"],
+	["CURSOR_CORE", "trail_hot_color"],
+]
+
+## "Onde eu estou" é uma leitura tão contínua quanto "onde está a borda", e o jogador passa a
+## partida inteira sobre um destes dois chãos: `BOUNDARY` enquanto anda protegido, `FREE` enquanto
+## desenha. Cada camada é medida contra os dois porque a silhueta só é legível pela camada que
+## sobreviver ao chão do momento.
+const CURSOR_PAIRS := [
+	["CURSOR_OUTER", "FREE"],
+	["CURSOR_OUTER", "BOUNDARY"],
+	["CURSOR_ACCENT", "FREE"],
+	["CURSOR_ACCENT", "BOUNDARY"],
+	["CURSOR_CORE", "FREE"],
+	["CURSOR_CORE", "BOUNDARY"],
+]
+
 ## Piso de regressão: pior razão observada em 2026-09-04 sobre a paleta padrão e as três rodadas
 ## autoradas, arredondada para baixo. Não é aprovação — vários pares estão abaixo de
 ## `TARGET_RATIO` e isso está registrado em `docs/ART_DIRECTION.md`. É uma catraca: uma paleta
@@ -87,6 +111,26 @@ const PAIR_FLOOR := {
 ## deles **falhe** o teste: a dívida sai da lista junto com o piso e o texto de `ART_DIRECTION`,
 ## no mesmo commit, em vez de a documentação envelhecer sozinha.
 const KNOWN_DEBT := ["BOUNDARY×TRAIL", "BOUNDARY×THREAT", "TRAIL×THREAT"]
+
+## Mesma catraca de `PAIR_FLOOR`, para a silhueta do cursor: pior razão observada em 2026-09-05
+## sobre a paleta padrão e as três rodadas autoradas, arredondada para baixo. Os três pares sobre
+## `BOUNDARY` estão registrados como dívida, não como aprovação — ver `docs/ART_DIRECTION.md`.
+const CURSOR_FLOOR := {
+	"CURSOR_OUTER×FREE": 12.10,
+	"CURSOR_OUTER×BOUNDARY": 1.00,
+	"CURSOR_ACCENT×FREE": 5.30,
+	"CURSOR_ACCENT×BOUNDARY": 1.11,
+	"CURSOR_CORE×FREE": 15.30,
+	"CURSOR_CORE×BOUNDARY": 1.03,
+}
+
+## Mesma função de `KNOWN_DEBT`, para o cursor. Que a lista tenha **as três** camadas é o achado:
+## sobre `BOUNDARY` nenhuma parte opaca do cursor separa por luminância, em nenhuma paleta.
+const CURSOR_KNOWN_DEBT := [
+	"CURSOR_OUTER×BOUNDARY",
+	"CURSOR_ACCENT×BOUNDARY",
+	"CURSOR_CORE×BOUNDARY",
+]
 
 ## Folga numérica da catraca. Absorve ruído de ponto flutuante, não mudança de paleta.
 const FLOOR_TOLERANCE := 0.01
@@ -134,15 +178,56 @@ static func rendered_swatches(visual: RoundVisualDefinition) -> Dictionary:
 	}
 
 
+## Cores opacas de cada camada da silhueta do cursor, na ordem de empilhamento de `_draw`.
+## Cada camada é uma lista de um elemento só: ao contrário do chão, a view não modula o cursor.
+static func cursor_swatches(visual: RoundVisualDefinition) -> Dictionary:
+	var result := {}
+	for layer in CURSOR_LAYERS:
+		var authored: Color = visual.get(layer[1])
+		var single: Array[Color] = [authored]
+		result[layer[0]] = single
+	return result
+
+
 ## Mede todos os pares de `PAIRS` para uma paleta. Devolve o pior caso por par (extremos do shader
 ## × quatro modelos de visão), a retenção de diferença cromática e quem está abaixo da meta.
 static func measure(visual: RoundVisualDefinition) -> Dictionary:
+	return _measure(rendered_swatches(visual), PAIRS, PAIR_FLOOR)
+
+
+## Mede a silhueta do cursor contra os dois chãos em que ele anda. Mesma métrica, mesma catraca:
+## o que muda é o conjunto de pares e o piso, porque "onde eu estou" e "onde está a borda" são
+## perguntas diferentes e podem regredir independentemente.
+static func measure_cursor(visual: RoundVisualDefinition) -> Dictionary:
 	var swatches := rendered_swatches(visual)
+	swatches.merge(cursor_swatches(visual))
+	return _measure(swatches, CURSOR_PAIRS, CURSOR_FLOOR)
+
+
+## Pares que caíram abaixo do piso registrado. Vazio significa "não piorou", nunca "está bom".
+## O piso vem dentro da medição para que os dois conjuntos de pares usem a mesma catraca sem que
+## quem chama precise lembrar qual tabela é a certa.
+static func regressions(measurement: Dictionary) -> PackedStringArray:
+	var found := PackedStringArray()
+	var floors: Dictionary = measurement["floor"]
+	for entry in measurement["pairs"]:
+		var name: String = entry["pair"]
+		if not floors.has(name):
+			found.append("%s: par sem piso registrado" % name)
+			continue
+		var floor_value: float = floors[name]
+		var ratio: float = entry["worst_ratio"]
+		if ratio < floor_value - FLOOR_TOLERANCE:
+			found.append("%s: %.3f abaixo do piso %.3f" % [name, ratio, floor_value])
+	return found
+
+
+static func _measure(swatches: Dictionary, pairs_to_measure: Array, floors: Dictionary) -> Dictionary:
 	var pairs: Array[Dictionary] = []
 	var worst_ratio := INF
 	var worst_pair := ""
 	var below_target := PackedStringArray()
-	for pair in PAIRS:
+	for pair in pairs_to_measure:
 		var entry := _measure_pair(swatches, pair[0], pair[1])
 		pairs.append(entry)
 		if not entry["meets_target"]:
@@ -155,22 +240,8 @@ static func measure(visual: RoundVisualDefinition) -> Dictionary:
 		"worst_ratio": worst_ratio,
 		"worst_pair": worst_pair,
 		"below_target": below_target,
+		"floor": floors,
 	}
-
-
-## Pares que caíram abaixo do piso registrado. Vazio significa "não piorou", nunca "está bom".
-static func regressions(measurement: Dictionary) -> PackedStringArray:
-	var found := PackedStringArray()
-	for entry in measurement["pairs"]:
-		var name: String = entry["pair"]
-		if not PAIR_FLOOR.has(name):
-			found.append("%s: par sem piso registrado em PAIR_FLOOR" % name)
-			continue
-		var floor_value: float = PAIR_FLOOR[name]
-		var ratio: float = entry["worst_ratio"]
-		if ratio < floor_value - FLOOR_TOLERANCE:
-			found.append("%s: %.3f abaixo do piso %.3f" % [name, ratio, floor_value])
-	return found
 
 
 static func _measure_pair(swatches: Dictionary, first: String, second: String) -> Dictionary:
