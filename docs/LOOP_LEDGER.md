@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** base reconciliada à mão em 2026-09-04 sobre a integração dos 18 PRs do loop
+> (#1–#18). Em 2026-09-06T04:03Z foram atualizados o estado da fila no P0, dois itens de P3 sobre
+> o pulso da trilha e as notas de ambiente; o resto do backlog **não** foi reconferido nesta
+> passagem. O mérito estético de cada mudança continua sem julgamento: o jogo não pode ser jogado
+> nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +69,9 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **Estado em 2026-09-06T04:03Z: 22 PRs abertos (#20–#41).** A execução de 02:58Z mediu que
+      #20–#39 integram verdes em conjunto; esse dado não precisa ser refeito. O que falta é a
+      decisão humana de mesclar, não mais medição — **não gaste outra execução a remedir a fila.**
 
 ### P1 — higiene estrutural
 
@@ -145,7 +149,9 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       milissegundos absolutos, não em fração da duração. *Pronto:* teste que mede o frame de pico
       do PCM e exige que os cues de impacto piquem em ≤ 8 ms, mantendo a subida suave dos de anúncio.
 - [ ] **Ritmo do risco: som e háptica da exposição.** O canal visual foi feito em #9
-      (`TrailExposure`: o pulso da trilha acelera e clareia, o HUD nomeia o limiar). Faltam os
+      (`TrailExposure`: o pulso da trilha acelera e clareia, o HUD nomeia o limiar) — e só passou a
+      funcionar de facto na execução de 04:03Z, que descobriu que a fase do pulso saltava até 6 rad
+      por tick e não lia como aceleração. Faltam os
       outros dois canais do item original — um cue que suba com a exposição e um toque háptico ao
       cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes acima, que define
       prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com prioridade
@@ -154,6 +160,12 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Os dois números são justificáveis no papel e **não foram vistos em jogo**.
       *Pronto:* alguém joga as três rodadas e confirma (ou corrige) onde o aviso deve nascer.
+- [ ] **O ritmo do pulso da trilha nunca foi visto, só medido.** A execução de 04:03Z consertou a
+      *continuidade* da fase (ver abaixo), o que era um defeito objetivo. O que ela não pode julgar
+      é o ritmo resultante: 0,20 rad/tick parado e 0,75 rad/tick com exposição saturada, ou seja
+      ~1,9 s e ~0,5 s por ciclo. Um pulso lento demais não avisa; rápido demais vira o mesmo ruído
+      que acabou de sair. Anda junto com o item de calibrar a curva acima — é a mesma sessão de
+      jogo. *Pronto:* alguém joga e confirma (ou corrige) as duas taxas em `QixBoardView`.
 - [ ] **A pontuação não acompanha a subida do contador.** `06-gameplay.md §6.3` mostra que no
       original cada degrau do contador **paga pontos**, e é isso que faz o número na barra superior
       pulsar junto com a área. Aqui o score é domínio e chega inteiro num tick, então só a
@@ -195,6 +207,23 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - **A descoberta de testes em `run_tests.gd` varre diretório.** Dois PRs podem acrescentar arquivos
   de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem. Prefira arquivo novo a edição
   em arquivo disputado.
+- **Para saber o que está livre, use a união dos arquivos da fila, não os títulos dos PRs.** Uma
+  linha resolve, e é muito mais barato que remedir a integração:
+
+  ```bash
+  git fetch origin '+refs/pull/*/head:refs/remotes/pr/*'
+  for n in $(gh pr list --state open --json number -q '.[].number'); do
+    git diff --name-only origin/main...refs/remotes/pr/$n
+  done | sort -u | grep -v '^docs/loop/runs/' | grep -v LOOP_LEDGER
+  ```
+
+  O que **não** aparece nessa lista é território livre. Foi assim que a execução de 04:03Z chegou a
+  `game/board/board_view.gd` e ao shader com a fila em 21 PRs — e o defeito que encontrou lá valia
+  mais que qualquer item que restava no backlog.
+- **O `main` local do checkout pode estar atrasado em relação a `origin/main`.** Em 04:03Z o ref
+  `main` apontava para `74c173a` enquanto `origin/main` já estava em `cba520a`; um `git diff
+  main..<ramo>` devolveu 375 arquivos de diferença que não existiam. Compare sempre contra
+  `origin/main`, depois de `git fetch origin main`.
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.

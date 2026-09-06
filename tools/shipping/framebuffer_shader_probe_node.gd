@@ -68,7 +68,10 @@ func _run() -> void:
 	material.set_shader_parameter("boundary_color", BOUNDARY_COLOR)
 	material.set_shader_parameter("trail_color", TRAIL_COLOR)
 	material.set_shader_parameter("trail_hot_color", TRAIL_HOT_COLOR)
-	material.set_shader_parameter("presentation_tick", 0.0)
+	# Fases zeradas: a sonda compara cores por estado, e um pulso em movimento tornaria a
+	# asserção de framebuffer dependente do instante da captura.
+	material.set_shader_parameter("scan_phase", 0.0)
+	material.set_shader_parameter("trail_pulse_phase", 0.0)
 
 	var sprite := Sprite2D.new()
 	sprite.centered = false
