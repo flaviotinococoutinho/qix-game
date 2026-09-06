@@ -20,6 +20,31 @@ const ROW_PROMPT_Y := 118.0
 const ROW_INSET_X := 12.0
 const ROW_WIDTH := 172.0
 
+## Cadência da passagem, em fração do tempo de transição já decorrido.
+##
+## A barra de progresso é um relógio — ela conta quanto falta para a sessão avançar sozinha, e
+## por isso continua linear: uma barra com aceleração mentiria sobre o tempo restante. O ritmo
+## da passagem vive nas linhas, que entram em ordem de leitura em vez de nascerem todas no
+## mesmo frame. A linha de continuidade (o que a incursão traz do setor anterior, ou o que
+## este setor somou) é a última a entrar **de propósito**: ela é a resposta à pergunta que o
+## jogador acabou de fazer ao campo, e entrar por último é o que a torna a batida da passagem.
+##
+## As frações são do total, não ticks absolutos, porque `intro_ticks` (60) e `clear_ticks`
+## (120) diferem por 2×: em ticks fixos a intro terminaria antes de a cadência fechar.
+const REVEAL_SUBTITLE := 0.14
+const REVEAL_RESULT := 0.30
+const REVEAL_CONTINUITY := 0.46
+const REVEAL_PROMPT := 0.62
+
+## O acento: pela duração abaixo, contada a partir da entrada da continuidade, a linha é
+## escrita em `ACCENT_BEAT_COLOR` e a aresta do painel engrossa. Dois canais em vez de um
+## porque 7 px de texto num painel escuro não sustentam sozinhos uma batida — e porque a
+## aresta é decorativa: ela pode engrossar sem empurrar nenhuma linha (`ROW_INSET_X` = 12).
+const ACCENT_SPAN := 0.18
+const ACCENT_BEAT_COLOR := Color("f2ffff")
+const EDGE_WIDTH := 3.0
+const EDGE_BEAT_WIDTH := 5.0
+
 var _scrim: ColorRect
 var _panel: ColorRect
 var _edge: ColorRect
@@ -42,7 +67,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scrim = _bar("Scrim", self, Vector2.ZERO, size, Color("02070bd1"))
 	_panel = _bar("Panel", self, PANEL_RECT.position, PANEL_RECT.size, Color("07141af2"))
-	_edge = _bar("Edge", _panel, Vector2.ZERO, Vector2(3.0, PANEL_RECT.size.y), DEFAULT_ACCENT)
+	_edge = _bar("Edge", _panel, Vector2.ZERO, Vector2(EDGE_WIDTH, PANEL_RECT.size.y), DEFAULT_ACCENT)
 	_phase_label = _label("Phase", _panel, Vector2(ROW_INSET_X, ROW_PHASE_Y), Vector2(ROW_WIDTH, 14.0), 7, HORIZONTAL_ALIGNMENT_LEFT)
 	_title_label = _label("Title", _panel, Vector2(ROW_INSET_X, ROW_TITLE_Y), Vector2(ROW_WIDTH, 23.0), 13, HORIZONTAL_ALIGNMENT_LEFT)
 	_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -82,6 +107,8 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 		_continuity_label.text = _running_totals(session)
 		_prompt_label.text = "ESC / P  ·  CONTINUAR"
 		_progress_fill.size.x = PROGRESS_WIDTH
+		# A pausa não é uma passagem: o painel abre inteiro, sem batida nenhuma.
+		_apply_cadence(1.0, accent)
 		return
 
 	match session.phase:
@@ -98,6 +125,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			_continuity_label.text = _carry_in_line(session)
 			_prompt_label.text = "ENTER  ·  INICIAR AGORA"
 			_set_progress(session.transition_progress())
+			_apply_cadence(session.transition_progress(), accent)
 		GameSession.Phase.ROUND_CLEAR:
 			visible = true
 			_phase_label.text = "ROTA SEGURA  %02d / %02d" % [session.current_round_number(), session.campaign.rounds.size()]
@@ -112,6 +140,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			# depois dela. É a ameaça crescente aparecendo antes de ser enfrentada.
 			_prompt_label.add_theme_color_override("font_color", _next_accent(session, accent))
 			_set_progress(session.transition_progress())
+			_apply_cadence(session.transition_progress(), accent)
 		GameSession.Phase.GAME_OVER:
 			visible = true
 			_edge.color = threat
@@ -124,6 +153,10 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			_continuity_label.add_theme_color_override("font_color", threat)
 			_prompt_label.text = "ENTER  ·  REINICIAR CAMPANHA"
 			_set_progress(0.0)
+			# Fim de jogo e campanha concluída não têm relógio de transição
+			# (`transition_ticks_total` = 0): são estados terminais, e um painel que ainda se
+			# monta por partes atrasaria a leitura de um resultado que já é definitivo.
+			_apply_cadence(1.0, threat)
 		GameSession.Phase.CAMPAIGN_COMPLETE:
 			visible = true
 			_phase_label.text = "TODOS OS SETORES ONLINE"
@@ -133,6 +166,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			_continuity_label.text = _sectors_cleared_line(session)
 			_prompt_label.text = "ENTER  ·  NOVA CAMPANHA"
 			_set_progress(1.0)
+			_apply_cadence(1.0, accent)
 
 
 ## Linha de continuidade da intro: o que a incursão trouxe do setor anterior. Sem ela, cada
@@ -187,6 +221,30 @@ func _next_accent(session: GameSession, fallback: Color) -> Color:
 		return fallback
 	var next_visual := session.campaign.rounds[next_index].visual
 	return next_visual.accent_color if next_visual != null else fallback
+
+
+## Encena a passagem a partir do progresso **já confirmado** pela sessão. Não mede tempo, não
+## guarda contador próprio e não antecipa fase nenhuma: recebe a mesma fração que a barra e
+## decide o que já está em cena (invariante 6). Uma transição de duração zero — pausa, fim de
+## jogo, campanha concluída — chega aqui com 1.0 e abre o painel inteiro.
+func _apply_cadence(progress: float, settled_color: Color) -> void:
+	var elapsed := clampf(progress, 0.0, 1.0)
+	_subtitle_label.visible = elapsed >= REVEAL_SUBTITLE
+	_result_label.visible = elapsed >= REVEAL_RESULT
+	_continuity_label.visible = elapsed >= REVEAL_CONTINUITY
+	_prompt_label.visible = elapsed >= REVEAL_PROMPT
+	_continuity_label.add_theme_color_override(
+		"font_color", settled_color.lerp(ACCENT_BEAT_COLOR, _beat(elapsed)))
+	_edge.size.x = lerpf(EDGE_WIDTH, EDGE_BEAT_WIDTH, _beat(elapsed))
+
+
+## Força da batida: 1.0 no frame em que a continuidade entra, 0.0 ao fim de `ACCENT_SPAN`.
+## Decai em vez de piscar porque um degrau de um frame é ruído a 60 Hz, não ênfase — a mesma
+## razão pela qual o contador de percentagem sobe em degraus com atraso (ADR-0009).
+func _beat(elapsed: float) -> float:
+	if elapsed < REVEAL_CONTINUITY:
+		return 0.0
+	return clampf(1.0 - (elapsed - REVEAL_CONTINUITY) / ACCENT_SPAN, 0.0, 1.0)
 
 
 func _set_progress(value: float) -> void:

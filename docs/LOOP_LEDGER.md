@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o corpo do backlog foi reconciliado à mão em 2026-09-04 sobre a integração dos
+> 18 PRs do loop (#1–#18). Em 2026-09-06 foram atualizados apenas: o P0 (fila recontada contra
+> os 30 PRs abertos), o item do ritmo da transição (entregue) e o item da geometria do HUD
+> (hipóteses medidas). Medida verde desta data: 179 testes, 11872 asserções, 0 falhas; rota M2
+> 179→825‰ com `errors: []`. O mérito **estético** de cada mudança continua por julgar: o jogo
+> não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +70,13 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+
+      **Estado em 2026-09-06T13:03Z: 30 PRs abertos (#20–#49), `main` parada em `cba520a`
+      desde 04-09.** Quatro ramos de integração já foram produzidos (#19 mesclado; #36, #42
+      abertos) e o #42 nasceu obsoleto — #43–#49 chegaram depois dele. **Uma quinta integração
+      não é o gargalo; a mão humana é.** Execuções seguintes: não gastem a hora a reintegrar.
+      Meçam a fila, digam-no no PR, e trabalhem num item que a fila não cubra. Só quatro itens
+      deste backlog estavam sem PR aberto nessa medição, e três deles exigem olho humano.
 
 ### P1 — higiene estrutural
 
@@ -150,26 +159,45 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes acima, que define
       prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com prioridade
       declarada, **sem alterar checksum**.
-- [ ] **Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
-      `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
-      Os dois números são justificáveis no papel e **não foram vistos em jogo**.
-      *Pronto:* alguém joga as três rodadas e confirma (ou corrige) onde o aviso deve nascer.
+- [ ] **Calibrar com jogo real os números que só têm defesa no papel.** Dois conjuntos, mesma
+      dívida: (a) `TrailExposure` usa piso 8 px (o mesmo `new_segment_slow_px` do domínio) e teto
+      geométrico `(w+h)/4` = 127 px no campo de produção; (b) a cadência da transição
+      (`QixRoundTransitionView`, 2026-09-06) usa 0,14 / 0,30 / 0,46 / 0,62 com acento de 0,18 —
+      a 60 ticks de intro isso dá ~11 ticks de batida e ~23 de prompt em cena antes do fim.
+      Nenhum dos dois conjuntos foi visto em jogo.
+      *Pronto:* alguém joga as três rodadas e confirma (ou corrige) onde o aviso de exposição
+      deve nascer e se a batida da passagem se lê como ênfase, não como atraso.
 - [ ] **A pontuação não acompanha a subida do contador.** `06-gameplay.md §6.3` mostra que no
       original cada degrau do contador **paga pontos**, e é isso que faz o número na barra superior
       pulsar junto com a área. Aqui o score é domínio e chega inteiro num tick, então só a
       percentagem é encenada — o rótulo `S ######` continua saltando. → Avaliar se o HUD pode
       encenar a subida do score pelos mesmos degraus, lendo o valor já confirmado.
       *Pronto:* score e percentagem sobem juntos, sem que o HUD toque no domínio.
-- [ ] **O tempo da transição entre rodadas não tem ritmo.** #15 fez a passagem carregar score,
-      vidas e o próximo setor, mas a barra de progresso é linear em ticks e nada enfatiza o
-      instante em que o número de continuidade aparece. É animação de apresentação, não texto.
-      *Pronto:* a passagem tem um acento perceptível no momento da continuidade, sem tocar domínio.
+- [x] **O tempo da transição entre rodadas não tem ritmo.** — feito em
+      `docs/loop/runs/2026-09-06T130328Z.md`. As linhas do painel entram em ordem de leitura por
+      frações do tempo de transição, e a linha de continuidade recebe um acento que decai em dois
+      canais (a linha clareia, a aresta do painel engrossa). A barra de progresso **fica linear
+      de propósito** — é um relógio, e acelerá-la mentiria sobre o tempo restante; isso está
+      escrito no código para não ser "consertado". Defendido por
+      `tests/unit/round_transition_cadence_test.gd`, que também prova checksum e replay
+      inalterados ao longo da intro inteira.
+      *Fica pendente:* as frações (0,14 / 0,30 / 0,46 / 0,62, acento de 0,18) nunca foram vistas
+      em jogo. Ver o item de calibração abaixo.
 - [ ] **A geometria do HUD depende da ordem de construção.** `_add_label` só obtém o retângulo
       pedido porque atribui `size` depois de entrar na árvore; antes do primeiro frame o mínimo do
-      `Label` ainda é o do tema (23 px). Funciona, mas é frágil e invisível. → Avaliar
-      `custom_minimum_size` explícito ou um `Theme` do HUD com tamanho de fonte definido, para que
-      a altura não dependa de quando `_ready` corre. *Pronto:* altura correta medida dentro do
-      runner, sem a ressalva que `game_hud_layout_test.gd` documenta hoje.
+      `Label` ainda é o do tema (23 px). Funciona, mas é frágil e invisível.
+      **As duas hipóteses do item foram medidas em 2026-09-06 e ambas falham**
+      (`docs/loop/runs/2026-09-06T130328Z.md` traz a tabela): `custom_minimum_size` entra por
+      `max()` e nunca encolhe o mínimo; `Theme` com `font_size`, no HUD ou no próprio `Label`,
+      não muda nada, porque a causa é `Control.update_minimum_size()` **adiar** a recomputação
+      para o próximo frame — e o runner corre antes de qualquer frame. A única combinação que
+      funciona é `autowrap_mode` + `clip_text` (mínimo cai para (1,1), `size.y` fica em 14), e
+      ela custa `OVERRUN_TRIM_ELLIPSIS`: um nome de setor longo passa a quebrar de linha e a
+      segunda linha some, em vez de ganhar reticências. Trocar "texto que transborda" por "texto
+      que some" é pior; não foi aplicado.
+      *Pronto:* alguém confirma por captura que o clip é aceitável nos rótulos de conteúdo
+      autorável (`RoundTitle`, `Status`), **ou** fica escrito que o custo não compensa e o item
+      fecha com a ressalva de `game_hud_layout_test.gd` mantida de propósito.
 
 ## Notas de ambiente (sandbox de nuvem)
 
