@@ -6,6 +6,13 @@
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
 
+> **Reverificação parcial em 2026-09-06T19:58Z** (`ai/loop-20260906T195841Z`), contra
+> `origin/main` = `34634d0`: suíte em **262 testes / 12719 asserções / 0 falhas** (e
+> **12715** depois da remoção deste PR — o delta de −4 está explicado no relato) e
+> `verify_m2_capture_route.gd` com `"errors": []` e score 12750. Só o item P1 da ADR-0010 foi
+> mexido; o resto do backlog **não** foi reauditado nesta passagem. Fila medida no mesmo instante:
+> **4 PRs abertos (#56, #57, #58, #59), os quatro meta** — ver o P0 abaixo.
+
 > **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
 > pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
 > Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
@@ -116,6 +123,17 @@ Itens sem critério de pronto não entram aqui.
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
 
+      **Medida nova (19:58Z, quinta medição): o problema mudou de forma.** A fila drenou até 0 com
+      a mesclagem do #55 e voltou a **4 em ~1 h** — #56, #57, #58 e #59, e os **quatro são
+      meta-PRs**: reconciliam o ledger ou relatam o estado da fila. Nenhum toca o jogo. As
+      medições anteriores diziam "o loop produz mais do que a revisão consome"; esta diz algo pior
+      e mais acionável: **esvaziar a fila não devolve capacidade ao jogo, porque o próprio ato de
+      esvaziá-la gera a fila seguinte.** Três dos quatro editam `docs/LOOP_LEDGER.md`, o único
+      arquivo que a integração já mediu como o que sempre conflita. O teto de meta-PR do protocolo
+      (regra 7) existe para isto e não segurou — quatro é o dobro do limite operacional de dois. →
+      Junto às três opções acima, avaliar uma quarta: **proibir PR só de ledger**, fazendo a
+      reconciliação viajar sempre carona num PR que muda o jogo.
+
 - [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
       `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
       contagem. Achado de #31, reconfirmado aqui: os dois existem lado a lado na árvore integrada.
@@ -124,12 +142,21 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+- [~] **Executar as remoções decididas na ADR-0010 — uma pasta por PR. 1 de 7 feita; faltam 6.**
+      A primeira (`curved_lines_2d`, a maior: 3,4 MB, 296 arquivos, 42 cenas, 17 `class_name`) é a
+      da execução `ai/loop-20260906T195841Z` — evidência em
+      `docs/loop/runs/2026-09-06T195841Z.md`: os **170 `uid://`** da pasta não apareciam nenhuma
+      vez fora dela, nenhum dos 17 `class_name` era citado, e a única citação de caminho era o
+      próprio `exclude_filter`. Continuam em disco: `GDDraw` (1,9 MB, 1 cena), `curve2collision`
+      (48 KB), `guide` (2,7 MB, 19 cenas), `phantom_camera` (2,2 MB, 30 cenas), `softbody2d`
+      (112 KB), `yard` (1,1 MB, 9 cenas) — ~7,9 MB e 59 cenas no total.
+      **Item ideal para uma execução curta** — pequeno, mecânico, repetível e sem disputar arquivo
+      com os meta-PRs que ocupam a fila. O molde de uma remoção, para não redescobrir: (1) as
+      quatro medições de posse; (2) tirar a linha do inventário de `addons/README.md` e acrescentar
+      uma em § Remoções já executadas; (3) `.gitignore`; (4) uma asserção por preset em
+      `shipping_export_test.gd` — o `exclude_filter` **fica**; (5) recontar cenas e `class_name` em
+      `docs/PROJECT_CONTRACT.md` § Addons. O delta de asserções de cada remoção é **−6 + 2 = −4**;
+      se der outro número, algo se perdeu.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
 
