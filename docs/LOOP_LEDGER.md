@@ -1,7 +1,10 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** só o **backlog** foi mexido nesta passagem — o item do canal sonoro da exposição
+> passou a `[~]`, e nasceu dele um item de sessão humana. O estado da fila descrito abaixo é o
+> de `c4cedb1` e **não** foi reconciliado aqui: essa reconciliação é o objeto dos PRs #56 e #57,
+> abertos, e duplicá-la só produziria uma quinta versão contraditória do mesmo censo.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
@@ -224,17 +227,32 @@ O que continua aberto:
       `CURSOR_KNOWN_DEBT` e a seção de `ART_DIRECTION` reescritos no mesmo commit, e alguém
       confirmou por captura que o cursor não virou um borrão claro sobre o campo.
 
-- [ ] **O canal sonoro da exposição não foi feito.** O item original pedia som **e** háptica ao
-      cruzar `TrailExposure.WARNING_RATIO`; #39 entregou só a háptica (`app/haptic_feedback.gd`).
-      Falta o cue que suba com a exposição, com prioridade declarada entre vozes — o envelope por
-      cue de #23 já dá a ferramenta. *Pronto:* cruzar o limiar é audível, com prioridade
-      declarada, **sem alterar checksum**.
+- [~] **O canal sonoro da exposição — reivindicado por `ai/loop-20260906T210208Z`.** O item
+      original pedia som **e** háptica ao cruzar `TrailExposure.WARNING_RATIO`; #39 entregou só a
+      háptica. O cue `&"exposure"` está autorado (prioridade 35, a mesma do pulso háptico;
+      `onset` de anúncio, não de impacto), `QixAudioDirector.sync` recebe a aresta e
+      `exposure_cue_survives` recusa o aviso quando algo mais alto acontece no mesmo tick — o mix
+      tem oito vozes, e sem essa regra o aviso entraria por cima da captura ou da morte. A aresta
+      continua com **um** dono: `QixHapticFeedback.would_cross_warning` lê sem consumir, e o hub
+      pergunta antes de `sync` avançar a memória. Checksum imóvel, verificado. Relato em
+      `docs/loop/runs/2026-09-06T210208Z.md`.
+      **Falta o julgamento estético** — ver o item de sessão humana abaixo.
 
-- [ ] **`docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** Medido na árvore
-      integrada: **zero** ocorrências de `ADR-0011` no documento de arte, embora a ADR decida um
-      traço visual da ameaça; e a floritura de captura de #37 também não está escrita lá. Quem lê
-      só o documento de arte não encontra nenhuma das duas.
-      *Pronto:* as duas decisões referenciadas na seção que lhes corresponde.
+- [ ] **[requer sessão humana] Ouvir o cue do limiar de exposição.** Nasceu da entrega acima: a
+      forma da onda está medida sobre o PCM, mas o sandbox corre com `--audio-driver Dummy` e
+      `runtime_allows_playback()` devolve `false` em headless — o cue é sintetizado e nunca sai
+      por um altifalante. A pergunta é uma só: 466 → 622 Hz em 0,20 s soa como papel a esticar
+      sob o traço longo, ou como um telefone a tocar? *Pronto:* alguém ouviu e disse; se soar a
+      alarme, o conserto é de autoração (`hz`/`end_hz`/`gain` na receita) e não toca em domínio.
+
+- [ ] **`docs/ART_DIRECTION.md` não registra decisões de identidade já tomadas.** Medido na
+      árvore integrada: **zero** ocorrências de `ADR-0011` no documento de arte, embora a ADR
+      decida um traço visual da ameaça; a floritura de captura de #37 também não está escrita lá;
+      e o documento não tem seção nenhuma sobre som, apesar de o jogo já ter escada de prioridade
+      autorada, famílias de onset (#23) e agora o cue do limiar de exposição
+      (`ai/loop-20260906T210208Z`). Quem lê só o documento de arte não encontra nada disto.
+      *Pronto:* as três decisões referenciadas na seção que lhes corresponde — e, para o som, uma
+      seção que exista.
 
 - [x] **O tempo da transição entre rodadas não tem ritmo.** ✅ entregue pelo #50
       (`ai/loop-20260906T130328Z`), integrado aqui **com resolução de conflito**: o painel abre em

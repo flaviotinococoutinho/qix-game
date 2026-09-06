@@ -7,6 +7,10 @@ const BUS_MUSIC := &"Qix Music"
 const BUS_SFX := &"Qix SFX"
 const SFX_VOICES := 8
 const TRAIL_THROTTLE_MSEC := 36
+## O cue do limiar de exposição da trilha. Não está em `cue_for_kind` porque não é
+## um evento: é uma aresta lida sobre o snapshot já confirmado, e quem a reconhece
+## é o hub de feedback, que compara dois ticks. Ver `QixFeedbackHub.sync`.
+const EXPOSURE_CUE := &"exposure"
 
 @export_range(0.0, 1.0, 0.01) var master_volume := 0.90
 @export_range(0.0, 1.0, 0.01) var music_volume := 0.52
@@ -102,15 +106,45 @@ static func arguments_allow_playback(
 
 
 ## Interface única para o bootstrap após a simulação emitir eventos.
-func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) -> void:
+##
+## `exposure_crossed` é a aresta de `TrailExposure.crossed_warning` para este tick, calculada
+## pelo hub. O default `false` preserva quem sincroniza só por eventos.
+func sync(
+	session: GameSession,
+	events: Array[GameEvent],
+	paused: bool = false,
+	exposure_crossed: bool = false,
+) -> void:
 	ensure_ready()
 	if session != null and session.round_index != _round_index:
 		play_round_music(session.round_index)
 	apply_pause(paused, Time.get_ticks_msec())
 	if not enabled:
 		return
-	for cue_name in cues_for_events(events):
+	var cues := cues_for_events(events)
+	for cue_name in cues:
 		play_cue(cue_name)
+	# Depois dos cues de evento de propósito: eles reservam voz primeiro, e o aviso entra
+	# no que sobrar — nunca por cima da notícia do tick.
+	if exposure_crossed and exposure_cue_survives(cues):
+		play_cue(EXPOSURE_CUE)
+
+
+## O aviso de exposição só soa se nada mais alto tiver acontecido no mesmo tick.
+##
+## Ao contrário da háptica — um actuador, um pulso, e por isso uma disputa que `plan` já
+## resolve — o mix tem oito vozes: sem esta regra o aviso entraria numa voz livre por cima
+## da captura ou da morte. E o problema não é disputa de canal, é que o aviso **perde o
+## objeto**: se o laço fechou, a notícia é o território; se o jogador morreu, já não há
+## trilha para estar exposta. A regra e o número são os mesmos de
+## `QixHapticFeedback._exposure_pulse`, para que ouvir e sentir não discordem sobre qual foi
+## o acontecimento do tick.
+static func exposure_cue_survives(event_cues: Array[StringName]) -> bool:
+	var exposure_priority := QixProceduralAudioLibrary.priority_for(EXPOSURE_CUE)
+	for cue_name in event_cues:
+		if QixProceduralAudioLibrary.priority_for(cue_name) > exposure_priority:
+			return false
+	return true
 
 
 ## Congela ou retoma **todo** o feedback sonoro: a música e as oito vozes de SFX.
