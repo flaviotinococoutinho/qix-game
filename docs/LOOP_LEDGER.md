@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** base reconciliada à mão em 2026-09-04 sobre a integração dos 18 PRs do loop
+> (#1–#18). Em 2026-09-06T06:59Z foram atualizados o estado da fila no P0 e o P2 (guarda do
+> invariante 10 entregue, lacuna dos invariantes 2/3/5/9 registrada); o resto do backlog **não**
+> foi reconferido nesta passagem. O mérito estético de cada mudança continua sem julgamento: o
+> jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +69,11 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **Estado em 2026-09-06T06:59Z: 24 PRs abertos (#20–#43).** `main` está parada em `cba520a`
+      desde 2026-09-04 23:57 — cerca de 31 h e 24 execuções horárias. O #42 integra #20–#41 numa
+      branch só e a execução de 02:58Z mediu esse conjunto verde; **não gaste outra execução a
+      remedir a fila**, o que falta é decisão humana de mesclar. O dono do repositório foi
+      notificado em 06:03Z e de novo em 06:59Z, fora do PR.
 
 ### P1 — higiene estrutural
 
@@ -108,6 +114,27 @@ Itens sem critério de pronto não entram aqui.
       R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
       literal cobre. *Pronto:* cada perfil de boss de produção tem ao menos um checksum final
       fixado, ou uma nota dizendo por que não precisa.
+- [x] **Invariante 10 sem guarda: o manifesto de proveniência era uma promessa que ninguém era
+      obrigado a cumprir.** Item nascido fora do backlog na execução de 06:59Z, ao conferir que a
+      fila não deixava nenhum item livre. Dos dez invariantes, o 10 ("nenhum byte extraído de ROM
+      entra no jogo") era o único cuja quebra não aparecia em checksum, teste de comportamento nem
+      revisão de diff — e é o único cujo custo é de licença, descoberto depois da distribuição.
+      Entregue por `tests/unit/asset_provenance_test.gd` (PR de 06:59Z): SHA-256 de todo arquivo de
+      mídia conferido contra `assets/ASSET-PROVENANCE.md`, hash órfão recusado, arquivo marcado
+      `(removido)` proibido de reaparecer, e `reference/` incluído na varredura porque é lá que a
+      promessa de "nenhum byte de ROM" é mais fácil de quebrar sem querer. Provado plantando as
+      três violações — ver `docs/loop/runs/2026-09-06T065947Z.md`.
+      *Pronto:* atingido. O que a guarda **não** prova: que a origem declarada é verdadeira.
+      Nenhuma varredura distingue arte gerada de arte extraída; isso continua sendo afirmação
+      humana, e está dito no cabeçalho do teste.
+- [ ] **Invariantes 2, 3, 5 e 9 continuam sem guarda mecânica.** Depois de 1 e 4 (#3), 6 (#26),
+      7/8 (checksums dourados de #5 e #24) e 10 (06:59Z), sobram: `step()` avança exatamente um
+      tick; `BoardState` é a única autoridade sobre território; `FloodFillCaptureResolver` é puro;
+      `GameRules` é imutável em runtime. O 3 é o mais barato — o teste de #26 já proíbe `set_cell`
+      vindo da apresentação, e faltaria estendê-lo às camadas restantes. O 5 provavelmente só cede
+      a um teste de comportamento (chamar o resolver duas vezes com o mesmo estado e comparar os
+      bytes do board). *Pronto:* cada um com guarda, ou com uma linha escrita dizendo por que ele
+      não é verificável estaticamente.
 - [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
       `phase = ROUND_CLEAR` num teste não arquiva a rodada — correto, mas não óbvio: custou uma
       asserção errada na execução de 19:00Z. Qualquer apresentação que conte rodadas depende disso.

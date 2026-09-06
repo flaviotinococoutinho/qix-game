@@ -1,9 +1,11 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** `tests/run_tests.gd` reexecutado (134 testes, 11.489 asserções, 0 falhas) e
-> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Os
-> testes Python do parser Metal HUD e o run de shipping não foram reexecutados.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** `tests/run_tests.gd` reexecutado (179 testes, 11.878 asserções, 0 falhas) e
+> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). As duas
+> linhas novas — invariante 10 e guarda de proveniência — foram medidas nesta passagem; o resto
+> da matriz **não** foi reconferido. Os testes Python do parser Metal HUD e o run de shipping não
+> foram reexecutados (export e assinatura não rodam na nuvem).
 
 Última validação automatizada: **2026-09-03**, Godot
 **4.7.2-stable.mono.official** em macOS. Run de shipping:
@@ -56,6 +58,7 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | integração | existência, carga, campanha/feedback/touch ligados, camadas obrigatórias da cena principal, permissão Android de vibração e 60 Hz persistidos no projeto |
 | captura de erros | o runner de testes falha por erro de script ocorrido depois de uma asserção, e limpa a janela entre testes |
 | invariantes 1 e 4 | varredura estática de `game/simulation`, `game/rules` e `game/session` por símbolo do mundo real (acaso global, relógio, `Input`, `Tween`, física, `await`, `_process`); o próprio scanner é validado contra amostras positivas e negativas, de modo que ele não pode passar sem olhar |
+| invariante 10 | SHA-256 de todo arquivo de mídia de `assets`, `game`, `ui`, `app`, `content`, `tools`, `tests` e `reference` conferido contra `assets/ASSET-PROVENANCE.md`; hash declarado sem arquivo correspondente é recusado como órfão salvo em linha `(removido)`; arquivo marcado `(removido)` não pode reaparecer; a checagem é exercitada contra bytes de controle não declarados e o padrão da tabela é validado numa linha sintética, para que uma reformatação não a transforme em laço vazio |
 
 ## Verificação de engine, gameplay e conteúdo
 
@@ -74,6 +77,7 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | perfil isolado do board | R8 p50/p95 1/1 µs em 240 amostras; legado sintético 31.160/32.304 µs; speedup p95 32.304× e 4× menos bytes por refresh |
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
+| guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
 | log final da suíte | 138 testes, 11.547 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 (o parser não foi reexecutado na nuvem) |
 | log final da suíte | 138 testes, 11.515 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
