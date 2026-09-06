@@ -78,6 +78,10 @@ var _flash_message: String = ""
 var _flash_ticks: int = 0
 var _shown_permille: int = -1
 var _counter_delay: int = 0
+var _shown_score: int = -1
+var _climbing: bool = false
+var _climb_from_permille: int = 0
+var _climb_from_score: int = 0
 var _built: bool = false
 
 
@@ -151,11 +155,13 @@ func sync(source: Variant, paused: bool, events: Array[GameEvent]) -> void:
 	_apply_visual(visual)
 
 	_round_label.text = "R %d/%d" % [round_number, round_count]
-	_score_label.text = "S %06d" % simulation.score
 	var target := maxi(1, simulation.rules.target_permille)
 	@warning_ignore("integer_division")
 	var target_percent := target / 10
+	# A ordem importa: o contador de área abre a subida e fixa os âncoras que a pontuação segue.
 	_advance_shown_permille(simulation.permille)
+	_advance_shown_score(simulation.score, simulation.permille)
+	_score_label.text = "S %06d" % _shown_score
 	_percent_label.text = "%04.1f/%02d" % [_shown_permille / 10.0, target_percent]
 	_vitals_label.text = "L×%d  E%02d" % [simulation.lives, _shield_seconds(simulation)]
 	_round_title_label.text = visual.display_name if visual != null else "SETOR ATIVO"
@@ -180,7 +186,14 @@ func _advance_shown_permille(target: int) -> void:
 	if _shown_permille < 0 or target <= _shown_permille:
 		_shown_permille = target
 		_counter_delay = 0
+		_climbing = false
 		return
+	if not _climbing:
+		# Começa aqui uma subida. Os âncoras congelam o par (área, pontuação) de onde os dois
+		# números partem, para que percorram o mesmo caminho e pousem no mesmo tick.
+		_climbing = true
+		_climb_from_permille = _shown_permille
+		_climb_from_score = _shown_score
 	if _counter_delay > 0:
 		_counter_delay -= 1
 		return
@@ -194,6 +207,31 @@ func _advance_shown_permille(target: int) -> void:
 	else:
 		_shown_permille += 1
 		_counter_delay = COUNTER_TENTH_DELAY
+
+
+## Encena a pontuação **pelo caminho da área**: a cada tick o número mostrado fecha a mesma fração
+## do seu intervalo que o contador de percentagem já fechou, e por isso os dois pousam no valor
+## confirmado no mesmo tick. É o comportamento de `hud_area_pct_step`
+## (`reference/volfied/06-gameplay.md §6.3`), onde cada degrau do contador *paga* pontos e é isso
+## que faz o número da banda superior pulsar junto com a área — traduzido para aqui, onde a
+## pontuação é do domínio e chega inteira num tick: o HUD não decide quantos pontos a conquista
+## vale, só escreve o valor já confirmado no mesmo ritmo em que pinta o mapa que o pagou.
+##
+## Fora de uma subida de área a pontuação assenta de imediato. O gotejo da trilha
+## (`rules.trail_score_points` a cada `trail_score_every_px`) é de poucos pontos e contínuo:
+## encená-lo seria ruído a competir com a única subida que significa alguma coisa.
+func _advance_shown_score(target_score: int, target_permille: int) -> void:
+	var span := target_permille - _climb_from_permille
+	if _shown_score < 0 or target_score <= _shown_score or not _climbing or span <= 0:
+		_shown_score = target_score
+		return
+	var closed := _shown_permille - _climb_from_permille
+	@warning_ignore("integer_division")
+	var staged := _climb_from_score + (target_score - _climb_from_score) * closed / span
+	# Uma segunda captura no meio da subida alarga o intervalo de área e faria a fração recuar.
+	# O contador de área nunca desce (ADR-0009) e a pontuação também não pode: um número a descer
+	# diria ao jogador que ele perdeu pontos que acabou de ganhar.
+	_shown_score = maxi(_shown_score, staged)
 
 
 func _simulation_from(source: Variant) -> GameSimulation:
@@ -294,7 +332,13 @@ func _add_label(
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", HUD_COLOR)
 	add_child(label)
-	# Entrar na árvore resolve o tema; definir o retângulo depois evita os 23 px padrão.
+	# O retângulo é definido **depois** de entrar na árvore porque `size` é clampado para cima
+	# pelo mínimo do `Label`, e esse mínimo só vale o da fonte pedida com o tema já resolvido.
+	# Numa árvore que já processa — o caso do jogo — isso vale já no `add_child`, e a linha
+	# assenta em `TEXT_HEIGHT`. Construído antes do primeiro frame (só o runner de testes faz
+	# isso), o mínimo ainda é o do tema padrão, 23 px, e a altura pedida é ignorada; o `size`
+	# fica preso nos 23 px mesmo depois de o mínimo relaxar, porque Godot nunca re-encolhe.
+	# Medido em 2026-09-06 por `tools/verify_hud_row_geometry.gd`, que é quem defende isto.
 	label.position = node_position
 	label.size = node_size
 	return label
