@@ -1,10 +1,14 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** a medida de `main` foi refeita nesta data com a árvore limpa — 174 testes, 11837
+> asserções, 0 falhas; rota M2 179→825‰ com `errors: []`. O **estado da fila** (P0) foi
+> reconferido contra os PRs abertos: 28 (#20–#47), e a lista de arquivos que cada um toca foi
+> cruzada para saber que superfície continua livre. O item novo do P2 foi entregue e medido.
+> **Não** refeito nesta data: a conferência item a item do resto do backlog contra o código —
+> ela vem da reconciliação de 2026-09-04 sobre `33c81e6`, e continua valendo porque `main` não
+> mudou desde então. O mérito estético de cada mudança continua sem julgamento: o jogo não pode
+> ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -69,6 +73,15 @@ Itens sem critério de pronto não entram aqui.
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
 
+      **2026-09-06T10:59Z — a fila está em 28 (#20–#47) e `main` não anda desde `cba520a`.**
+      Já existem duas drenagens prontas na própria fila (#36 integra 16, #42 integra 22, e o #45
+      mede que o #42 está verde) e dois PRs só de ledger (#40, #45). *Não abra uma terceira
+      drenagem nem um quarto relatório de fila* — o gargalo não é medição, é a mescla. O que
+      **muda o custo desta espera**, e o que a próxima execução deve verificar antes de escolher:
+      de `game/`, `ui/`, `app/` e `tools/*.gd`, os únicos arquivos que nenhum PR aberto toca são o
+      domínio puro, as regras autoráveis e as ferramentas de conteúdo. Trabalho novo cabe **ali**,
+      ou em arquivo de teste novo — não em HUD, BoardView, VFX, áudio, entrada ou views.
+
 ### P1 — higiene estrutural
 
 - [ ] **`antipixel_state_machine/` é a última raiz de terceiros não decidida.** 3 cenas, 7
@@ -108,6 +121,18 @@ Itens sem critério de pronto não entram aqui.
       R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
       literal cobre. *Pronto:* cada perfil de boss de produção tem ao menos um checksum final
       fixado, ou uma nota dizendo por que não precisa.
+- [x] **A paleta autorada era o único recurso sem validação nenhuma.** ✅ resolvido em
+      `ai/loop-20260906T105928Z` (ver `docs/loop/runs/2026-09-06T105928Z.md`). Nasceu fora do
+      backlog: `RoundVisualDefinition` validava `display_name` e o `background` e deixava as **seis
+      cores** passarem sem serem olhadas, enquanto todos os recursos irmãos validam o que autoram.
+      Consequência concreta: `trail_color == trail_hot_color` torna constante o
+      `mix(trail_color, trail_hot_color, heat)` do shader e **apaga** o canal de risco da exposição
+      (#9, #41) sem erro nenhum — a transação (ADR-0008) escreveria o `.tres` em silêncio.
+      `validation_errors()` agora recusa os quinze pares de papéis colididos, comparando em RGBA8
+      (dois floats diferentes podem ser o mesmo pixel). Alpha distinto não é colisão.
+      *Aprendido:* `const X: PackedStringArray = PackedStringArray([...])` não é expressão constante
+      em GDScript 4.7 — o script não parseia, `X.new()` morre em cascata e a suíte mostra dezenas de
+      falhas sem causa aparente, porque a mensagem real só sai no `--import`. Use `Array[String]`.
 - [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
       `phase = ROUND_CLEAR` num teste não arquiva a rodada — correto, mas não óbvio: custou uma
       asserção errada na execução de 19:00Z. Qualquer apresentação que conte rodadas depende disso.
