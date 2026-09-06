@@ -124,14 +124,40 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`). A ADR exige, por remoção, a
+      mesma evidência de posse de `uid://` usada na poda dos demos. **Item ideal para uma execução
+      curta** — pequeno, mecânico, repetível e sem disputar arquivo com ninguém.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
+
+      Estado por pasta (o inventário em `addons/README.md` § Remoções já executadas é a fonte;
+      esta lista existe só para escolher sem abrir o GitHub):
+
+      | Pasta | Estado |
+      |---|---|
+      | `guide` | reivindicada por `ai/loop-20260906T225830Z` — 2,7 MB, 549 arquivos, 19 cenas, **79 `class_name`** |
+      | `curved_lines_2d` | reivindicada pelo #60 |
+      | `phantom_camera` | reivindicada pelo #62 |
+      | `GDDraw` | **livre** — 1,9 MB, 218 arquivos, 1 cena, 10 `class_name` |
+      | `yard` | **livre** — 1,1 MB, 108 arquivos, 9 cenas, 1 `class_name` |
+      | `softbody2d` | **livre** — 112 KB, 14 arquivos, 0 cenas, 3 `class_name` |
+      | `curve2collision` | **livre** — 48 KB, 9 arquivos, 0 cenas, 1 `class_name` |
+
+      **Ordene por `class_name`, não por megabytes.** Os bytes não chegam ao jogador (os dois
+      presets excluem as sete por nome desde antes da ADR); o que custa é o namespace global, que
+      o autocomplete e o cache de classes não deixam ninguém ignorar. Por essa métrica o `guide`
+      sozinho valia mais que as quatro pastas livres somadas (79 contra 15) — daí ter vindo antes
+      do `GDDraw`, que é maior em disco. As quatro restantes somam 15 `class_name` e 10 cenas: são
+      faxina barata, não mais alavanca de leitura.
+
+      **Custo medido de uma remoção**, para a próxima execução calibrar: a suíte perde exatamente
+      **6 asserções** por pasta `a-remover` que sai — 2 em
+      `test_every_addon_folder_has_a_manifest_line_and_vice_versa` (a varredura confere disco→
+      manifesto e manifesto→disco), 1 na de vocabulário, 1 na de "sem consumidor" e 2 na de
+      presets (uma por preset). Um delta diferente de −6 não é ruído: é sinal de que a pasta era
+      citada por algo, ou de que a mesma PR mexeu em teste. O `exclude_filter` **não** sai junto —
+      ver o inventário.
 
 - [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,

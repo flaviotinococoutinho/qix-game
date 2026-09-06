@@ -1,9 +1,9 @@
 # PROJECT_CONTRACT — QIX GAME (vertical slice)
 
-> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** a seção § Raízes foi remedida nesta data — contagem de cenas, `uid://` e
-> `class_name` de `antipixel_state_machine/` conferidos por `grep` e pelo cache de classes
-> globais antes da remoção. Engine, viewport, renderer e tick seguem conferidos em
+> **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** as contagens de cenas e de `class_name` de vendor foram remedidas nesta data, após
+> a remoção de `addons/guide` (ADR-0010), e o comando de medição ficou escrito junto do número.
+> A tabela de addons perdeu a linha do `guide`. Engine, viewport, renderer e tick seguem conferidos em
 > `project.godot`; a tabela de ownership, por existência de arquivo. Alvos, tamanhos de export e
 > estado do ferramental MCP seguem do run macOS de 2026-09-03 e **não** foram reexecutados.
 
@@ -115,14 +115,13 @@ completo ou mantê-lo junto de todo o fechamento necessário.
 ## Addons — quem é jogo, quem é ferramenta
 
 Inventário verificado em **2026-09-04** contra o checkout de `main` em `74c173a`. Existe porque
-nove pastas em `addons/` não dizem, por si, quais participam do jogo: sem esta tabela, cada leitor
+as pastas em `addons/` não dizem, por si, quais participam do jogo: sem esta tabela, cada leitor
 refaz a mesma investigação e alguns concluem errado.
 
 | Addon | Versão | Habilitado em `[editor_plugins]` | Consumido pelo jogo | Destino no export |
 |---|---|---|---|---|
 | `godot_ai` | 3.2.4 | **sim** (único) | autoload `_mcp_game_helper` | `runtime/` embarca; `clients/`, `custom_tools/`, `debugger/`, `dock_panels/`, `export/`, `handlers/`, `testing/` excluídos |
 | `fennara` | 0.4.2 | não é plugin de editor — é `GDExtension` com bibliotecas `*.editor.*` | autoload `_fennara_game_capture` | `runtime/` embarca; `ai/`, `bin/`, `dist/` e o `.gdextension` excluídos |
-| `guide` (G.U.I.D.E) | 0.14.0 | não | **nenhum** | excluído em bloco |
 | `curved_lines_2d` (Scalable Vector Shapes 2D) | 2.33.3 | não | **nenhum** | excluído em bloco |
 | `phantom_camera` | 0.11.0.3 | não | **nenhum** | excluído em bloco |
 | `GDDraw` | 0.2.0 | não | **nenhum** | excluído em bloco |
@@ -134,24 +133,32 @@ Como "nenhum" foi verificado — dois testes independentes sobre `app/`, `game/`
 `tests/`, `content/` e `assets/`:
 
 1. Nenhuma dessas árvores contém a string `res://addons/`.
-2. Dos 174 `class_name` declarados pelos nove addons, **nenhum** aparece como palavra nessas
-   árvores. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot`, não o
-   G.U.I.D.E.; a câmera é fixa em 240×320, não `phantom_camera`.
+2. Dos `class_name` declarados pelos addons restantes, **nenhum** aparece como palavra nessas
+   árvores. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot` — era
+   esse o motivo de `guide` (G.U.I.D.E.) nunca ter sido consumido, e o motivo de ter podido sair;
+   a câmera é fixa em 240×320, não `phantom_camera`.
+
+   A contagem medida em 2026-09-06 é **97** (`grep -rhoE '^class_name +[A-Za-z0-9_]+' addons/`),
+   contra 176 antes da remoção de `addons/guide`. O número anterior registrado aqui, 174, foi
+   medido por outro critério e não confere com este `grep`; a partir daqui o comando fica escrito
+   junto do número, para que a próxima recontagem não precise adivinhar como esta foi feita.
 
 Nenhuma pasta de terceiros vive mais **fora** de `addons/`. As três que viviam — `samples/`
 (demos do `softbody2d`), `guide_examples/` (demos do `guide`) e `antipixel_state_machine/` —
 foram removidas do versionamento, a última em 2026-09-05.
 
-Consequência prática para quem lê o repositório: das **103** cenas do checkout, **2** são do jogo
-— `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn` — e as outras **101** são de terceiros,
+Consequência prática para quem lê o repositório: das **84** cenas do checkout, **2** são do jogo
+— `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn` — e as outras **82** são de terceiros,
 todas em `addons/`. Isso vale como regra de leitura, não só como contagem: **um `.tscn` fora de
 `addons/` é do jogo.** Antes da poda eram 2 em 145, espalhadas por quatro raízes, e procurar uma
 cena do jogo pelo nome devolvia 98 % de ruído.
 
-O que esta tabela **não** decide: se os sete addons dormentes devem ser removidos. Eles já não
-entram no payload (os `exclude_filter` de ambos os presets em `export_presets.cfg` listam os sete
-por nome), então o custo deles é de leitura e de busca, não de bytes entregues ao jogador. A
-remoção é uma decisão separada, com o seu próprio item no ledger.
+O que esta tabela **não** decide: se os addons dormentes devem ser removidos. Isso foi decidido na
+ADR-0010, e a execução acontece **uma pasta por PR**, com evidência de posse por remoção; o
+inventário em [`addons/README.md`](../addons/README.md) registra quais já saíram. Enquanto esperam,
+nenhuma delas entra no payload — os `exclude_filter` de ambos os presets em `export_presets.cfg`
+listam as sete por nome, e essa lista **fica** mesmo depois da pasta sair, porque um checkout que
+rebaixe os addons pela AssetLib recria o diretório em disco.
 
 ## Comandos reais
 
