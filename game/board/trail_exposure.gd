@@ -55,3 +55,15 @@ const WARNING_RATIO := 0.5
 
 static func is_warning(exposure: float) -> bool:
 	return exposure >= WARNING_RATIO
+
+
+## Verdadeiro **apenas** no tick em que a exposição atravessa `WARNING_RATIO` para cima.
+##
+## Atravessar é uma aresta, não um estado. Quem quer pintar a trilha lê `is_warning` a cada
+## tick; quem quer marcar o *instante da decisão* — um toque, um cue — precisa disto, senão
+## repete o aviso a 60 Hz enquanto a trilha continuar longa, e um aviso contínuo deixa de ser
+## aviso. Descer de volta rearma: recolher a trilha e voltar a apostar é uma decisão nova.
+##
+## Continua puro e sem estado. Quem consome guarda o `previous`; esta função não guarda nada.
+static func crossed_warning(previous: float, current: float) -> bool:
+	return not is_warning(previous) and is_warning(current)
