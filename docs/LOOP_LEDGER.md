@@ -142,7 +142,7 @@ Itens sem critério de pronto não entram aqui.
       | Pasta | Estado | Tamanho / cenas / `class_name` |
       |---|---|---|
       | `curved_lines_2d` | `[~]` #60 (`ai/loop-20260906T195841Z`) | 3,4 MB · 42 · 19 |
-      | `phantom_camera` | `[~]` **#? (`ai/loop-20260906T215930Z`)** | 2,2 MB · 30 · 11 |
+      | `phantom_camera` | `[~]` **#62 (`ai/loop-20260906T215930Z`)** | 2,2 MB · 30 · 11 |
       | `guide` | `[ ]` livre | 2,7 MB · 19 · 79 |
       | `GDDraw` | `[ ]` livre | 1,9 MB · 1 · 10 |
       | `yard` | `[ ]` livre | 1,1 MB · 9 · 1 |
