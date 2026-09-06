@@ -1,14 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
+> **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** conferido **depois** da mescla do #55, que integrou #20–#54. Recontados contra o
+> estado real: a fila (0 PRs abertos, medida às 19:42Z) e as duas marcas `[~]` cujos PRs já
+> mesclaram. As evidências de execução ficam no workflow Verificação e em seu `manifest.json`,
+> vinculado ao commit e à árvore testados; registros anteriores são históricos, não contagens
+> atuais. O resto do backlog **não** foi reconferido item a item nesta passagem.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
-
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -86,11 +84,17 @@ Itens sem critério de pronto não entram aqui.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
-- [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
-      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
-      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
-      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
-      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+- [x] **Drenar a fila de PRs abertos.** ✅ **Cumprido em 2026-09-06T19:42Z.** `main` está em
+      `34634d0` (mescla do #55, que integrou #20–#54) e a fila está em **0 PRs abertos** — os dois
+      critérios de pronto, `main` além de `cba520a` e fila ≤ 2, medidos contra o GitHub, não
+      inferidos. O caminho foi: #51 integrou #20–#50 à mão; #52–#54 chegaram depois; o #55 reuniu
+      tudo preservando os pais de merge e a resolução #25×#50. O #19 drenou os 18 primeiros; o #36
+      (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila sem serem mesclados.
+      *Pronto (era):* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+
+      **A fila está vazia pela primeira vez desde 2026-09-04.** A próxima execução é a primeira em
+      ~40 h que pode escolher qualquer item sem colidir com trabalho em voo. Escolha do backlog,
+      não outra medição de fila: não há fila para medir.
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
@@ -115,6 +119,13 @@ Itens sem critério de pronto não entram aqui.
       do agendamento; deixar o loop empilhar commits numa branch de longa duração e abrir **um** PR
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
+
+      **Continua aberto, e a drenagem de 19:42Z não o resolveu — só zerou o contador.** Custo
+      final desta fila, para dimensionar a ADR: 35 PRs (#20–#54) abertos em ~44 h, drenados por
+      **quatro** esforços de integração (#36 e #42 morreram na fila; #51 e #55 mesclaram). Sem
+      mudança de política, a fila volta a crescer 1 PR/h a partir de agora. Esta é a janela boa
+      para escrever a ADR: é a primeira vez que ela pode ser escrita sem competir com a fila que
+      descreve.
 
 - [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
       `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
@@ -246,10 +257,11 @@ O que continua aberto:
       por `round_transition_cadence_test.gd`: percorre a intro inteira e prova que checksum e
       replay não mexem. **Falta o julgamento estético:** ninguém viu a passagem numa tela.
 
-- [~] **Geometria real do HUD — #52 integrado no candidato de merge.**
-      `tools/verify_hud_row_geometry.gd` mede a construção durante frames, não só as constantes
-      no `_initialize()` do runner. O teste horizontal e os comentários corrigidos também
-      foram preservados. A sonda passou a fazer parte do CI. Aprovação estética continua humana.
+- [x] **Geometria real do HUD.** ✅ mesclado em `main` pelo #55 (via #52): confirmado que
+      `tools/verify_hud_row_geometry.gd` existe na árvore. A sonda mede a construção durante
+      frames, não só as constantes no `_initialize()` do runner; o teste horizontal e os
+      comentários corrigidos também foram preservados, e a sonda faz parte do CI.
+      **Aprovação estética continua humana.**
 
 - [ ] **[requer sessão humana] Calibrar a curva de exposição.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
