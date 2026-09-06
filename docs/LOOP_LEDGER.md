@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o backlog foi reconciliado à mão em 2026-09-04 sobre a integração dos 18 PRs do
+> loop (#1–#18) e **não** foi reconferido item a item desta vez. O que esta revisão mediu é a
+> fila: 20 PRs abertos (#20–#39), que integram **sem um único conflito de código** e dão 226
+> testes / 12504 asserções / 0 falhas, contra 174 / 11837 em `main` sozinho; rota M2 179→825‰ com
+> `errors: []` na árvore integrada. Só o P0 abaixo foi atualizado. O mérito estético de cada
+> mudança **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +70,27 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      *Meia vitória em 2026-09-05:* o #19 mesclou e `main` saiu do commit de fundação (`cba520a`).
+      *Estado em 2026-09-06T02:59Z:* `main` continua em `cba520a` e a fila chegou a **20**
+      (#20–#39) — um PR por hora, nenhum mesclado em 24 h. A metade "≤ 2 PRs abertos" é a que
+      importa agora. **A fila inteira já está medida:** mesclados em ordem numérica os 20 não têm
+      um único conflito de código (o único conflito em qualquer par é este arquivo, mecânico e
+      esperado por contrato) e a árvore integrada dá 226 testes / 12504 asserções / 0 falhas com
+      a rota M2 em `errors: []`. **Falta a decisão de mesclar, não mais medição** — uma próxima
+      execução que remedir a fila gasta a hora à toa. O #36 é a integração de #20–#35 e está três
+      PRs desatualizado: #37, #38 e #39 entram depois, com o backlog reconciliado à mão.
+      Ver `docs/loop/runs/2026-09-06T025859Z.md`.
+
+- [ ] **A cadência do loop excede a cadência de revisão, e isso é um problema de projeto.** Uma
+      execução por hora produz mais do que um humano mescla; duas drenagens em dois dias, ambas
+      por integração de emergência, são o sintoma. A execução de 2026-09-06T02:59Z é a evidência
+      mais limpa: **nenhum item do backlog estava livre** — os herdados todos com PR aberto, e os
+      quatro que pareciam livres colidindo em arquivo com #25, #27, #28 ou #32 —, então a hora
+      inteira foi gasta sem poder tocar no jogo. → Opções a avaliar num PR curto: baixar a
+      frequência do agendamento; deixar o loop **empilhar** o trabalho num único ramo de longa
+      duração em vez de abrir um PR por execução; ou dar ao loop critério explícito para não abrir
+      PR de funcionalidade quando a fila passa de N. *Pronto:* a taxa de produção do loop e a de
+      revisão estão declaradas por escrito, com a regra que as concilia.
 
 ### P1 — higiene estrutural
 
