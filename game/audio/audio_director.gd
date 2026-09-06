@@ -27,6 +27,15 @@ var _last_trail_msec := -TRAIL_THROTTLE_MSEC
 var _music_cache: Dictionary = {}
 var _cue_cache: Dictionary = {}
 var _paused := false
+## Instante real em que a pausa começou, ou `-1` enquanto o jogo corre. Enquanto
+## é válido, o relógio de mix fica congelado nele — ver `mix_now_msec`.
+var _pause_started_msec := -1
+## Quantas vozes receberam a ordem de suspensão na última pausa. Guardamos a ordem
+## dada em vez de reler `AudioStreamPlayer.stream_paused` pela mesma razão que já
+## vale para `_voice_priorities`: essa propriedade deriva dos playbacks vivos, e o
+## runtime headless nunca os inicia — relê-la devolveria `false` mesmo depois de a
+## pausa ter sido aplicada, e o caminho de mix ficaria por testar.
+var _paused_voices := 0
 
 
 func _ready() -> void:
@@ -97,13 +106,53 @@ func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) 
 	ensure_ready()
 	if session != null and session.round_index != _round_index:
 		play_round_music(session.round_index)
-	_paused = paused
-	if _music != null and _music.is_inside_tree():
-		_music.stream_paused = paused
+	apply_pause(paused, Time.get_ticks_msec())
 	if not enabled:
 		return
 	for cue_name in cues_for_events(events):
 		play_cue(cue_name)
+
+
+## Congela ou retoma **todo** o feedback sonoro: a música e as oito vozes de SFX.
+## Antes disto a pausa parava só a música, e o cue em voo continuava a tocar por
+## cima de um campo já congelado — `death` (0,42 s) e `game_over` (0,75 s) são
+## longos o bastante para isso ser audível sempre que se pausa ao morrer.
+##
+## Retomar não é só voltar a tocar. Os prazos em `_voice_free_msec` são absolutos
+## contra `Time.get_ticks_msec()`, que não pára na pausa: sem empurrá-los pelo
+## tempo pausado, uma pausa de poucos segundos declararia todas as vozes livres
+## enquanto elas ainda seguram áudio por tocar, e o primeiro `trail` depois de
+## retomar roubaria a voz do `death` — exatamente o corte que `select_voice`
+## existe para impedir. O mesmo vale para o estrangulamento de `trail`.
+func apply_pause(paused: bool, now_msec: int) -> void:
+	if paused and not _paused:
+		_pause_started_msec = now_msec
+	elif not paused and _paused:
+		var elapsed := maxi(now_msec - _pause_started_msec, 0)
+		_pause_started_msec = -1
+		for index in _voice_free_msec.size():
+			_voice_free_msec[index] += elapsed
+		_last_trail_msec += elapsed
+	_paused = paused
+	if _music != null and _music.is_inside_tree():
+		_music.stream_paused = paused
+	# Sem guarda de `is_inside_tree`: `stream_paused` só percorre os playbacks vivos,
+	# portanto é inócuo fora da árvore, e assim a ordem dada é a mesma no runtime e
+	# no runner de teste — que corre inteiro dentro de `_initialize()`, antes de a
+	# árvore existir.
+	var commanded := 0
+	for voice in _voices:
+		if is_instance_valid(voice):
+			voice.stream_paused = paused
+			commanded += 1
+	_paused_voices = commanded if paused else 0
+
+
+## Instante que a mixagem considera "agora": o relógio real quando o jogo corre,
+## congelado no início da pausa enquanto ela dura. Puro e estático para que a
+## aritmética da pausa seja testável sem depender do relógio da máquina.
+static func mix_now_msec(real_now_msec: int, pause_started_msec: int) -> int:
+	return pause_started_msec if pause_started_msec >= 0 else real_now_msec
 
 
 func play_round_music(round_index: int) -> void:
@@ -120,8 +169,8 @@ func play_cue(cue_name: StringName) -> void:
 	if not enabled:
 		return
 	ensure_ready()
+	var now := mix_now_msec(Time.get_ticks_msec(), _pause_started_msec)
 	if cue_name == &"trail":
-		var now := Time.get_ticks_msec()
 		if now - _last_trail_msec < TRAIL_THROTTLE_MSEC:
 			return
 		_last_trail_msec = now
@@ -130,14 +179,12 @@ func play_cue(cue_name: StringName) -> void:
 	if not _cue_cache.has(cue_name):
 		_cue_cache[cue_name] = QixProceduralAudioLibrary.cue(cue_name)
 	var priority := QixProceduralAudioLibrary.priority_for(cue_name)
-	var index := select_voice(voice_priorities_now(), priority, _voice_cursor)
+	var index := select_voice(voice_priorities_at(now), priority, _voice_cursor)
 	if index < 0:
 		return  # todas as vozes seguram algo tão ou mais importante: não corta
 	_voice_cursor = (index + 1) % _voices.size()
 	_voice_priorities[index] = priority
-	_voice_free_msec[index] = (
-		Time.get_ticks_msec() + QixProceduralAudioLibrary.duration_msec(cue_name)
-	)
+	_voice_free_msec[index] = now + QixProceduralAudioLibrary.duration_msec(cue_name)
 	var voice := _voices[index]
 	voice.stream = _cue_cache[cue_name]
 	# Headless ainda constrói o cue para validar o pipeline e o cache; só não
@@ -149,7 +196,12 @@ func play_cue(cue_name: StringName) -> void:
 ## Prioridade que cada voz ainda segura neste instante, ou `PRIORITY_IDLE` para as
 ## que já terminaram. É o snapshot que `select_voice` consome.
 func voice_priorities_now() -> PackedInt32Array:
-	var now := Time.get_ticks_msec()
+	return voice_priorities_at(mix_now_msec(Time.get_ticks_msec(), _pause_started_msec))
+
+
+## Igual a `voice_priorities_now`, mas com o instante injetado — é por aqui que o
+## teste exercita a aritmética da pausa sem depender do relógio da máquina.
+func voice_priorities_at(now: int) -> PackedInt32Array:
 	var snapshot := PackedInt32Array()
 	snapshot.resize(_voices.size())
 	for index in _voices.size():
@@ -217,10 +269,12 @@ func presentation_state() -> Dictionary:
 		"round_index": _round_index,
 		"music_loaded": _music != null and _music.stream != null,
 		"music_paused": _paused,
+		"mix_clock_frozen": _pause_started_msec >= 0,
 		"voice_count": _voices.size(),
 		"cached_music": _music_cache.size(),
 		"cached_cues": _cue_cache.size(),
 		"busy_voices": _busy_voice_count(),
+		"paused_voices": _paused_voices,
 	}
 
 

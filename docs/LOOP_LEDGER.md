@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** suíte e rota M2 corridas neste commit (178 testes, 11855 asserções, 0 falhas com o
+> teste novo deste PR; rota M2 179→825‰ com `errors: []`). O backlog foi reconferido contra a
+> **fila**, não contra o código: cruzei cada item com os arquivos que cada ramo `ai/loop-*` aberto
+> toca — a tabela está em `docs/loop/runs/2026-09-06T085912Z.md`. O mérito estético de cada
+> mudança **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +69,11 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **2026-09-06:** a fila está em **26 PRs abertos (#20–#45)** e `main` parado em `cba520a`.
+      Todo item abaixo já tem PR aberto que toca o seu arquivo — a tabela item→PR→arquivo está em
+      `docs/loop/runs/2026-09-06T085912Z.md`. Enquanto isto durar, uma execução só tem duas saídas
+      honestas: um defeito real em arquivo que a fila não toca, ou um PR só de ledger. O #40 e o
+      #45 já são o segundo caso; um terceiro seria ruído.
 
 ### P1 — higiene estrutural
 
@@ -170,6 +176,13 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       `custom_minimum_size` explícito ou um `Theme` do HUD com tamanho de fonte definido, para que
       a altura não dependa de quando `_ready` corre. *Pronto:* altura correta medida dentro do
       runner, sem a ressalva que `game_hud_layout_test.gd` documenta hoje.
+- [ ] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** Sobra da execução de
+      08:59Z, que fez a pausa alcançar as oito vozes de SFX (antes ela parava só a música, e o
+      `death`/`game_over` terminava por cima do campo congelado). As vozes são comandadas sempre;
+      a música continua atrás de `is_inside_tree()`. No runtime real os dois caminhos coincidem,
+      por isso não foi mexido — mas é assimetria a resolver por quem tocar em `sync()` a seguir.
+      No mesmo saco: `shutdown()` não zera `_paused_voices`. *Pronto:* uma só regra de guarda para
+      música e vozes, com o teste de `audio_pause_test.gd` a continuar verde.
 
 ## Notas de ambiente (sandbox de nuvem)
 
