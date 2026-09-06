@@ -10,6 +10,14 @@
 > pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
 > Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
 
+> **Adendo de 2026-09-06T21:59Z** (execução de `ai/loop-20260906T215930Z`, escopo restrito): o
+> merge do #55 pôs `main` em `34634d0`, e nesse commit a suíte dá **262 testes / 12719 asserções /
+> 0 falhas**. `list_pull_requests` devolveu **seis** PRs abertos nesta hora — #56–#61 —, não os 30
+> que o corpo deste arquivo ainda descreve. Esta execução **não** reconciliou o resto do ledger:
+> #56 e #57 já estão abertos exatamente para isso e reconciliar por cima deles seria a união
+> automática que a seção seguinte proíbe. O que está atualizado aqui é o item da ADR-0010, que é
+> o que esta execução trabalhou.
+
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -124,14 +132,34 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** Duas reivindicadas,
+      cinco livres. A decisão está tomada e a guarda existe
+      (`tests/unit/addons_manifest_test.gd`). **Item ideal para uma execução curta** — pequeno,
+      mecânico e repetível, sem disputar arquivo de código com ninguém.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
+
+      | Pasta | Estado | Tamanho / cenas / `class_name` |
+      |---|---|---|
+      | `curved_lines_2d` | `[~]` #60 (`ai/loop-20260906T195841Z`) | 3,4 MB · 42 · 19 |
+      | `phantom_camera` | `[~]` **#? (`ai/loop-20260906T215930Z`)** | 2,2 MB · 30 · 11 |
+      | `guide` | `[ ]` livre | 2,7 MB · 19 · 79 |
+      | `GDDraw` | `[ ]` livre | 1,9 MB · 1 · 10 |
+      | `yard` | `[ ]` livre | 1,1 MB · 9 · 1 |
+      | `softbody2d` | `[ ]` livre | 112 KB · 0 · 3 |
+      | `curve2collision` | `[ ]` livre | 48 KB · 0 · 1 |
+
+      O molde está escrito em `docs/loop/runs/2026-09-06T195841Z.md` (#60) e repetido em
+      `docs/loop/runs/2026-09-06T215930Z.md`: quatro medições de posse (`uid://` interno,
+      `class_name` não consumido, caminho só no `exclude_filter`, não é plugin habilitado), mais a
+      linha na § Remoções já executadas de `addons/README.md`, mais a asserção por preset em
+      `shipping_export_test.gd`, mais os totais de `PROJECT_CONTRACT`. **O `exclude_filter` fica**
+      — `.gitignore` não cobre o payload de export. Duas ressalvas: `guide` tem `guide_examples/`
+      já podado e citado no filtro (não "limpe" a linha junto) e sozinho declara 79 dos
+      `class_name` de vendor, sendo a remoção que mais mexe no namespace global; e os PRs de
+      remoção colidem entre si **só em texto** (README, `.gitignore`, a asserção adjacente e os
+      totais do contrato), resolvendo-se por união — ver a tabela de ordem de merge no relato de
+      `2026-09-06T215930Z`.
 
 - [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
@@ -183,7 +211,12 @@ Itens sem critério de pronto não entram aqui.
       `doc_freshness_header_test.gd` (#6) exige a linha `> **Verificado em**` e fica verde com ela
       presente — mesmo quando o corpo mente. #21 corrigiu `TEST_MATRIX.md`, que afirmava quatro
       contagens concorrentes e passava em tudo; **os demais docs que passaram pela mesma união
-      automática não foram auditados**. → (a) auditar os outros documentos contra o código
+      automática não foram auditados**. **Mais um caso medido em 21:59Z**, agora em
+      `docs/PROJECT_CONTRACT.md`: a § Addons afirmava **174** `class_name` de vendor desde
+      2026-09-04 e a recontagem em `34634d0` dá **176** — divergência anterior a qualquer remoção,
+      num doc verde em tudo. O contrato passou a registrar o **método** junto do número, porque
+      número sem método não é reverificável; ninguém sabe qual método produziu 174, e o #60
+      registra 17 onde este método conta 19 para a mesma pasta. → (a) auditar os outros documentos contra o código
       integrado; (b) decidir se alguma guarda barata pega contradição interna (ex.: recusar duas
       linhas de tabela com a mesma primeira coluna). *Pronto:* nenhum doc de `docs/` com duas
       afirmações concorrentes sobre o mesmo fato, e a decisão sobre (b) escrita.

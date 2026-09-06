@@ -94,6 +94,12 @@ func test_shipping_probes_and_runner_are_exported_but_build_outputs_are_not() ->
 			excluded.contains("antipixel_state_machine/**"),
 			"%s não leva a máquina de estados de vendor" % section,
 		)
+		# Pasta já removida do versionamento (ADR-0010). O filtro fica porque um checkout que
+		# rebaixe os addons pela AssetLib a recria em disco, e `.gitignore` não cobre o payload.
+		ok(
+			excluded.contains("addons/phantom_camera/**"),
+			"%s não leva a direção de câmera de vendor" % section,
+		)
 		ok(
 			not excluded.contains("addons/fennara/runtime/**"),
 			"%s preserva o autoload e dependências Fennara" % section,
