@@ -1,12 +1,15 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos **30** PRs abertos do loop (#20–#50)
-> sobre `cba520a` — a árvore medida é a integração, não `main` sozinho —, medida verde
-> (261 testes, 12713 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`; perfil de `BoardView`
-> p95_speedup 46380×; catraca de contraste sem par abaixo do piso). Cada item abaixo foi
-> reconferido contra o **código integrado**, não contra a prosa do PR que o reivindicou. O mérito
-> estético continua **não** julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
+> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
+> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+
+> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
+> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
+> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -15,10 +18,10 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 
 1. **Leia este arquivo inteiro antes de decidir o que fazer.** Ele vem depois do `CLAUDE.md` e
    antes de qualquer edição.
-2. **Liste os PRs abertos do loop antes de escolher.** Um item com PR aberto **não está livre**,
-   mesmo com o checkbox vazio: o backlog só reflete o que chegou a `main`. Use
-   `tools/loop/merge_queue_report.sh` — ele diz, além disso, em que arquivos a sua mudança vai
-   colidir em silêncio com a fila. Foi por não olhar a fila que o par `#8×#11` nasceu.
+2. **Liste os PRs abertos do loop antes de escolher.** Um item com PR aberto não está livre.
+   Consulte o estado atual no GitHub. Use `tools/loop/unclaimed_surface.sh` antes de escolher
+   (heurística por refs e camada) e `tools/loop/merge_queue_report.sh` depois de escolher.
+   Refs de branches não provam, sozinhos, que os respectivos PRs continuam abertos.
 3. **Escolha exatamente UM item** — o de maior prioridade que caiba num PR pequeno e revisável.
    Um PR grande não é produtividade: é uma revisão que não vai acontecer.
 4. **Escreva o relato em `docs/loop/runs/<carimbo>.md`** — arquivo novo, seu. Não apense a uma
@@ -28,6 +31,11 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
    duas execuções que mexem no mesmo item *devem* se encontrar aqui.
 6. **Nunca reabra um item de "Decisões fechadas"** sem argumento novo e explícito no PR. Essa
    seção existe para impedir que o loop oscile entre duas opções para sempre.
+7. **Meta-PR tem teto.** Um PR sobre a fila só é legítimo se trouxer uma medição ainda ausente
+   nos meta-PRs abertos e nomear quais supera. Sem evidência nova, registre o achado no relato
+   da execução, sem abrir outro PR redundante. Origem: #53 e o censo de posse de 2026-09-06.
+   O limite operacional é dois PRs do loop em andamento; com o limite atingido, priorize revisão
+   e correção dos existentes, não a geração de uma nova mudança sobre os mesmos arquivos.
 
 ### Legenda do backlog (convenção de #34)
 
@@ -193,7 +201,7 @@ pulso da trilha (#41, `board_pulse_phase_test.gd`).
 
 O que continua aberto:
 
-- [ ] **`BOUNDARY`×`TRAIL` a 1,04:1 — a decisão mais cara do jogo no canal mais frágil.**
+- [ ] **[requer sessão humana] `BOUNDARY`×`TRAIL` a 1,04:1 — a decisão mais cara do jogo no canal mais frágil.**
       Atravessou as 22 execuções sem dono. A medição de #7 (`docs/ART_DIRECTION.md`, "Contraste
       medido") mostra contorno e trilha com a mesma luminância nas quatro paletas; "estou
       protegido" × "estou desenhando" depende de matiz mais o glint/pulso do shader. Caminhos:
@@ -238,19 +246,12 @@ O que continua aberto:
       por `round_transition_cadence_test.gd`: percorre a intro inteira e prova que checksum e
       replay não mexem. **Falta o julgamento estético:** ninguém viu a passagem numa tela.
 
-- [ ] **A geometria do HUD depende da ordem de construção.** `_add_label` só obtém o retângulo
-      pedido porque atribui `size` depois de entrar na árvore; antes do primeiro frame o mínimo do
-      `Label` ainda é o do tema (23 px). Funciona, mas é frágil e invisível. → Avaliar
-      `custom_minimum_size` explícito ou um `Theme` do HUD com tamanho de fonte definido, para que
-      a altura não dependa de quando `_ready` corre. *Pronto:* altura correta medida dentro do
-      runner, sem a ressalva que `game_hud_layout_test.gd` documenta hoje.
+- [~] **Geometria real do HUD — #52 integrado no candidato de merge.**
+      `tools/verify_hud_row_geometry.gd` mede a construção durante frames, não só as constantes
+      no `_initialize()` do runner. O teste horizontal e os comentários corrigidos também
+      foram preservados. A sonda passou a fazer parte do CI. Aprovação estética continua humana.
 
-### P4 — a dívida que só um humano com o jogo aberto pode pagar
-
-Seis itens acumulados. **Nenhuma execução headless pode fechá-los** — estão aqui para não se
-perderem, não para serem escolhidos. Uma sessão de jogo de vinte minutos fecha os seis de uma vez.
-
-- [ ] **Calibrar a curva de exposição.** `TrailExposure` usa piso 8 px (o mesmo
+- [ ] **[requer sessão humana] Calibrar a curva de exposição.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Justificáveis no papel, nunca vistos em jogo.
 - [ ] **Confirmar o ritmo do pulso da trilha.** #41 consertou a matemática da fase; o efeito

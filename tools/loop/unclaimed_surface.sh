@@ -92,6 +92,7 @@ claimed_in_base="$(comm -12 "${base_list}" "${claimed_file}" | wc -l | tr -d ' '
 free_list="$(comm -23 "${base_list}" "${claimed_file}")"
 free_count="$(printf '%s\n' "${free_list}" | grep -c . || true)"
 
+echo "nota: heurística por refs; confirme o estado dos PRs no GitHub."
 echo "base:            ${BASE_REF} ($(git rev-parse --short "${BASE_REF}"))"
 echo "ramos do loop:   $(printf '%s\n' "${branches}" | grep -c .) ($(printf '%s' "${contributing}") ainda à frente da base)"
 echo "arquivos na base: ${total_base}"
