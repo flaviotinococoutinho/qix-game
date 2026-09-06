@@ -97,7 +97,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			_result_label.text = "OBJETIVO  %02d%%" % target_percent
 			_continuity_label.text = _carry_in_line(session)
 			_prompt_label.text = "ENTER  ·  INICIAR AGORA"
-			_set_progress(session.transition_progress())
+			_set_progress(_transition_progress(session))
 		GameSession.Phase.ROUND_CLEAR:
 			visible = true
 			_phase_label.text = "ROTA SEGURA  %02d / %02d" % [session.current_round_number(), session.campaign.rounds.size()]
@@ -111,7 +111,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			# (ciano → âmbar → lima, `docs/ART_DIRECTION.md`) acontece na passagem, não
 			# depois dela. É a ameaça crescente aparecendo antes de ser enfrentada.
 			_prompt_label.add_theme_color_override("font_color", _next_accent(session, accent))
-			_set_progress(session.transition_progress())
+			_set_progress(_transition_progress(session))
 		GameSession.Phase.GAME_OVER:
 			visible = true
 			_edge.color = threat
@@ -187,6 +187,18 @@ func _next_accent(session: GameSession, fallback: Color) -> Color:
 		return fallback
 	var next_visual := session.campaign.rounds[next_index].visual
 	return next_visual.accent_color if next_visual != null else fallback
+
+
+## Fração da barra de passagem, de 0 (acabou de entrar na fase) a 1 (a fase vai virar).
+##
+## A divisão mora aqui e não em `GameSession` porque o domínio conta ticks inteiros — invariante 1
+## do `CLAUDE.md`, "só inteiros e ponto fixo 8.8". A sessão continua dona do *significado* (quantos
+## ticks já correram); esta view é dona do único lugar onde isso vira pixel. Nenhum tick, checksum
+## ou replay depende deste número.
+func _transition_progress(session: GameSession) -> float:
+	if session.transition_ticks_total <= 0:
+		return 1.0
+	return float(session.transition_elapsed_ticks()) / float(session.transition_ticks_total)
 
 
 func _set_progress(value: float) -> void:

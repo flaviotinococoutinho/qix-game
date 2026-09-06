@@ -2,7 +2,8 @@ extends TestCase
 ## Guarda mecânica dos invariantes 1 e 4 do `CLAUDE.md`.
 ##
 ## Invariante 1: nada em `game/simulation/`, `game/rules/` ou `game/session/` lê relógio, `Input`,
-## `Tween`, física ou `delta` de quadro. Invariante 4: `DeterministicRng` é o único acaso.
+## `Tween`, física ou `delta` de quadro — **e o domínio calcula só com inteiros e ponto fixo 8.8**.
+## Invariante 4: `DeterministicRng` é o único acaso.
 ##
 ## Um invariante que só existe em prosa é uma intenção, não uma regra: ele não resiste ao dia em
 ## que alguém precisar de "só um `Time.get_ticks_msec()` para depurar". Este teste é o custo de
@@ -54,6 +55,34 @@ const RULES: Array = [
 	["\\bmove_and_collide\\b", 1, "colisão é da engine; o domínio resolve em células"],
 	["\\bPhysicsServer2D\\b", 1, "colisão é da engine; o domínio resolve em células"],
 	["\\bawait\\b", 1, "espera assíncrona torna a ordem do tick indeterminada"],
+	# Invariante 1, segunda metade — "só inteiros e ponto fixo 8.8".
+	#
+	# Ponto flutuante não é proibido por gosto: ele é a única fonte de divergência que passa em
+	# todos os testes de uma máquina e reprova o checksum de outra. Um `0.5` no domínio arredonda
+	# igual hoje e não arredonda no dia em que a expressão ao redor mudar — e aí o replay quebra
+	# longe da linha que o quebrou. Inteiro e 8.8 (`>> 8`) não têm esse dia.
+	#
+	# Quem chegou aqui porque a suíte ficou vermelha: a correção quase nunca é apagar uma regra.
+	# Se o número real é de **apresentação** (fração de barra, alfa, escala), ele pertence à view —
+	# foi o que aconteceu com `GameSession.transition_progress()`, que virou
+	# `transition_elapsed_ticks() -> int` mais uma divisão em `RoundTransitionView`. Se ele é de
+	# **simulação**, ele precisa virar ponto fixo. O caso que ainda não aconteceu é um `@export`
+	# real num Resource só-de-apresentação sob `game/rules/` (`round_visual_definition.gd`, que
+	# declara no cabeçalho que nunca entra no hash): aí a saída é tirar o arquivo de `game/rules/`,
+	# não afrouxar a varredura. Enfraquecer a guarda é a única correção que não corrige nada.
+	["\\bfloat\\b", 1, "o domínio calcula em inteiro e ponto fixo 8.8, não em float"],
+	["[0-9]+\\.[0-9]", 1, "literal decimal no domínio; use inteiro ou 8.8 (<< 8)"],
+	["\\b(clampf|lerpf|snappedf|absf|maxf|minf|roundf|floorf|ceilf|signf|fposmod)\\s*\\(", 1,
+		"variante float de uma função que tem par inteiro (clampi, maxi, roundi…)"],
+	["\\b(lerp|sqrt|pow|exp|log|sin|cos|tan|atan|atan2|fmod|deg_to_rad|rad_to_deg)\\s*\\(", 1,
+		"matemática de ponto flutuante não pertence ao domínio"],
+	["\\b(is_equal_approx|is_zero_approx)\\s*\\(", 1,
+		"comparação aproximada só existe porque há float; inteiro compara com =="],
+	["\\b(PI|TAU|INF|NAN)\\b", 1, "constante de ponto flutuante no domínio"],
+	["\\b(Vector2|Vector3|Vector4|Rect2|Transform2D|Basis|Quaternion)\\b", 1,
+		"tipo de componentes reais; o domínio usa a variante inteira (Vector2i, Rect2i)"],
+	["\\b(PackedFloat32Array|PackedFloat64Array|PackedVector2Array|PackedVector3Array)\\b", 1,
+		"buffer de reais; o território é PackedByteArray (invariante 3)"],
 ]
 
 ## Trechos que a varredura **tem** de acusar. Sem eles, um erro no scanner viraria um teste que
@@ -67,6 +96,16 @@ const POSITIVE_SAMPLES: Array[String] = [
 	"create_tween().tween_property(self, \"position\", alvo, 0.2)",
 	"directions.shuffle()",
 	"await get_tree().process_frame",
+	# Invariante 1, segunda metade.
+	"func transition_progress() -> float:",
+	"\treturn clampf(1.0 - float(left) / float(total), 0.0, 1.0)",
+	"\tvar meio := 0.5",
+	"\tvar d := sqrt(dx * dx + dy * dy)",
+	"\tvar passo := lerp(a, b, t)",
+	"\tif is_equal_approx(a, b):",
+	"\tvar giro := TAU / 8",
+	"\tvar alvo := Vector2(px, py)",
+	"\tvar buffer := PackedFloat32Array()",
 ]
 
 ## Trechos legítimos que a varredura **não** pode acusar: `delta` inteiro de pontuação, os nomes
@@ -79,6 +118,18 @@ const NEGATIVE_SAMPLES: Array[String] = [
 	"\tvar msg := \"não use Input.is_action_pressed aqui\"  # Tween também não",
 	"\treturn next_u32() % n",
 	"\tvar rand_slot := 3  # 'rand' sem parêntese não é chamada",
+	# Invariante 1, segunda metade: as variantes inteiras e o 8.8 são exatamente o que se quer ver.
+	"\tvar alvo := Vector2i(px, py)",
+	"\tconst VIEWPORT := Vector2i(240, 320)",
+	"\tvar caixa := Rect2i(0, 0, w, h)",
+	"\tvar gained := maxi(0, score - carry)",
+	"\tvar px := clampi(px + dx, 0, width - 1)",
+	"\tbx_fp += boss_speed_fp   # ponto fixo 8.8: um pixel são 256",
+	"\treturn Vector2i(bx_fp >> 8, by_fp >> 8)",
+	"\t@export var boss_speed_fp: int = 96",
+	"\t## §4.4: a moldura vai de 19,15 a 301,239 e 0.5 px não existe aqui",
+	"\tvar rotulo := \"%04.1f%% REVELADO\"",
+	"\tvar PI_STEPS := 4  # 'PI' colado a outra palavra não é a constante",
 ]
 
 
