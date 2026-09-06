@@ -5,6 +5,9 @@
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Acréscimo de 2026-09-06T19:45Z** (execução do #49, depois da mescla): repõe em P2 o achado
+> `_current_archived`, que a reconciliação à mão desta integração deixou cair. Só esse item foi
+> tocado; o resto do backlog **não** foi reconferido nesta edição.
 
 > **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
 > pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
@@ -149,6 +152,16 @@ Itens sem critério de pronto não entram aqui.
       extras na fase terminal não acrescentam um segundo registro; rodada perdida arquiva com
       `completed false`; o tamanho conta tentativas terminadas, não rodadas visitadas). Verde
       nesta árvore.
+
+- [ ] **`GameSession._current_archived` é inalcançável.** Achado colateral do #49, provado por
+      mutação e **perdido na reconciliação à mão da integração** — o texto sobreviveu no
+      comentário de `game/session/game_session.gd` e em `docs/loop/runs/2026-09-06T115826Z.md`,
+      mas deixou de existir como item, então ninguém o decidiria. Reposto aqui.
+      Trocar `if _current_archived:` por `if false:` deixa a suíte inteira verde: as duas chamadas
+      de `_archive_current_round` vivem nos ramos mutuamente exclusivos de `PLAYING`, e arquivar
+      já tira a sessão de `PLAYING` no mesmo tick — quem garante a entrada única é a máquina de
+      fases, não o campo. Não é bug: é uma afirmação de invariante que nenhum teste distingue de
+      um `pass`. *Pronto:* ou o campo saiu, ou existe caso que o exercite de facto.
 
 - [ ] **O speed-up do jogador está autorado, validado, hasheado — e não existe.** Achado do #47
       (`ai/loop-20260906T100242Z`), integrado aqui já **medido e cercado** por
