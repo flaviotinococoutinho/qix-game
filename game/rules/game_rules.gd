@@ -26,6 +26,10 @@ enum PercentMode {
 @export var shield_pauses_during_trail: bool = true  ## perfil Volfied (§9)
 
 @export var substeps_normal: int = 2             ## §4.3: 2 chamadas/frame
+## INERTE HOJE: os dois campos abaixo só são lidos quando `GameSimulation.speedup_active` é
+## verdadeiro, e nada escreve nesse campo — `MoveIntent` não tem bit de "rápido". Editá-los
+## invalida todo replay existente (entram em `canonical_bytes`) e não muda um único tick.
+## Medido em `tests/unit/speedup_rules_inert_test.gd`; item aberto em `docs/LOOP_LEDGER.md`.
 @export var substeps_speedup: int = 4            ## §4.3: 4 com speed-up…
 @export var new_segment_slow_px: int = 8         ## …nunca nos primeiros 8 px de um segmento novo
 

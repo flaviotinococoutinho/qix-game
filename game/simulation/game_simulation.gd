@@ -40,6 +40,9 @@ var permille_remainder: int = 0
 var shield_ticks: int
 var shield_critical_sent: bool = false
 var death_ticks_left: int = 0
+## SEM PRODUTOR: nada neste arquivo, na sessão ou na apresentação escreve `true` aqui, portanto
+## `_player_substeps()` devolve sempre `substeps_normal`. O campo continua no checksum de propósito
+## — tirá-lo invalidaria os replays existentes. Ver `tests/unit/speedup_rules_inert_test.gd`.
 var speedup_active: bool = false
 
 # jogador

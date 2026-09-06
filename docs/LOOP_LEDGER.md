@@ -1,10 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** suíte e rota M2 corridas neste commit (174 testes, 11837 asserções, 0 falhas antes
+> da mudança; 178 testes, 11861 asserções, 0 falhas com o teste novo deste PR; rota M2 179→825‰
+> com `errors: []`). O backlog foi reconferido contra a **fila** — os 27 ramos `ai/loop-*` abertos
+> tocam 469 arquivos, e o domínio inteiro fica de fora deles; foi aí que este PR procurou. O
+> mérito estético **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +69,13 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **2026-09-06T10:02Z:** a fila está em **27 PRs abertos (#20–#46)** e `main` parado em
+      `cba520a` há dois dias. O #42 integra #20–#41 numa branch só e está medido verde. Todo item
+      do backlog já tem PR aberto que toca o seu arquivo (tabela em
+      `docs/loop/runs/2026-09-06T085912Z.md`), então as saídas honestas são duas: um defeito real
+      em arquivo que a fila não toca, ou um PR só de ledger — e o #40 e o #45 já são o segundo
+      caso. Esta execução tomou a primeira: cruzou os 469 arquivos da fila com o repositório e
+      encontrou **o domínio inteiro intocado**. É onde vale procurar enquanto isto durar.
 
 ### P1 — higiene estrutural
 
@@ -108,6 +116,22 @@ Itens sem critério de pronto não entram aqui.
       R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
       literal cobre. *Pronto:* cada perfil de boss de produção tem ao menos um checksum final
       fixado, ou uma nota dizendo por que não precisa.
+- [ ] **O speed-up do jogador está autorado, validado, hasheado — e não existe.** Achado da
+      execução de 10:02Z, já **medido e cercado** por `tests/unit/speedup_rules_inert_test.gd`:
+      `GameSimulation.speedup_active` não tem produtor (nada lhe escreve `true`), e `MoveIntent`
+      não tem bit de "rápido", então `substeps_speedup` (4) e `new_segment_slow_px` (8) nunca são
+      lidos. Variá-los muda o `config_hash` de replay e **não muda um único tick** — a tabela de
+      medição está em `docs/loop/runs/2026-09-06T100242Z.md`. O que falta é a **decisão de
+      design**, que o loop não pode tomar porque não vê nem joga: o jogo tem speed-up ou não?
+      As duas saídas custam coisas diferentes — **implementar** é barato em replay (o bit 4 de
+      `MoveIntent.to_byte()` está livre e um replay antigo decodifica-o como `false`, então
+      `SCHEMA_VERSION` e os checksums existentes sobrevivem se `fast=false` se comportar como
+      hoje), mas toca `app/input_adapter.gd` e `ui/touch/touch_controls.gd`, ambos na fila;
+      **remover** os campos mexe em `GameRules.canonical_bytes()` e invalida todo replay.
+      Cuidado colateral: `TrailExposure` (#9) usa `new_segment_slow_px` como piso da curva de
+      exposição, tratando-o como número vivo de gameplay. *Pronto:* ou o speed-up é alcançável
+      pelo jogador e o teste inerte é reescrito como teste de comportamento, ou os campos saem
+      com ADR que assuma a invalidação dos replays.
 - [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
       `phase = ROUND_CLEAR` num teste não arquiva a rodada — correto, mas não óbvio: custou uma
       asserção errada na execução de 19:00Z. Qualquer apresentação que conte rodadas depende disso.
