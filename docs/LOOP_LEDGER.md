@@ -1,10 +1,10 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** base reconciliada à mão em 2026-09-04 sobre a integração dos 18 PRs do loop
+> (#1–#18). Em 2026-09-06T06:03Z foram atualizados o estado da fila no P0 e as notas de ambiente;
+> o resto do backlog **não** foi reconferido nesta passagem. O mérito estético de cada mudança
+> continua sem julgamento: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -68,6 +68,11 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      **Estado em 2026-09-06T06:03Z: 23 PRs abertos (#20–#42).** `main` está parada em `cba520a`
+      desde 2026-09-04 23:57 — cerca de 30 h e 23 execuções horárias. O #42 integra #20–#41 numa
+      branch só e a execução de 02:58Z mediu esse conjunto verde; **não gaste outra execução a
+      remedir a fila**, o que falta é decisão humana de mesclar. O dono do repositório foi
+      notificado em 06:03Z, fora do PR.
 
 ### P1 — higiene estrutural
 
@@ -195,6 +200,12 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - **A descoberta de testes em `run_tests.gd` varre diretório.** Dois PRs podem acrescentar arquivos
   de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem. Prefira arquivo novo a edição
   em arquivo disputado.
+- **Os latches de entrada são filas drenadas por tick, e todo `return` cedo em
+  `QixBootstrap._process_input_tick` é um latch por drenar.** `consume_pause` e `consume_confirm`
+  esvaziam filas alimentadas por eventos crus entre ticks; quem sai do tick sem chamar as duas
+  deixa um edge pendurado que vale por um pedido no ecrã seguinte. Foi esse o defeito corrigido em
+  06:03Z (pausa + confirmar na mesma janela de frame reiniciavam a campanha no fim de jogo).
+  Ao acrescentar um ramo novo a essa função, drene os dois latches antes de ramificar.
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.
