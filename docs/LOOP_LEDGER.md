@@ -1,12 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
 > **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 22 PRs abertos do loop (#20–#41) sobre
-> `cba520a` — a árvore medida é a integração, não `main` sozinho —, medida
-> verde (232 testes, 12534 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`; perfil de
-> `BoardView` p95 = 2 µs). Cada item abaixo foi reconferido contra o **código integrado**, não
-> contra a prosa do PR que o reivindicou. O mérito estético continua **não** julgado: o jogo não
-> pode ser jogado nem visto num sandbox headless.
+> **Alcance:** reconciliado à mão sobre a integração dos **30** PRs abertos do loop (#20–#50)
+> sobre `cba520a` — a árvore medida é a integração, não `main` sozinho —, medida verde
+> (261 testes, 12713 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`; perfil de `BoardView`
+> p95_speedup 46380×; catraca de contraste sem par abaixo do piso). Cada item abaixo foi
+> reconferido contra o **código integrado**, não contra a prosa do PR que o reivindicou. O mérito
+> estético continua **não** julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -78,11 +78,24 @@ Itens sem critério de pronto não entram aqui.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
-- [~] **Drenar a fila de PRs abertos — terceira vez.** Reivindicado pelo PR desta execução
-      (`ai/loop-20260906T045700Z`), que integra #20–#41 numa branch só, com o ledger reconciliado
-      à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 22 em 30 h. Só um humano
-      mescla, e o loop não mescla o próprio PR.
+- [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
+      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
+      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
+      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
       *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+
+      **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
+      não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
+      Esta integração encontrou o que nenhuma medição de fila por nomes de arquivo podia
+      encontrar: **#25 e #50 são incompatíveis em código.** O #25 tirou `transition_progress()` de
+      `GameSession` (devolvia `float`, invariante 1) e mudou a chamada para um helper da view; o
+      #50 acrescentou `_apply_cadence` chamando `session.transition_progress()` — o método que já
+      não existe — e o mesmo em `tests/unit/round_transition_cadence_test.gd:117`. Mesclados em
+      qualquer ordem, sem esta resolução, a suíte fica **vermelha** com
+      `Nonexistent function 'transition_progress'`. Resolvido aqui alimentando a cadência do #50
+      com o helper do #25. **Lição para o protocolo:** relatório de fila que cruza *nomes de
+      arquivo* não vê conflito semântico entre um PR que remove uma API e outro que a chama —
+      só a integração de facto vê. Enquanto a fila passar de ~10, vale reintegrar e medir.
 
 - [ ] **A cadência do loop excede a cadência de revisão, e isso é problema de projeto, não de
       execução.** Medido quatro vezes (#31, #36, #40 e esta run): o loop produz 1 PR/h e a revisão
@@ -121,12 +134,31 @@ Itens sem critério de pronto não entram aqui.
 
 ### P2 — integridade de contexto
 
-- [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
-      `phase = ROUND_CLEAR` num teste não arquiva a rodada — correto, mas não óbvio: custou uma
-      asserção errada na execução de 19:00Z. Qualquer apresentação que conte rodadas depende disso.
-      → Documentar a regra no cabeçalho de `GameSession`. *Pronto:* o contrato de `records`
-      legível sem ler `_archive_current_round`. **Livre** — três execuções o listaram e nenhum dos
-      22 PRs o tocou.
+- [x] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** ✅ entregue pelo #49
+      (`ai/loop-20260906T115826Z`), integrado aqui: o contrato foi para o cabeçalho de
+      `GameSession` e `tests/unit/session_records_contract_test.gd` defende as cinco regras
+      (fica vazio até uma rodada acabar de facto; forçar a fase de fora não arquiva nada; ticks
+      extras na fase terminal não acrescentam um segundo registro; rodada perdida arquiva com
+      `completed false`; o tamanho conta tentativas terminadas, não rodadas visitadas). Verde
+      nesta árvore.
+
+- [ ] **O speed-up do jogador está autorado, validado, hasheado — e não existe.** Achado do #47
+      (`ai/loop-20260906T100242Z`), integrado aqui já **medido e cercado** por
+      `tests/unit/speedup_rules_inert_test.gd`: `GameSimulation.speedup_active` não tem produtor
+      (nada lhe escreve `true`) e `MoveIntent` não tem bit de "rápido", então `substeps_speedup`
+      (4) e `new_segment_slow_px` (8) nunca são lidos. Variá-los muda o `config_hash` de replay e
+      **não muda um único tick** — a tabela está em `docs/loop/runs/2026-09-06T100242Z.md`. O que
+      falta é **decisão de design**, que o loop não pode tomar porque não vê nem joga: o jogo tem
+      speed-up ou não? *Pronto:* ou existe produtor e teste de comportamento, ou as duas regras
+      saem de `GameRules` (o que **invalida replays**, invariante 7 — é ADR, não commit).
+
+- [ ] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** Sobra do #46
+      (`ai/loop-20260906T085912Z`), que fez a pausa alcançar as oito vozes de SFX — antes ela
+      parava só a música e o `death`/`game_over` terminava por cima do campo congelado. As vozes
+      passaram a ser comandadas sempre; a música continua atrás de `is_inside_tree()`. No runtime
+      real os dois caminhos coincidem, por isso não foi mexido. No mesmo saco: `shutdown()` não
+      zera `_paused_voices`. *Pronto:* uma só regra de guarda para música e vozes, com
+      `audio_pause_test.gd` a continuar verde.
 
 - [ ] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** Achado
       de #36: `domain_purity_test.gd` varre `game/simulation/`, `game/rules/` e `game/session/`,
@@ -196,11 +228,15 @@ O que continua aberto:
       só o documento de arte não encontra nenhuma das duas.
       *Pronto:* as duas decisões referenciadas na seção que lhes corresponde.
 
-- [ ] **O tempo da transição entre rodadas não tem ritmo.** #15 fez a passagem carregar score,
-      vidas e o próximo setor, mas a barra de progresso é linear em ticks e nada enfatiza o
-      instante em que o número de continuidade aparece. É animação de apresentação, não texto.
-      *Pronto:* a passagem tem um acento perceptível no momento da continuidade, sem tocar domínio.
-      **Livre** — nenhum dos 22 PRs tocou `ui/round_transition_view.gd`.
+- [x] **O tempo da transição entre rodadas não tem ritmo.** ✅ entregue pelo #50
+      (`ai/loop-20260906T130328Z`), integrado aqui **com resolução de conflito**: o painel abre em
+      ordem de leitura (`_apply_cadence` revela subtítulo → resultado → continuidade → prompt por
+      limiares de progresso) e a continuidade entra com uma batida que **decai** em vez de piscar
+      (`_beat`, pela mesma razão do ADR-0009: um degrau de um frame é ruído a 60 Hz).
+      A cadência é alimentada pelo helper `_transition_progress(session)` da própria view, não por
+      `session.transition_progress()` como o #50 escrevia — ver o P0 acima. Invariante 6 defendido
+      por `round_transition_cadence_test.gd`: percorre a intro inteira e prova que checksum e
+      replay não mexem. **Falta o julgamento estético:** ninguém viu a passagem numa tela.
 
 - [ ] **A geometria do HUD depende da ordem de construção.** `_add_label` só obtém o retângulo
       pedido porque atribui `size` depois de entrar na árvore; antes do primeiro frame o mínimo do
@@ -252,10 +288,18 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.
-- **Integrar a fila é barato; reconciliar o ledger não.** Medido nesta execução: os 22 merges de
+- **Integrar a fila é barato; reconciliar o ledger não.** Medido em 04:57Z: os 22 merges de
   #20–#41 produziram **zero** conflitos de código — o único arquivo conflitante, em 20 dos 22, é
   `docs/LOOP_LEDGER.md`. O custo real da drenagem é reescrever o backlog à mão, porque `--ours`
   descarta a entrada de ledger de cada PR e a união automática mente.
+- **…mas "zero conflitos de código" não é "zero incompatibilidades".** Corrigido em 14:00Z ao
+  integrar #42+#43–#50: dos 8 merges, 7 conflitaram só no ledger, 1 (#44) também em
+  `docs/TEST_MATRIX.md`, e o #50 conflitou em `ui/round_transition_view.gd` — mas a incompatibilidade
+  cara **não deu conflito nenhum**: o #50 chama `session.transition_progress()` num arquivo de
+  teste que o #25 nunca tocou, e o #25 removeu esse método. `git merge` fica verde e a suíte fica
+  vermelha. Duas conclusões: (a) só a suíte corrida sobre a árvore integrada prova que a fila
+  mescla; (b) um PR que **remove** um símbolo público conflita silenciosamente com todo PR aberto
+  que o use — ao remover, `grep` o símbolo nos ramos abertos, não só na árvore.
 
 ## Histórico
 
