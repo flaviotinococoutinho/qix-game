@@ -1,10 +1,13 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o backlog foi reconferido item a item contra os **19 PRs abertos** em
+> 2026-09-06T00:02Z (mapa de quem cobre o quê em `docs/loop/runs/2026-09-06T000200Z.md`), e um
+> item foi fechado com medida verde (179 testes, 11860 asserções, 0 falhas; rota M2 179→825‰
+> com `errors: []`). A reconciliação anterior, de 2026-09-04 sobre `33c81e6`, cobriu a
+> integração dos 18 PRs (#1–#18) e continua válida no que não foi mexido aqui. O mérito
+> estético de cada mudança **não** foi julgado: o jogo não pode ser jogado, visto nem sentido
+> num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -65,9 +68,18 @@ Itens sem critério de pronto não entram aqui.
 
 - [ ] **Drenar a fila de PRs abertos.** Só um humano mescla; o loop não mescla o próprio PR.
       Enquanto `main` não andar, cada execução ou duplica um item já coberto ou trabalha na fila
-      em vez de no jogo. A integração dos 18 está medida e verde — ver
-      `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
-      *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      em vez de no jogo. **Em 2026-09-06T00:02Z a fila estava em 19** (#20–#38), todos pequenos
+      e ramificados de `cba520a`; a segunda integração medida é o PR #36
+      (`docs/loop/runs/2026-09-04T230000Z.md` descreve a primeira e o que a ordem exige).
+      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+
+  > **Enquanto a fila não drena, o backlog mente por construção.** Ele só reflete o que chegou
+  > a `main`, então um item "livre" pode ter dono há horas. Antes de escolher, cruze os ramos
+  > abertos contra o item: `git fetch origin 'refs/heads/ai/*:refs/remotes/origin/ai/*'` e
+  > depois `git diff --name-only origin/main..<ramo>` em cada um — a lista de arquivos diz o
+  > que o ramo cobre e onde a sua mudança vai colidir. Cuidado com o conflito **semântico**: o
+  > git mescla sem reclamar uma entrada nova numa tabela cujas outras entradas o ramo aberto
+  > acabou de ganhar chaves novas. Foi por isso que o cue sonoro da exposição ficou para depois.
 
 ### P1 — higiene estrutural
 
@@ -144,12 +156,23 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       release autorados por cue na receita, ao lado de `intent` e `priority`; ataque em
       milissegundos absolutos, não em fração da duração. *Pronto:* teste que mede o frame de pico
       do PCM e exige que os cues de impacto piquem em ≤ 8 ms, mantendo a subida suave dos de anúncio.
-- [ ] **Ritmo do risco: som e háptica da exposição.** O canal visual foi feito em #9
-      (`TrailExposure`: o pulso da trilha acelera e clareia, o HUD nomeia o limiar). Faltam os
-      outros dois canais do item original — um cue que suba com a exposição e um toque háptico ao
-      cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes acima, que define
-      prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com prioridade
-      declarada, **sem alterar checksum**.
+- [x] **Ritmo do risco: a háptica da exposição.** Feito em `ai/loop-20260906T000200Z` —
+      `TrailExposure.crossed_warning` (a aresta, ao lado do estado que já existia), pulso
+      `&"exposure"` em prioridade **35** na escada de `QixHapticFeedback`, e o hub a passar a
+      leitura. Medido: 179 testes / 0 falhas, rota M2 com `errors: []` e permille idêntico —
+      **checksum intacto**. Ver `docs/loop/runs/2026-09-06T000200Z.md`.
+- [ ] **Ritmo do risco: o cue sonoro da exposição.** A metade que sobrou, e está **bloqueada
+      por sequência, não por dúvida**: um cue novo em `CUE_RECIPES` hoje nasceria sem
+      `onset`/`attack_ms`/`release_ms`, as chaves que o PR de envelopes acrescenta às dez
+      receitas — e o git mesclaria os dois sem conflito textual, produzindo um cue com a forma
+      antiga num arquivo que já não a usa (o padrão `#8×#11`). *Pronto:* depois do PR de
+      envelopes mesclar, cue `&"exposure"` com `onset: &"announce"` e prioridade **35**, para
+      casar com a escada háptica já fixada, **sem alterar checksum**.
+- [ ] **O pulso da exposição nunca foi sentido.** 70 ms a `weak 0.30`/`strong 0.10` são
+      justificáveis no papel — mais suave que o `shield`, que é ameaça imposta — e um sandbox
+      headless não vibra. Anda junto com o item de calibrar a curva abaixo: é a mesma sessão de
+      jogo real. *Pronto:* alguém joga com gamepad ou telemóvel e confirma (ou corrige) força e
+      duração.
 - [ ] **Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Os dois números são justificáveis no papel e **não foram vistos em jogo**.
