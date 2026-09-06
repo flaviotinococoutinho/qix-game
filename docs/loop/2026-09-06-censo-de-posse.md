@@ -89,6 +89,24 @@ Escolher qualquer um deles nesta execução produziria um PR que afirma mais do 
 pronto do item P0 tal como está escrito. É a única ação que devolve o loop ao jogo, e só um humano
 pode tomá-la.
 
+### Nenhum PR da fila está vermelho
+
+O portão `.github/workflows/verificacao.yml` roda em `main` desde a integração do #19 e cobre
+todos os PRs abertos. Consultadas as execuções de evento `pull_request` do portão:
+
+| | |
+|---|---|
+| Execuções concluídas | **37** |
+| Conclusão `success` | **37** |
+| Conclusão `failure`/`cancelled`/`timed_out` | **0** |
+| PRs cobertos | **#20–#53**, todos os 34 |
+
+Isso muda a natureza da decisão de merge: a fila não está represada por trabalho duvidoso, e o
+revisor não está sendo convidado a mesclar código não verificado. O #51 em particular tem, além da
+medição local desta execução, o verde independente do portão (run `34037911211`). O que continua
+sem verificação é o **mérito** — nenhum PR foi revisado, e o portão mede a suíte, não se as
+mudanças são boas para o jogo.
+
 Se mesclar em bloco não for aceitável, a alternativa mínima é fechar os meta redundantes (#40,
 #42, #45 são todos superados pelo #51) — isso não destrava o backlog, mas para de fazer a fila
 crescer por trabalho sobre si mesma.

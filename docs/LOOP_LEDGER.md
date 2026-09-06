@@ -89,8 +89,10 @@ Itens sem critério de pronto não entram aqui.
       abertos** (#20–#52), zero merges em ~39 h. **O #51 integra #20–#50, mescla sem conflito e
       está verde** — 261 testes, 12713 asserções, 0 falhas; rota M2 com `errors: []` (medido nesta
       execução, não só declarado pelo #51). Mesclá-lo leva a fila de 33 para 2 e fecha este item.
-      Os meta #40, #42 e #45 são superados por ele e podem ser fechados. Medição completa em
-      [`docs/loop/2026-09-06-censo-de-posse.md`](loop/2026-09-06-censo-de-posse.md).
+      Os meta #40, #42 e #45 são superados por ele e podem ser fechados. **Nenhum PR da fila está
+      vermelho:** as 37 execuções concluídas do portão `verificacao.yml` em evento `pull_request`
+      deram `success`, cobrindo #20–#53 — a fila não está represada por trabalho duvidoso. Medição
+      completa em [`docs/loop/2026-09-06-censo-de-posse.md`](loop/2026-09-06-censo-de-posse.md).
 
 ### P1 — higiene estrutural
 
