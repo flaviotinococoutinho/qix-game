@@ -1,10 +1,13 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o corpo continua sendo a reconciliação à mão da integração dos 18 PRs (#1–#18),
+> feita em 2026-09-04 sobre `33c81e6`. Nesta data foram atualizados apenas: o estado da fila no
+> P0 (29 PRs abertos, medido), o item de `session.records` (entregue) e dois itens novos nascidos
+> dessa entrega. Medida desta árvore: 179 testes, 11866 asserções, 0 falhas; rota M2 179→825‰ com
+> `errors: []`. **Os demais itens do backlog não foram reconferidos hoje** — vários já têm PR
+> aberto na fila e o ledger de `main` não os conhece. O mérito estético de cada mudança **não**
+> foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -67,7 +70,14 @@ Itens sem critério de pronto não entram aqui.
       Enquanto `main` não andar, cada execução ou duplica um item já coberto ou trabalha na fila
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
-      *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+
+      **Medido em 2026-09-06T11:58Z: 29 PRs abertos (#20–#48), `main` parado em `cba520a` há
+      ~33 h.** O #42 já integra #20–#41 numa branch só, verde. A drenagem foi reivindicada três
+      vezes e medida cinco (#30, #31, #34, #40, #45) — **não a meça de novo**: o dado existe e o
+      gargalo não é falta de medição. Uma execução que chegue aqui deve escolher um item que
+      nenhum PR aberto toque (confira com `git diff --name-only origin/main...<ramo>` por ramo)
+      e seguir em frente.
 
 ### P1 — higiene estrutural
 
@@ -108,11 +118,26 @@ Itens sem critério de pronto não entram aqui.
       R2 e R3 têm perfis de boss diferentes (PURSUIT, SWEEP) cujas trajetórias nenhum checksum
       literal cobre. *Pronto:* cada perfil de boss de produção tem ao menos um checksum final
       fixado, ou uma nota dizendo por que não precisa.
-- [ ] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Forçar
-      `phase = ROUND_CLEAR` num teste não arquiva a rodada — correto, mas não óbvio: custou uma
-      asserção errada na execução de 19:00Z. Qualquer apresentação que conte rodadas depende disso.
-      → Documentar a regra no cabeçalho de `GameSession`. *Pronto:* o contrato de `records`
-      legível sem ler `_archive_current_round`.
+- [x] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** Feito em
+      `ai/loop-20260906T115826Z`: contrato documentado no campo `records` de `GameSession` e
+      fixado por `tests/unit/session_records_contract_test.gd` (5 testes). A regra utilizável é
+      `records.size() == current_round_number() - 1` durante `ROUND_INTRO` e `PLAYING`.
+
+- [ ] **`_current_archived` não é alcançável por nenhum caminho.** Achado colateral do item
+      acima, por mutação: trocar `if _current_archived:` por `if false:` deixa a suíte inteira
+      verde (179 testes, 0 falhas, 2026-09-06). As duas chamadas de `_archive_current_round`
+      vivem nos dois ramos mutuamente exclusivos de `PLAYING`, e arquivar já tira a sessão de
+      `PLAYING` no mesmo tick — quem garante a entrada única é a máquina de fases, não o guarda.
+      Está escrito assim no código, com a data. → Decidir: remover o campo, ou mantê-lo com um
+      teste que o exercite de facto. *Pronto:* ou o campo saiu, ou existe caso que o distingue.
+
+- [ ] **Os dois maiores itens de estética são inatingíveis pelo critério que eles próprios
+      pedem.** `BOUNDARY`×`TRAIL` e a cor do cursor exigem, no *pronto*, que "alguém confirme por
+      captura" — e o loop roda cego num sandbox headless. Por isso atravessaram 29 execuções sem
+      dono, e vão atravessar as próximas. → Separar cada critério em duas metades: a mensurável
+      (a razão de contraste nas quatro paletas, que a suíte prova) e a que precisa de olho humano
+      (o campo não ficou lavado), esta última como revisão do PR, não como bloqueio da execução.
+      *Pronto:* os dois itens têm metade acionável por uma execução headless.
 
 ### P3 — experiência e estética (o alvo real)
 
