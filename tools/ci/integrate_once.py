@@ -69,11 +69,11 @@ if marker in ledger:
 header_end = ledger.index('\n\nUm agente')
 ledger = '''# LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · base integrada `c4cedb1` (#51), mais #52–#54
-> **Alcance:** reconciliação de código e documentação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros das execuções anteriores são históricos, não contagens
-> atuais. Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
+> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
 
 > **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
 > pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
