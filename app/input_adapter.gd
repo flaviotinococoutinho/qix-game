@@ -7,6 +7,23 @@ extends RefCounted
 const ANALOG_PRESS_THRESHOLD := 0.42
 const ANALOG_RELEASE_THRESHOLD := 0.28
 
+## Quanto o eixo secundário precisa vencer o eixo já sustentado para tomar a direção.
+##
+## A histerese de magnitude acima decide *se* o stick está empurrado; esta decide *para onde*.
+## Sem ela, `absf(x) > absf(y)` era reavaliado a cada `InputEventJoypadMotion` — e o hardware
+## manda um evento por eixo, não um vetor —, então um stick parado perto de 45° alternava de
+## direção com o próprio ruído do potenciômetro.
+##
+## Neste jogo isso não é um detalhe de conforto: com `draw` apertado, cada troca de direção é um
+## canto novo na trilha confirmada. A escada de cantos alonga a trilha, e comprimento de trilha é
+## a moeda que `TrailExposure` lê para acelerar o pulso e nomear o aviso no HUD — o jogador
+## pagava exposição por um movimento que não fez.
+##
+## 0.18 medido contra a deflexão: o eixo só troca depois de ~7° fora da diagonal com o stick no
+## fim de curso, ~11° a meia deflexão e ~18° logo acima de `ANALOG_PRESS_THRESHOLD`. A trava é
+## mais firme onde o gesto é mais vago, que é onde o ruído domina.
+const ANALOG_AXIS_SWITCH_MARGIN := 0.18
+
 var _touch_controls: Object
 var _left_sticks_by_device: Dictionary = {}
 var _analog_directions_by_device: Dictionary = {}
@@ -158,14 +175,7 @@ func _update_analog_direction(device: int) -> void:
 	if magnitude < threshold:
 		_analog_directions_by_device.erase(device)
 		return
-	if absf(stick.x) > absf(stick.y):
-		_analog_directions_by_device[device] = (
-			MoveIntent.Dir.RIGHT if stick.x > 0.0 else MoveIntent.Dir.LEFT
-		)
-	else:
-		_analog_directions_by_device[device] = (
-			MoveIntent.Dir.DOWN if stick.y > 0.0 else MoveIntent.Dir.UP
-		)
+	_analog_directions_by_device[device] = resolve_analog_direction(stick, current_direction)
 
 
 func _clear_device_state(device: int) -> void:
@@ -174,6 +184,32 @@ func _clear_device_state(device: int) -> void:
 	_joy_buttons_by_device.erase(device)
 	_confirm_queued_by_device.erase(device)
 	_pause_queued_by_device.erase(device)
+
+
+## Eixo dominante do stick, com trava no eixo já sustentado.
+##
+## É o análogo analógico do que `choose_direction` faz para o digital: sob ambiguidade, quem
+## está valendo continua valendo. Sem direção sustentada o desempate é o antigo — `|x| > |y|`,
+## empate exato vai para o vertical —, então o primeiro toque de um stick não muda de
+## comportamento. Trocar de **sentido** dentro do mesmo eixo escapa da trava por construção: a
+## margem compara módulos, e `RIGHT`→`LEFT` não altera qual eixo domina.
+static func resolve_analog_direction(stick: Vector2, current_direction: int) -> int:
+	var horizontal := absf(stick.x) > absf(stick.y)
+	if _is_horizontal(current_direction):
+		horizontal = absf(stick.y) <= absf(stick.x) + ANALOG_AXIS_SWITCH_MARGIN
+	elif _is_vertical(current_direction):
+		horizontal = absf(stick.x) > absf(stick.y) + ANALOG_AXIS_SWITCH_MARGIN
+	if horizontal:
+		return MoveIntent.Dir.RIGHT if stick.x > 0.0 else MoveIntent.Dir.LEFT
+	return MoveIntent.Dir.DOWN if stick.y > 0.0 else MoveIntent.Dir.UP
+
+
+static func _is_horizontal(direction: int) -> bool:
+	return direction == MoveIntent.Dir.RIGHT or direction == MoveIntent.Dir.LEFT
+
+
+static func _is_vertical(direction: int) -> bool:
+	return direction == MoveIntent.Dir.UP or direction == MoveIntent.Dir.DOWN
 
 
 ## Mantém a direção atual em diagonais/sobreposição; sem preferência usa ordem canônica.
