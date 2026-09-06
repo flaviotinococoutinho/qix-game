@@ -1,10 +1,13 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** o backlog foi reconferido item a item contra a **fila** — que PR aberto reivindica
+> cada item (censo em `docs/loop/2026-09-06-censo-de-posse.md`). Medido: `main` em 174 testes,
+> 11837 asserções, 0 falhas; o #51 em 261 testes, 12713 asserções, 0 falhas, rota M2 com
+> `errors: []`. **Não** reverificado nesta passagem: o conteúdo técnico de cada item do backlog
+> contra o código (isso foi feito em 2026-09-04, commit `33c81e6`, e nada entrou em `main` desde
+> então). O mérito estético continua sem julgamento: o jogo não pode ser jogado nem visto num
+> sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -26,6 +29,12 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
    duas execuções que mexem no mesmo item *devem* se encontrar aqui.
 6. **Nunca reabra um item de "Decisões fechadas"** sem argumento novo e explícito no PR. Essa
    seção existe para impedir que o loop oscile entre duas opções para sempre.
+7. **Meta-PR tem teto.** Um PR *sobre a fila* (integração, censo, "nada estava livre") só é
+   legítimo se carregar uma **medição que nenhum meta-PR aberto já carrega**, e tem de **nomear
+   quais ele supera**. Sem isso, escreva o achado no seu arquivo de `docs/loop/runs/` e não abra
+   PR. Esta regra existe porque o escape "PR só de ledger" não tinha teto: com a fila saturada ele
+   autoriza um meta-PR por hora, para sempre — #40 e #45 dizem a mesma coisa com palavras
+   diferentes. Ver `docs/loop/2026-09-06-censo-de-posse.md`.
 
 ### Ao resolver conflito de documentação
 
@@ -61,6 +70,13 @@ Itens sem critério de pronto não entram aqui.
 > pelos PRs #1–#18. O que resta abaixo **nasceu das próprias execuções** — é dívida que só ficou
 > visível depois que o trabalho foi feito. Confira a fila antes de escolher.
 
+> **Censo de 2026-09-06T16:00Z: 14 dos 16 itens abaixo já têm PR aberto.** A tabela de posse item
+> a item está em [`docs/loop/2026-09-06-censo-de-posse.md`](loop/2026-09-06-censo-de-posse.md) —
+> leia-a antes de escolher, ela poupa a meia hora de `git diff` que custou para levantá-la. Os
+> dois itens sem dono (`BOUNDARY`×`TRAIL` e a calibração da exposição) estão **bloqueados em olho
+> humano**, não livres: os dois têm "alguém confirma vendo o jogo" no próprio critério de pronto.
+> Enquanto `main` não andar, o backlog não volta a ter item trabalhável — o P0 abaixo é a raiz.
+
 ### P0 — a fila (nada abaixo importa enquanto isto não anda)
 
 - [ ] **Drenar a fila de PRs abertos.** Só um humano mescla; o loop não mescla o próprio PR.
@@ -68,6 +84,13 @@ Itens sem critério de pronto não entram aqui.
       em vez de no jogo. A integração dos 18 está medida e verde — ver
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+
+      **Estado em 2026-09-06T16:00Z:** `main` parada em `cba520a` desde 2026-09-04 23:57; **33 PRs
+      abertos** (#20–#52), zero merges em ~39 h. **O #51 integra #20–#50, mescla sem conflito e
+      está verde** — 261 testes, 12713 asserções, 0 falhas; rota M2 com `errors: []` (medido nesta
+      execução, não só declarado pelo #51). Mesclá-lo leva a fila de 33 para 2 e fecha este item.
+      Os meta #40, #42 e #45 são superados por ele e podem ser fechados. Medição completa em
+      [`docs/loop/2026-09-06-censo-de-posse.md`](loop/2026-09-06-censo-de-posse.md).
 
 ### P1 — higiene estrutural
 
