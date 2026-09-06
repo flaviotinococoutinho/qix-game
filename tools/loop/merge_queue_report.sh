@@ -8,7 +8,8 @@
 # o merge textual passa, e o teste de um deles quebra sem que nenhum dos dois PRs veja.
 #
 # Uso:
-#   tools/loop/merge_queue_report.sh                 # matriz de conflitos + sobreposições
+#   tools/loop/merge_queue_report.sh                 # matriz de conflitos + posse + sobreposições
+#   tools/loop/merge_queue_report.sh --claims        # só o mapa de posse (a pergunta do passo 2)
 #   tools/loop/merge_queue_report.sh --verify 8 11   # junta os dois PRs e roda a suíte
 #
 # Requer `git` com `merge-tree --write-tree` (>= 2.38) e, para `--verify`, um binário Godot em
@@ -31,8 +32,33 @@ fetch_pr_heads() {
   }
 }
 
+# Um ref em `refs/remotes/pr/` nunca desaparece: `git fetch refs/pull/*` só acrescenta. Depois que
+# o #19 levou dezenove PRs para `main`, este relatório passou a anunciar "29 PRs na fila" e 364
+# pares em conflito — quase todos entre PRs que já não existem. Um relatório que exagera a fila em
+# 19 unidades é pior que nenhum: a execução que o lê conclui que tudo colide e desiste de escolher.
+# Um PR mesclado é, por construção, ancestral da base; um PR aberto não é.
+#
+# Limite conhecido: um PR *fechado sem mesclar* também não é ancestral, e passa por aberto. Não
+# houve nenhum até hoje neste repositório; quando houver, o ref sobra no relatório e a correção é
+# apagá-lo (`git update-ref -d refs/remotes/pr/<n>`), não afrouxar o teste.
 pr_numbers() {
+  local n
+  for n in $(all_pr_refs); do
+    git merge-base --is-ancestor "pr/${n}" "${BASE_REF}" 2>/dev/null && continue
+    echo "${n}"
+  done
+}
+
+all_pr_refs() {
   git for-each-ref --format='%(refname:strip=3)' refs/remotes/pr/ | sort -n
+}
+
+# Arquivos cuja posse importa para quem vai escolher um item. Fora: o ledger (toda execução
+# escreve nele, por contrato) e os relatos por execução (arquivo novo por run, nunca disputado).
+claimable_files() {
+  git diff --name-only "${BASE_REF}...pr/${1}" \
+    | grep -v "^${LEDGER_PATH}\$" \
+    | grep -v '^docs/loop/runs/'
 }
 
 # Arquivos que ambos os PRs tocam, ignorando docs. Duas mãos no mesmo .gd é a colisão que o
@@ -80,13 +106,63 @@ cmd_verify() {
     --script res://tests/run_tests.gd 2>&1 | grep -E '^(ok|FAIL)|testes,' | grep -vE '^ok'
 }
 
+# O mapa de posse responde à pergunta que o passo 2 do protocolo do ledger faz antes de escolher
+# um item: "o arquivo que eu preciso tocar já tem dono na fila?". Sem ele a resposta custa um
+# `git diff` por PR aberto, à mão — e a execução que não paga esse custo escolhe um item que já
+# está em voo. A matriz de conflitos não substitui isto: ela só cruza PR com PR, e o que a
+# execução tem em mãos é um item de backlog, não um PR.
+print_claims() {
+  local prs="$1" p
+  echo "-- Posse de arquivos: o que a fila já reivindica --"
+  echo "   Item de backlog cujo arquivo aparece aqui **não está livre**, mesmo com o checkbox vazio."
+  if [ -z "${prs}" ]; then echo "  (fila vazia: nenhum arquivo reivindicado)"; return 0; fi
+  for p in ${prs}; do
+    claimable_files "${p}" | sed "s|\$| ${p}|"
+  done | sort | awk '
+    # Uma raiz inteira reivindicada por um só PR (a poda de um vendor, por exemplo) rende dezenas
+    # de linhas que respondem todas à mesma pergunta. Acima de COLAPSO arquivos vira uma linha; o
+    # leitor continua sabendo que qualquer arquivo sob aquela raiz tem dono. O limiar é alto de
+    # propósito: `tests/` recebe arquivo novo a cada execução e não pode ser colapsada.
+    function flush(   ) { if (prev != "") { printf "  %s  <- %s\n", prev, acc; prev = "" } }
+    BEGIN { COLAPSO = 8 }
+    { f[NR] = $1; o[NR] = $2
+      seg = $1
+      if (index(seg, "/") > 0) sub(/\/.*/, "", seg); else seg = ""
+      s[NR] = seg
+      if (seg != "") cnt[seg " " $2]++ }
+    END {
+      for (i = 1; i <= NR; i++) {
+        key = s[i] " " o[i]
+        if (s[i] != "" && cnt[key] >= COLAPSO) {
+          if (!(key in seen)) {
+            seen[key] = 1; flush()
+            printf "  %s/…  <- #%s  (%d arquivos)\n", s[i], o[i], cnt[key]
+          }
+          continue
+        }
+        if (f[i] != prev) { flush(); prev = f[i]; acc = "#" o[i] }
+        else acc = acc " #" o[i]
+      }
+      flush()
+    }'
+}
+
+cmd_claims() {
+  fetch_pr_heads
+  print_claims "$(pr_numbers)"
+}
+
 cmd_report() {
   fetch_pr_heads
   local prs; prs=$(pr_numbers)
+  local merged; merged=$(( $(all_pr_refs | wc -l) - $(echo "${prs}" | grep -c . ) ))
   if [ -z "${prs}" ]; then echo "nenhum PR aberto encontrado em refs/remotes/pr/"; return 0; fi
 
   echo "== Fila de merge sobre ${BASE_REF} =="
   echo "PRs na fila: $(echo "${prs}" | tr '\n' ' ')"
+  echo "(${merged} refs em refs/remotes/pr/ já são ancestrais de ${BASE_REF}: mesclados, fora da conta)"
+  echo
+  print_claims "${prs}"
   echo
   echo "-- Conflitos que NÃO são o ledger (exigem decisão humana) --"
   local real=0 a b out rest
@@ -128,6 +204,7 @@ cmd_report() {
 
 case "${1:-}" in
   --verify) shift; cmd_verify "$@" ;;
+  --claims) cmd_claims ;;
   ""|--report) cmd_report ;;
-  *) echo "uso: $0 [--report] | --verify <pr> <pr> [...]" >&2; exit 64 ;;
+  *) echo "uso: $0 [--report] | --claims | --verify <pr> <pr> [...]" >&2; exit 64 ;;
 esac
