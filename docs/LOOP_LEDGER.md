@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** suíte remedida em `origin/main` (174 testes, 11837 asserções, 0 falhas) e posse da
+> fila remedida **por arquivo** com `tools/loop/unclaimed_surface.sh`. O backlog em si não foi
+> reconferido item a item nesta passagem — a reconferência válida continua sendo a de 2026-09-04
+> sobre a integração dos #1–#18, mais o censo por item de `docs/loop/2026-09-06-censo-de-posse.md`
+> (PR aberto, ainda não em `main`). O mérito estético de nenhuma mudança foi julgado: o jogo não
+> pode ser jogado nem visto num sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -14,9 +16,14 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
 1. **Leia este arquivo inteiro antes de decidir o que fazer.** Ele vem depois do `CLAUDE.md` e
    antes de qualquer edição.
 2. **Liste os PRs abertos do loop antes de escolher.** Um item com PR aberto **não está livre**,
-   mesmo com o checkbox vazio: o backlog só reflete o que chegou a `main`. Use
-   `tools/loop/merge_queue_report.sh` — ele diz, além disso, em que arquivos a sua mudança vai
-   colidir em silêncio com a fila. Foi por não olhar a fila que o par `#8×#11` nasceu.
+   mesmo com o checkbox vazio: o backlog só reflete o que chegou a `main`. Duas ferramentas, nesta
+   ordem:
+   - `tools/loop/unclaimed_surface.sh` — **antes** de escolher: quais arquivos de `main` nenhum PR
+     aberto toca, quebrado por camada. Dois segundos, e evita uma hora de trabalho que vai
+     conflitar. A quebra por camada é o sinal que importa: apresentação livre significa que dá
+     para mexer na experiência sem tocar em checksum.
+   - `tools/loop/merge_queue_report.sh` — **depois** de escolher: em que arquivos a sua mudança vai
+     colidir em silêncio com a fila. Foi por não olhar a fila que o par `#8×#11` nasceu.
 3. **Escolha exatamente UM item** — o de maior prioridade que caiba num PR pequeno e revisável.
    Um PR grande não é produtividade: é uma revisão que não vai acontecer.
 4. **Escreva o relato em `docs/loop/runs/<carimbo>.md`** — arquivo novo, seu. Não apense a uma
@@ -69,6 +76,17 @@ Itens sem critério de pronto não entram aqui.
       `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
 
+      **Medido em 2026-09-06T17:01Z** (`tools/loop/unclaimed_surface.sh` contra `cba520a`, 34 PRs
+      abertos): a fila congelou exatamente a camada onde a experiência mora. **15 dos 17 arquivos
+      de apresentação de `main` estão reivindicados** — todo `.gd` e todo `.gdshader` de `app/`,
+      `ui/`, `game/board/`, `game/player/`, `game/vfx/`, `game/audio/` e `enemy_view.gd`; livres
+      ficam só duas cenas (`app/bootstrap.tscn`, `ui/touch/touch_controls.tscn`). `ui/game_hud.gd`
+      e `ui/round_transition_view.gd` têm **cinco** reivindicantes cada. O que sobra livre é
+      domínio (16/20), conteúdo (16/16) e testes (28/34) — camadas onde a mudança ou invalida
+      replay (invariante 7) ou não é trabalho de experiência. Consequência prática: **enquanto a
+      fila não drenar, nenhuma execução consegue mexer na estética sem colidir**, e o custo do
+      represamento deixa de ser "lentidão" para ser "a única saída barata está fechada".
+
 ### P1 — higiene estrutural
 
 - [ ] **`antipixel_state_machine/` é a última raiz de terceiros não decidida.** 3 cenas, 7
@@ -119,7 +137,12 @@ Itens sem critério de pronto não entram aqui.
 Os itens abaixo nasceram das execuções que entregaram HUD, áudio, contraste e transição. Os três
 primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova.
 
-- [ ] **`BOUNDARY`×`TRAIL` a 1,04:1 — a decisão mais cara do jogo no canal mais frágil.** A
+Dois deles estão marcados **[requer sessão humana]**. Não é rebaixamento de prioridade: é
+sinalização de que nenhuma execução de nuvem os fecha, porque o critério de pronto que eles mesmos
+declaram termina em alguém olhando a tela. Um agente headless que os escolher produz um PR que
+afirma mais do que mediu. Deixe-os no topo — mas passe adiante.
+
+- [ ] **[requer sessão humana] `BOUNDARY`×`TRAIL` a 1,04:1 — a decisão mais cara do jogo no canal mais frágil.** A
       medição de #7 (`docs/ART_DIRECTION.md`, "Contraste medido") mostra contorno e trilha com a
       mesma luminância nas quatro paletas; "estou protegido" × "estou desenhando" depende de matiz
       mais o glint/pulso do shader. Caminhos: baixar a luminância de `BOUNDARY`, subir a de
@@ -150,7 +173,7 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       cruzar `TrailExposure.WARNING_RATIO`. Depende do item de envelopes acima, que define
       prioridade entre vozes. *Pronto:* cruzar o limiar é audível e tátil, com prioridade
       declarada, **sem alterar checksum**.
-- [ ] **Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
+- [ ] **[requer sessão humana] Calibrar a curva de exposição com jogo real.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Os dois números são justificáveis no papel e **não foram vistos em jogo**.
       *Pronto:* alguém joga as três rodadas e confirma (ou corrige) onde o aviso deve nascer.
