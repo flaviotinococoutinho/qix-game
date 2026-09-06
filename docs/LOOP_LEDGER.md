@@ -1,14 +1,10 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
+> **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** medida do HEAD de `main` depois do merge do #55 (integra #20–#54) e da fila em
+> `0` PRs abertos. Suíte e rota M2 rodadas neste commit; contagens abaixo são deste HEAD, não
+> herdadas. Registros anteriores são históricos.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
-
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -86,11 +82,15 @@ Itens sem critério de pronto não entram aqui.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
-- [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
-      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
-      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
-      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
-      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+- [x] **Drenar a fila de PRs abertos — FEITO em 2026-09-06T19:42Z.** O critério de pronto está
+      satisfeito com folga: `main` em `34634d0` (bem além de `cba520a`) e a fila em **0** PRs
+      abertos, não em ≤ 2. O merge do #55 absorveu #20–#54; o #45 entrou no mesmo lote.
+      Verificado neste HEAD, num checkout limpo: **262 testes, 12719 asserções, 0 falhas**, e
+      `verify_m2_capture_route.gd` com `"errors": []`, progressão `179→358→493→780→825‰` e
+      `round_one_score` 12750 — a mesma referência de sempre, ou seja, 35 PRs integrados **não**
+      moveram checksum nem rota.
+      Histórico do que custou: o #19 drenou os 18 primeiros; a fila voltou a 30 em ~38 h; o #36
+      (16 PRs) e o #42 (22 PRs) nasceram e envelheceram sem serem mesclados.
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
@@ -115,6 +115,13 @@ Itens sem critério de pronto não entram aqui.
       do agendamento; deixar o loop empilhar commits numa branch de longa duração e abrir **um** PR
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
+
+      **Com a drenagem fechada, este é o item de topo — e o ciclo que acabou de terminar é a
+      quinta medida, a mais limpa.** A fila foi de 0 a 25 em ~29 h (2026-09-05T02:57Z a
+      2026-09-06T07:59Z) sem que `main` andasse, e não se drenou sozinha: precisou de uma
+      integração grande e de mão humana no merge. A fila voltará a encher na mesma taxa se a
+      política não mudar — a próxima execução que pegar isto deve escrever a ADR, não medir a
+      fila outra vez. Já há cinco medições; o que falta é a decisão.
 
 - [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
       `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
