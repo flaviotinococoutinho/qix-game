@@ -294,7 +294,13 @@ func _add_label(
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", HUD_COLOR)
 	add_child(label)
-	# Entrar na árvore resolve o tema; definir o retângulo depois evita os 23 px padrão.
+	# O retângulo é definido **depois** de entrar na árvore porque `size` é clampado para cima
+	# pelo mínimo do `Label`, e esse mínimo só vale o da fonte pedida com o tema já resolvido.
+	# Numa árvore que já processa — o caso do jogo — isso vale já no `add_child`, e a linha
+	# assenta em `TEXT_HEIGHT`. Construído antes do primeiro frame (só o runner de testes faz
+	# isso), o mínimo ainda é o do tema padrão, 23 px, e a altura pedida é ignorada; o `size`
+	# fica preso nos 23 px mesmo depois de o mínimo relaxar, porque Godot nunca re-encolhe.
+	# Medido em 2026-09-06 por `tools/verify_hud_row_geometry.gd`, que é quem defende isto.
 	label.position = node_position
 	label.size = node_size
 	return label

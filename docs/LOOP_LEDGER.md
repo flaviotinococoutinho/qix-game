@@ -1,10 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-04 · commit `33c81e6` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** reconciliado à mão sobre a integração dos 18 PRs do loop (#1–#18), medida verde
-> (174 testes, 11837 asserções, 0 falhas; rota M2 179→825‰ com `errors: []`). O backlog abaixo
-> foi reconferido item a item contra o código integrado. O mérito estético de cada mudança
-> **não** foi julgado: o jogo não pode ser jogado nem visto num sandbox headless.
+> **Verificado em** 2026-09-06 · commit `cba520a` · Godot 4.7.2-stable, Linux headless (nuvem)
+> **Alcance:** suíte reexecutada (175 testes, 11843 asserções, 0 falhas) e rota M2 reexecutada
+> (179→825‰, `errors: []`, `new_replay_ticks: 0`). Foram tocados **só** o item da geometria do
+> HUD, o item P0 da fila e uma entrada P2 nova; os restantes continuam como a reconciliação de
+> 2026-09-04 os deixou e **não** foram reconferidos contra a fila de 30 PRs abertos. O mérito
+> estético de qualquer mudança continua por julgar: o jogo não pode ser jogado nem visto num
+> sandbox headless.
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -65,9 +67,17 @@ Itens sem critério de pronto não entram aqui.
 
 - [ ] **Drenar a fila de PRs abertos.** Só um humano mescla; o loop não mescla o próprio PR.
       Enquanto `main` não andar, cada execução ou duplica um item já coberto ou trabalha na fila
-      em vez de no jogo. A integração dos 18 está medida e verde — ver
-      `docs/loop/runs/2026-09-04T230000Z.md` para a ordem e o que ela exige.
+      em vez de no jogo.
       *Pronto:* `main` além de `74c173a` e a fila em ≤ 2 PRs abertos.
+
+      **Estado em 2026-09-06T15:00Z: metade cumprida, metade a piorar.** `main` andou — está em
+      `cba520a`, a integração dos 18 (#19) foi mesclada. Mas a fila voltou a **30 PRs abertos**
+      (#22–#51), quinze vezes o teto deste item. #51 diz integrar #20–#50 numa branch só; se ela
+      entrar, a fila cai para ~1. **Nenhuma execução do loop pode resolver isto** — é um clique de
+      humano, e três execuções (#40, #45 e esta) já o disseram por escrito. Enquanto não entrar,
+      quase todo o backlog abaixo está com dono invisível: o ledger de `main` só conhece #1–#18,
+      então um item aqui pode parecer livre e ter PR aberto há horas. **Confira a fila real, não
+      este arquivo,** antes de escolher.
 
 ### P1 — higiene estrutural
 
@@ -81,6 +91,16 @@ Itens sem critério de pronto não entram aqui.
       `uid://` usada na poda.
 
 ### P2 — integridade de contexto
+
+- [ ] **`docs/TEST_MATRIX.md` carrega linhas quase-idênticas de resoluções por união.** As linhas
+      51, 53 e 54 (em `cba520a`) são três versões da mesma linha "apresentação", cada uma com um
+      pedaço diferente do que foi entregue, e o rodapé tem dois "log final da suíte" com contagens
+      diferentes (138 testes em ambos, asserções divergentes). É exatamente o sintoma contra o qual
+      o próprio ledger avisa — união automática passa nos testes e mente para o leitor. Achado
+      colateral da execução de 15:00Z; não corrigido ali por ser doc muito disputado no meio de uma
+      fila de 30 PRs, e porque o cabeçalho exige reverificação declarada.
+      *Pronto:* uma linha por assunto, reconciliada à mão, com o cabeçalho `Verificado em` refeito
+      contra a medição de quem reconciliar. Melhor feito **depois** de a fila drenar.
 
 - [ ] **Sete addons dormentes, 11,5 MB, 101 cenas** — `guide`, `curved_lines_2d`,
       `phantom_camera`, `GDDraw`, `softbody2d`, `curve2collision`, `yard`. O inventário (#2)
@@ -164,12 +184,19 @@ primeiros **exigem olho humano na tela**: uma sessão headless mede, não aprova
       vidas e o próximo setor, mas a barra de progresso é linear em ticks e nada enfatiza o
       instante em que o número de continuidade aparece. É animação de apresentação, não texto.
       *Pronto:* a passagem tem um acento perceptível no momento da continuidade, sem tocar domínio.
-- [ ] **A geometria do HUD depende da ordem de construção.** `_add_label` só obtém o retângulo
-      pedido porque atribui `size` depois de entrar na árvore; antes do primeiro frame o mínimo do
-      `Label` ainda é o do tema (23 px). Funciona, mas é frágil e invisível. → Avaliar
-      `custom_minimum_size` explícito ou um `Theme` do HUD com tamanho de fonte definido, para que
-      a altura não dependa de quando `_ready` corre. *Pronto:* altura correta medida dentro do
-      runner, sem a ressalva que `game_hud_layout_test.gd` documenta hoje.
+- [x] **A geometria do HUD depende da ordem de construção.** Feito em 2026-09-06, mas **não** por
+      onde este item apontava — ver `docs/loop/runs/2026-09-06T150000Z.md`. As duas saídas
+      propostas foram medidas e **as duas falham**: `custom_minimum_size` é um piso e não pode
+      baixar o mínimo, e um `Theme` com `default_font_size` não muda nada antes do primeiro frame
+      (nem `update_minimum_size()`, nem uma `NOTIFICATION_THEME_CHANGED` manual). Só um frame
+      processado resolve — e mesmo aí o `size` já atribuído fica nos 23 px, porque Godot clampa
+      para cima e nunca re-encolhe. O achado que importa: **na via do jogo não há defeito.** Com a
+      árvore já a processar, o mínimo certo vale já no `add_child` e as seis linhas assentam em
+      `TEXT_HEIGHT`, estáveis em 4 frames. Os 23 px são exclusivos de construir o HUD dentro de
+      `_initialize()`, que só o runner faz. Entregue: `tools/verify_hud_row_geometry.gd` (mede o
+      retângulo real durante um frame, catraca provada vermelha), a guarda do eixo X em
+      `game_hud_layout_test.gd`, e os dois comentários que diagnosticavam a causa errada
+      reescritos com a medição.
 
 ## Notas de ambiente (sandbox de nuvem)
 
