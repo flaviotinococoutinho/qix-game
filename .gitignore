@@ -52,31 +52,25 @@ samples/
 # exatamente a barreira que a ADR-0010 quis. Quem decidir mantê-la escreve a
 # linha com o estado novo e faz `git add -f`.
 #
-# curved_lines_2d (Scalable Vector Shapes 2D 2.33.3): 296 arquivos, 3,4 MB,
-# 42 cenas, 17 class_name. Nenhum dos seus 170 uid:// era citado de fora dela e
-# nenhum dos class_name aparecia em game/, ui/, app/, tools/, tests/, content/
-# ou project.godot. A arte deste jogo é máscara R8 e shader, não SVG.
+# As sete saíram uma por PR (#60, #62, #63, #64, #66, #72, #73) e foram integradas juntas.
+# Só duas delas traziam a própria linha aqui; as outras cinco confiavam no `.gitignore`
+# de quem entrasse antes — proteção que dependia da ordem de merge. Ficam as sete.
+# A evidência de posse de cada uma está na tabela de addons/README.md.
+addons/GDDraw/
+addons/curve2collision/
 addons/curved_lines_2d/
-# phantom_camera (Phantom Camera 0.11.0.3): 203 arquivos, 2,2 MB, 30 cenas,
-# 11 class_name, mais 13 fontes C# que este projeto — build não-mono — nem
-# compila. Nenhum dos seus 122 uid:// era citado de fora dela e nenhum dos
-# class_name aparecia em game/, ui/, app/, tools/, tests/, content/ ou
-# project.godot. O campo é 240×320 fixo: não há câmera que se mova.
+addons/guide/
 addons/phantom_camera/
-# ── Bytecode de Python ───────────────────────────────────────────────────────
-# `tools/ci/` tem testes que o workflow Verificação roda com `unittest`, e rodar
-# o mesmo comando localmente — que é o jeito certo de conferir antes de empurrar
-# — deixa `__pycache__/` para trás. Sem esta linha, toda execução que valida o
-# portão de CI aparece com artefato por versionar e é tentada a commitá-lo.
-__pycache__/
-*.py[cod]
+addons/softbody2d/
+addons/yard/
+
 # ── Bytecode do portão de CI ─────────────────────────────────────────────────
 # `python3 -m unittest discover -s tools/ci` é o primeiro passo de
 # .github/workflows/verificacao.yml, e quem o roda localmente para reproduzir o
 # portão ganha __pycache__/ com os .pyc de headless_gate. São derivados do
 # .py ao lado, nunca fonte da verdade.
 __pycache__/
-*.pyc
+*.py[cod]
 
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
