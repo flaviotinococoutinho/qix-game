@@ -17,6 +17,14 @@
 > **Alcance:** as contagens de cenas e de `class_name` de vendor foram remedidas nesta data, após
 > a remoção de `addons/guide` (ADR-0010), e o comando de medição ficou escrito junto do número.
 > A tabela de addons perdeu a linha do `guide`. Engine, viewport, renderer e tick seguem conferidos em
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** em 2026-09-07, só a seção § Addons — a saída de `curve2collision` (ADR-0010) foi
+> conferida por caminho, por `class_name` e por `uid://`, e os números da seção (nove→oito pastas,
+> 174→173 `class_name`) foram recontados no disco. Nada mais do documento foi reverificado hoje;
+> o que segue continua valendo com a data em que foi medido.
+> Em 2026-09-05 (`cba520a`): a seção § Raízes foi remedida — contagem de cenas, `uid://` e
+> `class_name` de `antipixel_state_machine/` conferidos por `grep` e pelo cache de classes
+> globais antes da remoção. Engine, viewport, renderer e tick seguem conferidos em
 > `project.godot`; a tabela de ownership, por existência de arquivo. Alvos, tamanhos de export e
 > estado do ferramental MCP seguem do run macOS de 2026-09-03 e **não** foram reexecutados.
 
@@ -135,6 +143,10 @@ leitor refaz a mesma investigação e alguns concluem errado.
 Inventário verificado em **2026-09-04** contra o checkout de `main` em `74c173a`. Existe porque
 as pastas em `addons/` não dizem, por si, quais participam do jogo: sem esta tabela, cada leitor
 refaz a mesma investigação e alguns concluem errado.
+Inventário verificado em **2026-09-04** contra o checkout de `main` em `74c173a`, e reduzido em
+**2026-09-07** pela 1ª remoção da ADR-0010. Existe porque as pastas em `addons/` não dizem, por si,
+quais participam do jogo: sem esta tabela, cada leitor refaz a mesma investigação e alguns concluem
+errado. Eram nove pastas; são oito desde que `curve2collision` saiu.
 
 | Addon | Versão | Habilitado em `[editor_plugins]` | Consumido pelo jogo | Destino no export |
 |---|---|---|---|---|
@@ -148,7 +160,6 @@ refaz a mesma investigação e alguns concluem errado.
 | ~~`phantom_camera`~~ | 0.11.0.3 | não | **nenhum** | **removido** do versionamento em 2026-09-06 (ADR-0010); filtro mantido |
 | `GDDraw` | 0.2.0 | não | **nenhum** | excluído em bloco |
 | `softbody2d` | 1.7.1 | não | **nenhum** | excluído em bloco |
-| `curve2collision` | 1.0.0 | não | **nenhum** | excluído em bloco |
 | `yard` | 1.2.0 | não | **nenhum** | excluído em bloco |
 
 Como "nenhum" foi verificado — dois testes independentes sobre `app/`, `game/`, `ui/`, `tools/`,
@@ -158,6 +169,9 @@ Como "nenhum" foi verificado — dois testes independentes sobre `app/`, `game/`
 2. Dos `class_name` declarados pelos addons — 174 quando eram nove pastas, **157** desde a saída
    dos 17 de `curved_lines_2d` —, **nenhum** aparece como palavra nessas
    árvores. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot`, não o
+2. Dos 174 `class_name` declarados pelos nove addons, **nenhum** aparecia como palavra nessas
+   árvores. Com a saída de `curve2collision`, são **173** declarados por oito addons — a pasta
+   removida declarava exatamente um, `CurveCollision2D`, e ele não era citado em lugar nenhum. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot`, não o
    G.U.I.D.E.; a câmera é fixa em 240×320, não `phantom_camera`.
 2. Dos `class_name` declarados pelos addons, **nenhum** aparece como palavra nessas árvores. A
    entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot`, não o G.U.I.D.E.;

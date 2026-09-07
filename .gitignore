@@ -70,6 +70,13 @@ addons/phantom_camera/
 # portão de CI aparece com artefato por versionar e é tentada a commitá-lo.
 __pycache__/
 *.py[cod]
+# ── Bytecode do portão de CI ─────────────────────────────────────────────────
+# `python3 -m unittest discover -s tools/ci` é o primeiro passo de
+# .github/workflows/verificacao.yml, e quem o roda localmente para reproduzir o
+# portão ganha __pycache__/ com os .pyc de headless_gate. São derivados do
+# .py ao lado, nunca fonte da verdade.
+__pycache__/
+*.pyc
 
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store

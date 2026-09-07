@@ -1,9 +1,12 @@
 # IMPLEMENTATION_STATUS
 
-> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** o verde de M2/G2 foi reconfirmado pela suíte e pela rota de captura headless.
-> O âmbar de release/hardware **não** foi reavaliado: exports, aparelho físico e assinatura
-> exigem macOS e SDKs ausentes na nuvem.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** em 2026-09-07 só o item de licença em § Pendências foi remedido — a identidade
+> entre `LICENSE` e a licença do addon removido foi reconferida por SHA-256 no disco. Nenhum outro
+> item foi reavaliado hoje.
+> Em 2026-09-04 (`74c173a`): o verde de M2/G2 foi reconfirmado pela suíte e pela rota
+> de captura headless. O âmbar de release/hardware **não** foi reavaliado: exports, aparelho
+> físico e assinatura exigem macOS e SDKs ausentes na nuvem.
 
 ## Gate atual
 
@@ -119,8 +122,14 @@ Detalhes, comandos e limites estão em `docs/SHIPPING_PASS.md`, `docs/TEST_MATRI
   QA ad-hoc.
 - `.git/` é apenas um esqueleto incompleto: não há `HEAD`, objetos ou refs válidos, portanto
   não é possível produzir diff/commit ou revisar regeneração com segurança equivalente a Git.
-- A licença raiz é byte a byte igual à licença do addon `curve2collision`; a licença pretendida
-  para o jogo ainda precisa ser confirmada antes de publicar.
+- **A `LICENSE` da raiz não é a licença deste jogo.** É a licença MIT do addon `curve2collision`,
+  copiada byte a byte (SHA-256 `daf1b515…`, 1065 bytes) — inclusive a linha
+  `Copyright (c) 2026 seina369`, que nomeia o autor do addon como titular do copyright do
+  repositório inteiro. Isto foi escrito em 2026-09-07 na forma acima porque a redação anterior
+  ("igual à licença do addon `curve2collision`") apontava para uma pasta que saiu do disco na
+  mesma data (ADR-0010): sem esta reescrita, a remoção teria apagado a única pista do problema.
+  A licença pretendida para o jogo precisa ser escolhida e o arquivo substituído **antes de
+  publicar**. O loop não a escolhe: é decisão do titular.
 - Termos comerciais vigentes das imagens geradas precisam ser confirmados; a proveniência
   técnica está registrada em `assets/ASSET-PROVENANCE.md`.
 - Há pouco espaço livre no volume. O runner exige 2 GiB para export e 3 GiB antes de iniciar o
