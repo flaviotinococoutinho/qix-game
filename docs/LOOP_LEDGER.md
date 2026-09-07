@@ -1,7 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** `main` rodada nesta sessão (262 testes, 12719 asserções, 0 falhas) e integração
+> *de facto* dos 30 PRs abertos (#56–#85) numa árvore descartável — ver a primeira entrada do P0.
+> As marcas `[~]` **não** foram reconciliadas aqui: o #85 fê-lo há uma hora e refazê-lo seria
+> duplicar. Registos anteriores a esta linha são históricos, não contagens atuais.
+> **Alcance herdado:** base integrada da #51, mais #52–#54; reconciliação a pedido do mantenedor.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
@@ -104,6 +108,23 @@ Itens sem critério de pronto não entram aqui.
       com o helper do #25. **Lição para o protocolo:** relatório de fila que cruza *nomes de
       arquivo* não vê conflito semântico entre um PR que remove uma API e outro que a chama —
       só a integração de facto vê. Enquanto a fila passar de ~10, vale reintegrar e medir.
+
+- [ ] **A fila inteira (#56–#85) fica verde com uma correção de duas linhas — medido em 22:01Z.**
+      Integração *de facto* dos 30 PRs abertos numa `worktree` descartável a partir de `34634d0`:
+      **zero conflitos em `game/`, `ui/`, `app/`, `content/` ou `tests/`** — os sete conflitos são
+      todos de documento (`LOOP_LEDGER.md` em todos; mais `IMPLEMENTATION_STATUS.md` no #82 e
+      `.gitignore` no #83). A suíte sobre a árvore integrada dá **303 testes, 14773 asserções,
+      2 falhas**, e as duas são o mesmo arquivo: `test_matrix_inventory_test.gd`, a guarda derivada
+      do #69, a acusar `288` digitado contra `303` varridos. Aplicada a correção que a própria
+      guarda dita — duas linhas de `docs/TEST_MATRIX.md` — a árvore fica **verde: 303 testes,
+      14773 asserções, 0 falhas**, e a rota M2 mantém `[179, 358, 493, 780, 825]`.
+      → **A fila não está travada por código; está travada por uma contagem digitada à mão.**
+      Quem drenar: mesclar por ordem de criação, resolver o ledger à mão e corrigir as duas linhas
+      da matriz **no último commit**. Nenhum PR precisa ser reaberto.
+      Supera #76 (mediu abortos), #78 (integrou só #56–#77), #80 (mediu `#78 × #79`) e #85 (mediu
+      alcance): nenhum dos quatro correu a suíte sobre a fila **inteira**.
+      *Pronto:* `main` além de `34634d0` e a fila em ≤ 2 PRs abertos. Evidência em
+      `docs/loop/runs/2026-09-07T220117Z.md`.
 
 - [ ] **A cadência do loop excede a cadência de revisão, e isso é problema de projeto, não de
       execução.** Medido quatro vezes (#31, #36, #40 e esta run): o loop produz 1 PR/h e a revisão
