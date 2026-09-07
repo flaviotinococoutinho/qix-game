@@ -1,24 +1,27 @@
 # Performance do board e probes de shipping
 
-> **Verificado em** 2026-09-03 · commit `ab512ef` · Godot 4.7.2-stable.mono, macOS/Apple M2
-> **Alcance:** números medidos na máquina local. Nada aqui foi remedido depois: frame pacing e
-> GPU dependem de hardware que a sessão de nuvem não tem, e um microbenchmark rodado em outra
-> máquina não substituiria estes valores — substituiria a pergunta.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless (nuvem)
+> **Alcance:** este documento tem duas espécies de número, e só uma envelhece na nuvem.
+> **Geometria e payload** (board 225×283, 63.675 células, bytes por refresh, reuso de textura)
+> foram remedidos nesta data em Linux headless e conferem — `tests/unit/performance_doc_geometry_test.gd`
+> passou a recusá-los quando divergirem do domínio. **Tempo** (µs, ms, p95, GPU, frame pacing,
+> smoke de áudio, framebuffer) continua de 2026-09-03, commit `ab512ef`, Godot 4.7.2-stable.mono,
+> macOS/Apple M2, e **não** foi remedido: depende de hardware que a sessão de nuvem não tem.
 
-Medição final local em 2026-09-03, Godot 4.7.2-stable Mono, macOS/Apple M2. O
+Os números de tempo abaixo vêm da medição local de 2026-09-03, Godot 4.7.2-stable Mono,
+macOS/Apple M2. O
 microbenchmark do board é headless; frame pacing e GPU vêm do bundle macOS arm64 exportado no
 run `20260903T065739Z-65912` (`runner_status=complete`, `runner_exit=0`,
 `overall_exit=0`).
 
 ## Perfil isolado do board
 
-Comando reproduzível:
+Comando reproduzível — o perfil do board **não** precisa de mono nem de macOS, e é a parte deste
+documento que qualquer sessão consegue refazer:
 
 ```bash
-cd /Users/flaviocoutinho/development/qiqix/qix-game
-/Applications/Godot_mono.app/Contents/MacOS/Godot \
-  --headless --path /Users/flaviocoutinho/development/qiqix/qix-game \
-  --script res://tools/profile_board_view.gd
+G=/Applications/Godot_mono.app/Contents/MacOS/Godot   # local; na nuvem, o build Linux headless
+$G --headless --path . --script res://tools/profile_board_view.gd
 ```
 
 Board real: 225×283 = 63.675 células.
@@ -34,6 +37,17 @@ a razão bruta do cronômetro: o caminho novo elimina 63.675 chamadas `Image.set
 GDScript, reduz em 4× o payload por atualização e reutiliza a textura em steady-state
 (`texture_create_count=0`). O board é enviado apenas quando sua identidade ou versão muda;
 sincronizações repetidas entram em `skipped_count`.
+
+**Remedição em 2026-09-07, Linux headless (nuvem), commit `34634d0`.** As colunas estruturais
+saíram idênticas — `225x283`, `63675` células, `63675` bytes/refresh no R8 contra `254700` no
+RGBA8 legado, `texture_create_count=0` em steady-state e `1` no cold start, `sample_capacity=240`.
+As colunas de tempo, não: a máquina da nuvem deu p95 de `1 µs` no R8 (igual) e `50.978 µs` no
+legado (contra `32.304 µs` no M2), cold start de `14 µs` (contra `7 µs`). É o esperado — outra
+CPU, outro relógio — e é a razão de a tabela acima continuar a ser a medição do M2 em vez de ser
+sobrescrita a cada sessão: **substituir estes valores por uma medição de outra máquina não
+responderia à mesma pergunta.** O que a remedição prova é que o *argumento* do R8 (4× menos
+payload, textura reutilizada) não depende da máquina, e é justamente essa parte que
+`tests/unit/performance_doc_geometry_test.gd` agora amarra ao domínio.
 
 ## Instrumentação em runtime
 
