@@ -12,6 +12,22 @@ const MIN_FOCUS_SIDE := 24.0
 ## Meia-largura da cruz de cada marca. As marcas nascem afastadas desta distância da borda do
 ## foco, para que a cruz inteira caiba dentro do campo.
 const MARKER_RADIUS := 2.0
+## Passos da sequência R2 (Roberts, 2018): a extensão bidimensional da recorrência de Weyl com o
+## número plástico `p`, raiz de `p³ = p + 1`. `MARKER_ALPHA_X = 1/p`, `MARKER_ALPHA_Y = 1/p²`.
+##
+## Substituem o pente modular `(marca * 37) % vão` / `(marca * 71) % vão` que espalhava as marcas
+## antes. O pente é regular no *índice* e não no *foco*, e o foco tem lado autorado pela trilha do
+## jogador (`_focus_from_trail_extent`, #37): quando o lado cai num múltiplo do passo, todas as
+## marcas colapsam. Medido sobre lados de 24 a 204 px: com vão de 37 px as doze marcas caem na
+## **mesma coluna**, com vão de 71 px na **mesma linha**, e vizinhos como 38 ou 72 alinham as doze
+## num rastro de 12 px — a maior lacuna chega a 100 % do foco. São lados alcançáveis numa partida
+## real, e é o clímax do jogo que fica sujeito a eles.
+##
+## Um passo irracional não tem essa ressonância: nenhum lado inteiro o divide. Na mesma varredura
+## a maior lacuna cai para 46 % (com quatro marcas) e 26 % (com doze). Continua determinístico:
+## `DeterministicRng` é do domínio (invariante 4) e apresentação não sorteia.
+const MARKER_ALPHA_X := 0.7548776662466927
+const MARKER_ALPHA_Y := 0.5698402909980532
 
 var capture_ticks_left: int = 0
 var clear_ticks_left: int = 0
@@ -116,6 +132,10 @@ func _focus_from_trail_extent() -> Rect2:
 
 ## Centros das marcas discretas que dão peso à captura sem criar partículas/nós por célula.
 ## Público para que o teste headless possa afirmar onde elas caem: não há tela para olhar.
+##
+## O índice da sequência começa em `last_filled_delta + last_permille` para que duas capturas
+## diferentes não desenhem a mesma constelação; deslocar o começo de uma recorrência aditiva
+## preserva a distribuição, ao contrário do pente modular, cuja qualidade dependia do vão.
 func marker_positions() -> PackedVector2Array:
 	var focus := focus_rect if focus_rect.has_area() else field_rect()
 	var area := focus.grow(-MARKER_RADIUS)
@@ -125,13 +145,22 @@ func marker_positions() -> PackedVector2Array:
 	var span_y := maxi(1, int(area.size.y))
 	@warning_ignore("integer_division")
 	var marker_count := mini(12, maxi(4, last_filled_delta / 64))
+	var sequence_start := last_filled_delta + last_permille
 	var centers := PackedVector2Array()
 	for marker in marker_count:
+		var index := float(sequence_start + marker)
 		centers.append(Vector2(
-			area.position.x + float((marker * 37 + last_filled_delta) % span_x),
-			area.position.y + float((marker * 71 + last_permille) % span_y),
+			area.position.x + float(_sequence_step(index, MARKER_ALPHA_X, span_x)),
+			area.position.y + float(_sequence_step(index, MARKER_ALPHA_Y, span_y)),
 		))
 	return centers
+
+
+## Termo `index` da recorrência aditiva, projetado em `[0, span)`. O `mini` é cinto de segurança
+## contra `fposmod` devolver exatamente 1.0 por arredondamento: uma marca fora do foco quebraria a
+## contenção que `capture_vfx_focus_test.gd` defende.
+static func _sequence_step(index: float, alpha: float, span: int) -> int:
+	return mini(int(fposmod(index * alpha, 1.0) * float(span)), span - 1)
 
 
 func _draw() -> void:

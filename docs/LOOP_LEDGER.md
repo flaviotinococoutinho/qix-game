@@ -1,14 +1,16 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless (nuvem)
+> **Alcance:** suíte completa sobre `main` (262 testes, 12719 asserções, 0 falhas) e censo de posse
+> por arquivo sobre os 25 ramos de PR aberto às 17:04Z. Não reverifiquei os itens marcados
+> `[requer sessão humana]`, nem mérito visual, áudio físico ou Android real — continuam sem
+> validação. Contagens de execuções anteriores são históricas, não estado atual.
 
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+> **Estado da fila em 2026-09-07T17:04Z: 25 PRs abertos (#56–#80).** O #55 drenou #20–#54 e `main`
+> chegou a `34634d0`; a fila voltou a 25 em ~21 h. Há **três** meta-PRs de fila em aberto — #76
+> (seis abortos em `addons/README.md`), #78 (integra #56–#77) e #80 (o #78 fica vermelho contra o
+> #79 pela guarda do #69). A regra 7 abaixo já está no teto: não abra um quarto sem medição que
+> supere os três, e nomeie-os. Confira a fila real no GitHub antes de escolher.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -86,11 +88,11 @@ Itens sem critério de pronto não entram aqui.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
-- [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
-      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
-      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
-      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
-      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+- [~] **Drenar a fila de PRs abertos.** O #55 fechou a rodada anterior: `main` foi de `cba520a` a
+      `34634d0` com #20–#54 dentro. **A fila voltou a 25 em ~21 h** e está reivindicada pelo #78
+      (integra #56–#77), com #76 e #80 a medir por que ela não mescla sozinha. Reivindicado — não
+      abra outra integração; se for trabalhar aqui, trabalhe *dentro* do #78.
+      *Pronto:* `main` além de `34634d0` e a fila em ≤ 2 PRs abertos.
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
@@ -251,6 +253,18 @@ O que continua aberto:
       no `_initialize()` do runner. O teste horizontal e os comentários corrigidos também
       foram preservados. A sonda passou a fazer parte do CI. Aprovação estética continua humana.
 
+- [~] **A floritura da captura colapsava numa barra quando o foco ressoava com o pente.**
+      Reivindicado por `ai/loop-20260907T170447Z`. As marcas eram espalhadas por
+      `(marca * 37) % vão_x` / `(marca * 71) % vão_y` — regular no *índice*, não no *foco*, cujo
+      lado é autorado pela trilha desde o #37. Medido sobre lados de 24 a 204 px: com vão de
+      37 px as doze marcas caíam na **mesma coluna**, com 71 px na **mesma linha**, e vizinhos
+      como 38 ou 72 deixavam 71–85 % do foco vazio. Um foco de 41×75 px é captura banal em
+      225×283. Trocado pela sequência R2 de Roberts (passo irracional, sem ressonância possível):
+      pior lacuna cai de 100 % para 46 % (4 marcas) e 26 % (12). `capture_vfx_focus_test.gd`
+      afirmava **contenção**, e contenção fica verde com tudo empilhado num pixel — a métrica que
+      faltava é a maior lacuna, agora em `capture_vfx_marker_spread_test.gd`, que **falha** contra
+      a implementação antiga. *Falta o julgamento estético:* ninguém viu a constelação nova.
+
 - [ ] **[requer sessão humana] Calibrar a curva de exposição.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Justificáveis no papel, nunca vistos em jogo.
@@ -289,6 +303,19 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.
+- **A fotografia de posse por arquivo envelhece em horas — refaça-a, não a cite.** A run de
+  17:01Z de 06-09 mediu "2 de 17 arquivos de apresentação livres" e concluiu que a camada estava
+  fechada. Depois do #55 isso deixou de valer: às 17:04Z de 07-09, com 25 PRs abertos,
+  `game/vfx/capture_vfx.gd`, `game/board/*`, `game/enemies/enemy_view.gd`,
+  `ui/round_transition_view.gd` e `ui/touch/` estavam **livres**. Refazer custa segundos —
+  `git diff --name-only origin/main...origin/<ramo>` sobre os ramos dos PRs *abertos* (não sobre
+  todo `refs/remotes/origin/ai/loop-*`, que inclui ramos já mesclados e inventa posse).
+  E filtre `docs/`: o ledger conflita por contrato, não é sinal de posse.
+- **Contenção não é distribuição.** Achado de 17:04Z, generalizável: um teste que afirma "o efeito
+  está dentro do recorte" fica verde com o efeito inteiro empilhado num pixel. Quando o que
+  importa é *como* algo se espalha, a asserção tem que medir espalhamento (maior lacuna, número de
+  coordenadas ocupadas) — ver `capture_vfx_marker_spread_test.gd` ao lado de
+  `capture_vfx_focus_test.gd`. Vale reler os outros testes de VFX com esta lente.
 - **Integrar a fila é barato; reconciliar o ledger não.** Medido em 04:57Z: os 22 merges de
   #20–#41 produziram **zero** conflitos de código — o único arquivo conflitante, em 20 dos 22, é
   `docs/LOOP_LEDGER.md`. O custo real da drenagem é reescrever o backlog à mão, porque `--ours`
