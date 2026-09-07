@@ -9,19 +9,19 @@
 > remedida: continua com a data de 2026-09-04 impressa nela, e nada nesta execução mexeu na
 > paleta autorada.
 >
-> **Emenda de 2026-09-07** · commit `34634d0` · Godot 4.7.2-stable, Linux headless. Acrescentou-se
-> “O contorno do cursor”, que transcreve a [ADR-0012](decisions/ADR-0012-cursor-ink-outline.md).
-> A tabela de “Contraste do cursor contra o chão” foi **reconferida** hoje pelo mesmo comando e sai
-> idêntica à impressa — as suas seis linhas continuam válidas, e por isso a data dentro dela fica
-> como está. O que mudou não foi cor autorada nenhuma: foi de onde vem a leitura. Nenhuma paleta,
-> regra ou geometria de campo mudou, e nenhum checksum de replay se moveu.
-> Nesta data acrescentaram-se as seções “O contorno da ameaça” e “Onde a floritura da captura
-> acontece”. As duas **transcrevem** decisões já tomadas e já guardadas por teste — a ADR-0011 e
-> `tests/unit/capture_vfx_focus_test.gd` — para que quem lê só este documento as encontre. Nenhum
-> arquivo de código, paleta ou regra mudou nesta execução. As tabelas de “Contraste medido”
-> (2026-09-04) e “Contraste do cursor contra o chão” (2026-09-05) **foram reconferidas** hoje por
-> `tools/verify_palette_contrast.gd` e saem idênticas às impressas; por isso as datas dentro delas
-> ficam como estão — dizem quando a paleta foi decidida, não quando o comando correu.
+> **Emenda de 2026-09-07** · commit `34634d0` · Godot 4.7.2-stable, Linux headless. Três seções
+> entraram, vindas de dois PRs integrados juntos: “O contorno da ameaça” e “Onde a floritura da
+> captura acontece” (#65) e “O contorno do cursor” (#75). As duas primeiras **transcrevem**
+> decisões já tomadas e já guardadas por teste — a [ADR-0011](decisions/ADR-0011-threat-ink-outline.md)
+> e `tests/unit/capture_vfx_focus_test.gd` — para que quem lê só este documento as encontre. A
+> terceira transcreve a [ADR-0012](decisions/ADR-0012-cursor-ink-outline.md), que muda de onde vem
+> a leitura do cursor, não que cor ele tem.
+>
+> As tabelas de “Contraste medido” (2026-09-04) e “Contraste do cursor contra o chão” (2026-09-05)
+> **foram reconferidas** por `tools/verify_palette_contrast.gd` na árvore integrada e saem
+> idênticas às impressas; por isso as datas dentro delas ficam como estão — dizem quando a paleta
+> foi decidida, não quando o comando correu. Nenhuma paleta, regra ou geometria de campo mudou, e
+> nenhum checksum de replay se moveu.
 
 O G2 usa uma identidade original de **cartografia bioluminescente**: o jogador não
 “pinta” uma chapa sólida; ele estabiliza regiões de um mapa vivo e revela uma paisagem

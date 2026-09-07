@@ -1,25 +1,23 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
 > **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** censo da fila (11 PRs abertos, #56–#66) por integração de facto dos 11 ramos, e a
-> guarda de fecho do manifesto de `addons/`. Suíte em `main` **262 testes / 12719 asserções**;
-> com a guarda, **263 / 12723**, 0 falhas. Registros anteriores são históricos, não contagens
-> atuais. Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Alcance:** integração de facto dos **22** PRs abertos (#56–#77) numa branch só, com as
+> resoluções à mão e a suíte corrida sobre a árvore acumulada — **288 testes, 14 087 asserções,
+> 0 falhas**, contra 262/12 719 na base. `verify_m2_capture_route.gd` (825‰), `profile_board_view.gd`
+> (R8 p50/p95 1/1 µs) e `verify_palette_contrast.gd` (catraca verde) reexecutados aqui.
+> Relato completo em `docs/loop/runs/2026-09-07T140000Z.md`. Registros anteriores são históricos,
+> não contagens atuais. **Nenhum mérito estético foi validado**: esta sessão não vê nem joga o jogo.
 
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+> **Estado da fila:** a fila #56–#77 foi integrada pelo PR desta execução
+> (`ai/loop-20260907T140000Z`). Enquanto ele não mesclar, os 22 continuam **abertos** — o `[~]` do
+> backlog abaixo reflete "reivindicado por esse PR", não "já em `main`". Consulte a fila real no
+> GitHub antes de escolher: refs de branch não provam que os PRs continuam abertos.
 
-> **Contagem de fila de 2026-09-07T11:00Z — o P0 abaixo NÃO está fechado.** `main` está em
-> `34634d0` e verde (262 testes), mas a fila voltou a **19 PRs abertos** (#56–#74) desde o merge
-> do #55, e `main` não andou nesse intervalo. Quinta medição do mesmo gargalo (#31, #36, #40, a
-> run de 14:00Z e esta). Efeito colateral que muda a escolha de quem ler isto a seguir: **quase
-> todo o backlog abaixo está reivindicado** por um desses 19 — as sete remoções da ADR-0010 em
-> #60/#62/#63/#64/#66/#72/#73, a `TEST_MATRIX` em #69, a pausa do áudio em #70, o domínio do
-> chefe em #68, a exceção do visual em #74, a ADR-0011 no doc de arte em #65, o som da exposição
-> em #61, a fusão dos relatórios de fila em #71. Confira no GitHub antes de escolher: as marcas
-> `[ ]` abaixo estão desatualizadas por não terem sido reconciliadas desde o #55.
-
+> **O gargalo, medido pela sexta vez.** #31, #36, #40, a run de 14:00Z de 06-09, o #76 e esta.
+> Entre o merge do #55 e agora, `main` **não andou** e a fila foi de 0 a 22 em ~19 h. As sete
+> remoções da ADR-0010 estavam entre elas, feitas uma por PR como a ADR pediu — e sete PRs
+> corretos, abertos em paralelo, produziram seis conflitos e cinco `.gitignore` incompletos.
+> **A cadência é o problema de projeto que o P0 abaixo descreve, e ele continua sem ADR.**
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -80,6 +78,7 @@ nos testes e mente para o leitor. A integração de 23:00Z produziu 703 linhas c
 | Contador de percentagem sobe em degraus | `docs/decisions/ADR-0009` |
 | `addons/` só hospeda pasta com estado declarado | `docs/decisions/ADR-0010` |
 | A ameaça tem contorno que não depende de cor | `docs/decisions/ADR-0011` |
+| O cursor tem contorno de tinta próprio, não emprestado da paleta | `docs/decisions/ADR-0012` |
 | O cursor tem contorno que não depende de cor | `docs/decisions/ADR-0012` |
 | Identidade visual é *Lumen Cartography* | `docs/ART_DIRECTION.md` |
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
@@ -98,23 +97,19 @@ Itens sem critério de pronto não entram aqui.
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
 - [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
-      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
-      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
-      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
-      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+      PR desta execução (`ai/loop-20260907T140000Z`), que integra os **22** abertos (#56–#77) numa
+      branch só, com nove resoluções à mão e a suíte verde sobre a árvore final (**288 / 14 087 /
+      0 falhas**, contra 262 / 12 719 na base). O #19 drenou 18; o #55 drenou 35; esta drena 22.
+      A fila reforma-se em ~19 h, todas as vezes.
+      *Pronto:* `main` além de `34634d0` e a fila em ≤ 2 PRs abertos.
 
-      **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
-      não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
-      Esta integração encontrou o que nenhuma medição de fila por nomes de arquivo podia
-      encontrar: **#25 e #50 são incompatíveis em código.** O #25 tirou `transition_progress()` de
-      `GameSession` (devolvia `float`, invariante 1) e mudou a chamada para um helper da view; o
-      #50 acrescentou `_apply_cadence` chamando `session.transition_progress()` — o método que já
-      não existe — e o mesmo em `tests/unit/round_transition_cadence_test.gd:117`. Mesclados em
-      qualquer ordem, sem esta resolução, a suíte fica **vermelha** com
-      `Nonexistent function 'transition_progress'`. Resolvido aqui alimentando a cadência do #50
-      com o helper do #25. **Lição para o protocolo:** relatório de fila que cruza *nomes de
-      arquivo* não vê conflito semântico entre um PR que remove uma API e outro que a chama —
-      só a integração de facto vê. Enquanto a fila passar de ~10, vale reintegrar e medir.
+      **Lição desta drenagem, que se soma à do #25×#50 (merge verde, suíte vermelha):** uma guarda
+      *derivada* pode ficar vermelha no estado que a decisão pediu. O #67 amarrou ao disco o fecho
+      da tabela de `addons/`, mas só previu o plural — executadas as sete remoções, a guarda
+      recusava zero pastas condenadas, e a segunda asserção (`not doomed.is_empty() or …`) proibia
+      por construção a chegada da ADR-0010. Corrigido aqui com o caso zero, sem afrouxar. Ao
+      escrever guarda derivada, **inclua o estado final da decisão que ela guarda** — senão o
+      último PR da série paga a conta, e o custo aparece só na integração.
 
 - [ ] **A cadência do loop excede a cadência de revisão, e isso é problema de projeto, não de
       execução.** Medido quatro vezes (#31, #36, #40 e esta run): o loop produz 1 PR/h e a revisão
@@ -127,50 +122,77 @@ Itens sem critério de pronto não entram aqui.
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
 
-      **Quinta medição, 2026-09-07T03:00Z: a #55 mesclou e a fila voltou a 11 em ~7 h** (#56–#66),
-      contra o teto de dois do protocolo. O padrão está agora medido cinco vezes e não se corrige
-      sozinho — a drenagem manual compra horas, não dias. Enquanto não houver ADR, a execução que
-      encontrar o teto estourado faz o que esta fez: escolhe um item que **não dispute arquivo**
-      com nenhum PR aberto, em vez de somar o décimo segundo.
+      **Sexta medição, 2026-09-07T14:00Z: a fila voltou a 22 em ~19 h** (#56–#77) sem que `main`
+      andasse, contra o teto de dois do protocolo. E desta vez o custo não foi só a espera: as sete
+      remoções da ADR-0010, feitas **exatamente como a ADR mandou** (uma pasta por PR), colidiram
+      seis vezes entre si e deixaram cinco `.gitignore` incompletos, porque nenhuma podia ver as
+      outras. **Um protocolo que manda serializar e um agendamento que produz em paralelo estão em
+      contradição**, e é isso que a ADR pendente tem de resolver — não só a frequência.
+      *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
 
-- [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
-      `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
-      contagem. Achado de #31, reconfirmado aqui: os dois existem lado a lado na árvore integrada.
-      → Fundir num só, com a contagem correta (a de #30, que exclui PRs já mesclados).
-      *Pronto:* um único script em `tools/loop/`, e o protocolo acima apontando para ele.
+- [~] **Dois relatórios de fila onde deve haver um.** ✅ resolvido pelo **#71**
+      (`ai/loop-20260907T065854Z`), integrado aqui: `merge_order_report.sh` saiu e `--order` entrou
+      no `merge_queue_report.sh`. Verificado na árvore integrada: `tools/loop/` tem só
+      `merge_queue_report.sh` e `unclaimed_surface.sh`. Vira `[x]` quando a integração mesclar.
 
 ### P1 — higiene estrutural
 
-- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco. **Cinco já têm PR aberto** (censo de 2026-09-07T03:00Z): `curved_lines_2d`
-      (#60), `phantom_camera` (#62), `guide` (#63), `GDDraw` (#64), `yard` (#66). **Livres:
-      `curve2collision` e `softbody2d`** — são as duas menores (48 KB e 112 KB, zero cenas), o que
-      as torna o resto mecânico do item, não o seu miolo.
-      *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
-      corpo.
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** ✅ as **sete**
+      saíram, uma por PR como a ADR exige, e estão integradas nesta branch: `curved_lines_2d`
+      (#60), `phantom_camera` (#62), `guide` (#63), `GDDraw` (#64), `yard` (#66), `softbody2d`
+      (#72), `curve2collision` (#73). `addons/` tem agora **duas** pastas, ambas `ferramenta`.
+      Total devolvido, remedido na integração (`git ls-tree -r -l` contra `34634d0`, não copiado
+      da prosa dos PRs): **1 397 arquivos, 101 cenas, 6 936 KiB, 122 `class_name`** — o namespace
+      global do projeto caiu de 176 para 52 símbolos de addon. Vira `[x]` quando a integração
+      mesclar.
 
-      **Correção do "sem disputar arquivo com ninguém": as sete remoções disputam, sim, um arquivo
-      — `addons/README.md`.** Medido em 03:00Z integrando os 11 ramos abertos: #62–#66 conflitam
-      nele, e o conflito é **semântico**. Cada PR reescreve a frase de fecho da tabela recalculando-a
-      como se fosse a única remoção — #60 escreveu `as seis pastas … ~7,9 MB … 59 cenas`, #62
-      `~9,3 MB … 71 cenas`, #63 `~8,8 MB … 82 cenas`. Mescladas as cinco restam **duas** pastas, e
-      nenhum dos três números descreve essa árvore. Quem drenar a fila **recalcula o fecho à mão
-      depois do último merge**; `--ours`, `--theirs` e união automática todos mentem aqui.
-      Desde 03:00Z isso não passa mais em silêncio: ver o item de frescor no P2.
+      **O item dizia "sete vezes repetível, sem disputar arquivo com ninguém". Era falso, e o
+      custo foi medido duas vezes** — pelo #76 (seis abortos em `addons/README.md`) e aqui, ao
+      resolver. Três coisas que a próxima série de remoções deve saber:
 
-- [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
-      reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
-      #38, #39 e #41 acrescentaram testes depois. → Reconciliar de novo e, de preferência, atacar a
-      causa: a matriz é contagem escrita à mão sobre um runner que varre diretório.
-      *Pronto:* a matriz bate com a saída de `run_tests.gd`, ou a contagem é gerada, não digitada.
+      1. **A união automática de documento mente alto.** As seis merges deixaram `addons/README.md`
+         com sete cabeçalhos `Verificado em` empilhados, quatro frases de fecho contraditórias e
+         três tabelas de "Remoções já executadas"; `docs/PROJECT_CONTRACT.md` acumulou **seis**
+         contagens de `class_name` incompatíveis (174, 176, 173, 165, 157, 97), nenhuma dizendo por
+         que método. **Nada ficou vermelho** — o cabeçalho de frescor estava lá. Os dois documentos
+         foram reescritos à mão e os números remedidos no disco.
+      2. **Cinco dos sete não protegiam a própria pasta no `.gitignore`.** Só #60 e #62 a
+         acrescentam. A proteção dependia da ordem de merge, que é a forma mais silenciosa de não
+         existir. As sete estão lá agora, num bloco só.
+      3. **O conflito estrutural em `tests/integration/shipping_export_test.gd` foi eliminado, não
+         só resolvido:** o bloco `ok(excluded.contains(...))` reescrito por cada remoção virou um
+         laço sobre `REMOVED_VENDOR_ADDONS`. Acrescentar uma remoção é uma linha numa lista.
 
-      **A defasagem cresceu, medida em 03:00Z:** o documento afirma **174 testes / 11.837
-      asserções** em três lugares (linhas 4, 22 e 76); `main` roda **262 / 12719**. São 88 testes de
-      atraso, e a divergência é justamente do tipo que o item de frescor do P2 acaba de mostrar ser
-      barato de amarrar — a contagem é derivada. Esta execução **não** mexeu na matriz de propósito:
-      o #61 a está editando, e um segundo editor no mesmo arquivo é o conflito que o teto de dois
-      PRs existe para evitar.
+- [~] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.**
+      ✅ a causa foi atacada pelo **#69** (`ai/loop-20260907T050359Z`): a contagem deixou de ser
+      digitada e passou a ser derivada, com `tests/unit/test_matrix_inventory_test.gd` a exigir que
+      o inventário bata com a varredura do runner **e** que toda afirmação `N testes, M asserções`
+      do documento repita os mesmos números. Reconciliado nesta integração para **288 testes /
+      14 087 asserções / 54 arquivos**. Vira `[x]` quando a integração mesclar.
+
+      **O preço do #69, medido pelo #76 e confirmado aqui:** a guarda acopla todo PR que acrescente
+      teste a todo outro que também acrescente. #61, #74 e #75 exigiram, cada um, uma correção à
+      mão da linha derivada **na ordem de merge**, e o número certo só existe depois de correr a
+      suíte sobre a árvore acumulada. Três resoluções obrigatórias, não opcionais.
+
+      **E uma propriedade nova, que ninguém tinha visto: a contagem de asserções é
+      autorreferente.** A guarda percorre cada afirmação da matriz e gasta asserções em cada uma —
+      corrigir a matriz muda o número que a matriz declara. Foram três iterações até estabilizar em
+      14 087. Não é instabilidade: é a guarda a medir-se a si própria. Quem reconciliar a matriz
+      deve **rodar, escrever, e rodar de novo** até o número parar de se mover.
+
+- [ ] **Guarda derivada tem de cobrir o estado final da decisão que guarda.** Achado de 14:00Z,
+      pago duas vezes na mesma integração: a guarda do fecho de `addons/` (#67) ficava vermelha com
+      zero pastas condenadas — o estado que a ADR-0010 pediu —, e a guarda da matriz (#69) fica
+      vermelha em todo PR que acrescente teste. Ambas são boas guardas com o domínio mal fechado.
+      Corrigidas aqui **em `addons_manifest_test.gd`**; a da matriz continua acoplada por
+      construção. → Escrever a regra onde as guardas são enunciadas (`docs/TEST_MATRIX.md` §
+      inventário, ou o `CLAUDE.md`): **uma guarda derivada declara o que faz nos extremos — zero,
+      um, e "outro PR mudou o número" — ou não entra.** E decidir se a do #69 fica como está: o
+      acoplamento é o preço de não voltar a "174 testes" por onze PRs, e pode valer a pena pago
+      conscientemente.
+      *Pronto:* a regra escrita onde o próximo autor de guarda a encontre, e a decisão sobre o #69
+      registrada — mantida com o custo assumido, ou afrouxada para avisar em vez de quebrar.
 
 ### P2 — integridade de contexto
 
@@ -192,24 +214,19 @@ Itens sem critério de pronto não entram aqui.
       speed-up ou não? *Pronto:* ou existe produtor e teste de comportamento, ou as duas regras
       saem de `GameRules` (o que **invalida replays**, invariante 7 — é ADR, não commit).
 
-- [ ] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** Sobra do #46
-      (`ai/loop-20260906T085912Z`), que fez a pausa alcançar as oito vozes de SFX — antes ela
-      parava só a música e o `death`/`game_over` terminava por cima do campo congelado. As vozes
-      passaram a ser comandadas sempre; a música continua atrás de `is_inside_tree()`. No runtime
-      real os dois caminhos coincidem, por isso não foi mexido. No mesmo saco: `shutdown()` não
-      zera `_paused_voices`. *Pronto:* uma só regra de guarda para música e vozes, com
-      `audio_pause_test.gd` a continuar verde.
+- [~] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** ✅ resolvido pelo
+      **#70** (`ai/loop-20260907T060000Z`), integrado aqui: uma só regra de guarda para música e
+      vozes. Vira `[x]` quando a integração mesclar. Verde nesta árvore.
 
-- [ ] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** Achado
-      de #36: `domain_purity_test.gd` varre `game/simulation/`, `game/rules/` e `game/session/`,
-      mas o controlador do boss é domínio morando em `game/enemies/`, pasta que o invariante 6
-      trata como apresentação. Ou o arquivo muda de pasta, ou a varredura passa a conhecê-lo pelo
-      nome. *Pronto:* o arquivo está sob uma das duas guardas, e o `CLAUDE.md` diz qual.
+- [~] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.**
+      ✅ resolvido pelo **#68** (`ai/loop-20260907T040000Z`), integrado aqui: o controlador do chefe
+      passou a estar sob uma das duas guardas de pureza, medido e fechado. Vira `[x]` quando a
+      integração mesclar. Verde nesta árvore.
 
-- [ ] **`round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
-      Achado de #25: é `Resource` de `game/rules/` com campos de cor, e cor é `float` por
-      construção. Hoje passa por exceção nomeada na guarda. *Pronto:* ou a exceção está escrita
-      onde a guarda é enunciada, ou o visual sai de `game/rules/`.
+- [~] **`round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
+      ✅ resolvido pelo **#74** (`ai/loop-20260907T100000Z`), integrado aqui: a exceção do visual em
+      `game/rules/` deixou de ser nomeada em silêncio e passa a ser paga, com
+      `rules_presentation_exception_test.gd`. Vira `[x]` quando a integração mesclar.
 
 - [ ] **A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.**
       `doc_freshness_header_test.gd` (#6) exige a linha `> **Verificado em**` e fica verde com ela
@@ -229,7 +246,16 @@ Itens sem critério de pronto não entram aqui.
       número derivado escrito à mão é o que envelhece primeiro, e é barato de amarrar; prosa de
       julgamento não é, e não vale tentar.** Os megabytes ficaram deliberadamente de fora — 6,8 MB
       por tamanho de arquivo contra 16 MB por blocos no mesmo checkout, e uma guarda sobre isso
-      ficaria vermelha conforme o sistema de arquivos. (a) continua por fazer.
+      ficaria vermelha conforme o sistema de arquivos.
+
+      **(a) ganhou a evidência mais forte até agora, em 14:00Z.** Ao integrar as sete remoções,
+      `addons/README.md` acabou com **sete cabeçalhos `Verificado em` empilhados**, quatro frases de
+      fecho contraditórias e três tabelas de "Remoções já executadas"; `docs/PROJECT_CONTRACT.md`,
+      com **seis** contagens de `class_name` incompatíveis (174, 176, 173, 165, 157, 97), nenhuma
+      dizendo por que método foi medida. **A suíte ficou verde o tempo todo** — o cabeçalho estava
+      lá. Os dois foram reescritos à mão. Isto é (a) demonstrado, não suspeitado: a auditoria dos
+      demais `docs/` continua por fazer, e agora sabe-se o que procurar — cabeçalho repetido e
+      número derivado sem o comando ao lado.
 
 ### P3 — experiência e estética (o alvo real)
 
@@ -254,31 +280,28 @@ O que continua aberto:
       `ART_DIRECTION` reescritos no mesmo commit, e alguém confirmou por captura que o campo não
       ficou lavado. **É o maior item de estética livre do backlog.**
 
-- [~] **Escolher de onde o cursor tira sua cor.** Reivindicado pelo PR de `ai/loop-20260907T110000Z`
-      (relato em `docs/loop/runs/2026-09-07T110000Z.md`), que **não** escolheu uma cor nova: a
-      restrição do item não tem solução em cor, e é por isso que ele atravessou mais de vinte
-      execuções. Os dois chãos estão em extremos opostos da luminância — sobre `FREE` as três
-      camadas passam com 5,38:1 justamente por serem claras — então nenhuma silhueta separa dos
-      dois. A saída foi a da ADR-0011, aplicada à mesma forma de problema: **contorno de tinta de
-      1 px em `free_color`** por baixo da silhueta (ADR-0012), com `CURSOR_INK×BOUNDARY` medido em
-      8,93–9,98:1 nas quatro paletas e nas quatro visões. `CURSOR_KNOWN_DEBT` fica como estava, de
-      propósito: os pares cromáticos não melhoraram, a leitura é que deixou de depender deles.
-      Guarda em `tests/unit/cursor_ink_outline_test.gd`. **Falta o julgamento estético** — ninguém
-      viu o contorno numa tela, em particular no instante em que o cursor deixa a borda e a tinta
-      se dissolve no chão. Se o PR for fechado sem mesclar, o item volta a `[ ]` com o critério
-      original.
+- [~] **Escolher de onde o cursor tira sua cor.** ✅ resolvido pelo **#75**
+      (`ai/loop-20260907T110000Z`, **ADR-0012**), integrado aqui: a silhueta ganhou contorno de
+      tinta próprio em vez de emprestar as três camadas da paleta do campo. Medido nesta árvore por
+      `verify_palette_contrast.gd`: `CURSOR_INK×BOUNDARY` fica em **9,98:1** na pior visão
+      (`verdant_singularity`), contra o 1,00:1 que `CURSOR_OUTER×BOUNDARY` trava. A catraca está
+      **verde** (nenhum par abaixo do piso registrado). Vira `[x]` quando a integração mesclar.
+      **Falta o julgamento estético:** ninguém viu o cursor numa tela — a medição diz que o
+      contraste subiu, não que ficou bom.
 
-- [ ] **O canal sonoro da exposição não foi feito.** O item original pedia som **e** háptica ao
-      cruzar `TrailExposure.WARNING_RATIO`; #39 entregou só a háptica (`app/haptic_feedback.gd`).
-      Falta o cue que suba com a exposição, com prioridade declarada entre vozes — o envelope por
-      cue de #23 já dá a ferramenta. *Pronto:* cruzar o limiar é audível, com prioridade
-      declarada, **sem alterar checksum**.
+- [~] **O canal sonoro da exposição não foi feito.** ✅ entregue pelo **#61**
+      (`ai/loop-20260906T210208Z`), integrado aqui: cruzar `TrailExposure.WARNING_RATIO` passa a ser
+      audível, com prioridade declarada (35, a mesma da háptica do #39), o aviso é recusado quando
+      algo mais alto acontece no mesmo tick, e a aresta é lida sem ser consumida — checksum imóvel
+      ao longo de oito `sync`. Vira `[x]` quando a integração mesclar. **O som nunca foi ouvido:**
+      áudio físico continua sem validação nesta sessão.
 
-- [ ] **`docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** Medido na árvore
-      integrada: **zero** ocorrências de `ADR-0011` no documento de arte, embora a ADR decida um
-      traço visual da ameaça; e a floritura de captura de #37 também não está escrita lá. Quem lê
-      só o documento de arte não encontra nenhuma das duas.
-      *Pronto:* as duas decisões referenciadas na seção que lhes corresponde.
+- [~] **`docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** ✅ resolvido
+      pelo **#65** (`ai/loop-20260907T010048Z`), integrado aqui: o anel de tinta da ameaça
+      (ADR-0011) e a floritura de captura (#37) entraram no documento de arte. Vira `[x]` quando a
+      integração mesclar. **Nota para a próxima execução:** a **ADR-0012** (contorno do cursor,
+      #75) nasceu depois e **ainda não está** referenciada no documento de arte — o mesmo buraco,
+      um decisão mais tarde.
 
 - [x] **O tempo da transição entre rodadas não tem ritmo.** ✅ entregue pelo #50
       (`ai/loop-20260906T130328Z`), integrado aqui **com resolução de conflito**: o painel abre em
@@ -333,6 +356,20 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.
+- **A união automática resolve o conflito e cria a mentira.** Medido em 14:00Z, e é o custo real
+  da drenagem: seis merges de remoção deixaram `addons/README.md` com sete cabeçalhos empilhados e
+  quatro fechos contraditórios, e `docs/PROJECT_CONTRACT.md` com seis contagens incompatíveis — com
+  a suíte **verde**. Documento com tabela que acumula linhas e cabeçalho que se reescreve **não**
+  se resolve por script: leia o arquivo inteiro e reescreva. E remeça os números derivados no disco
+  (`git ls-tree -r -l`, `grep -rhoE '^class_name …'`) em vez de escolher entre os que os PRs
+  trazem: cada PR mediu uma árvore que não é a integrada, e todos podem estar certos e errados ao
+  mesmo tempo.
+
+- **A contagem de asserções da matriz é autorreferente.** A guarda do #69 gasta asserções em cada
+  afirmação `N testes, M asserções` do documento — corrigir a matriz muda o número que a matriz
+  declara. Rode, escreva, rode de novo, até parar de se mover. Em 14:00Z foram três iterações
+  (14 091 → 14 087). Não é flake.
+
 - **Integrar a fila é barato; reconciliar o ledger não.** Medido em 04:57Z: os 22 merges de
   #20–#41 produziram **zero** conflitos de código — o único arquivo conflitante, em 20 dos 22, é
   `docs/LOOP_LEDGER.md`. O custo real da drenagem é reescrever o backlog à mão, porque `--ours`
