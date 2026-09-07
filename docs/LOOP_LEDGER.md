@@ -1,14 +1,16 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable (não-mono), Linux headless
+> **Alcance:** apenas o item P2 de veracidade da documentação foi reverificado nesta passagem
+> (auditoria de `IMPLEMENTATION_STATUS.md` e medição das heurísticas de guarda). O restante do
+> backlog **não** foi reavaliado; as marcas `[~]` refletem a fila lida no GitHub em 2026-09-07,
+> não uma reconferência item a item. Mérito visual, áudio físico e Android real continuam sem
+> validação nesta sessão.
 
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+> **Estado da fila em 2026-09-07T18:00Z: 26 PRs abertos (#56–#81), `main` parado em `34634d0`
+> desde o merge do #55.** O #78 integra #56–#77; o #80 mediu que o #78 fica vermelho contra o
+> #79 sem dar conflito de git. Consulte a fila real no GitHub antes de escolher — as marcas
+> abaixo envelhecem em uma hora.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -179,7 +181,7 @@ Itens sem critério de pronto não entram aqui.
       construção. Hoje passa por exceção nomeada na guarda. *Pronto:* ou a exceção está escrita
       onde a guarda é enunciada, ou o visual sai de `game/rules/`.
 
-- [ ] **A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.**
+- [~] **A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.**
       `doc_freshness_header_test.gd` (#6) exige a linha `> **Verificado em**` e fica verde com ela
       presente — mesmo quando o corpo mente. #21 corrigiu `TEST_MATRIX.md`, que afirmava quatro
       contagens concorrentes e passava em tudo; **os demais docs que passaram pela mesma união
@@ -187,6 +189,51 @@ Itens sem critério de pronto não entram aqui.
       integrado; (b) decidir se alguma guarda barata pega contradição interna (ex.: recusar duas
       linhas de tabela com a mesma primeira coluna). *Pronto:* nenhum doc de `docs/` com duas
       afirmações concorrentes sobre o mesmo fato, e a decisão sobre (b) escrita.
+
+      **(a) — em curso, um documento por PR.** O PR de `ai/loop-20260907T180244Z` auditou
+      `docs/IMPLEMENTATION_STATUS.md`, o único doc de topo que **nenhum** PR aberto tocava, e
+      achou duas afirmações contraditas pela árvore: a contagem da suíte (dizia 134 testes /
+      11.489 asserções; o runner corre **262 / 12.719**) e a nota de que o `.git/` seria «um
+      esqueleto incompleto… não é possível produzir diff/commit» — falsa, o repositório tem
+      `HEAD`, refs e 188 commits. Achou também que o risco de licença estava **subdeclarado**:
+      o `LICENSE` da raiz não é só «byte a byte igual» ao do `curve2collision`, é literalmente
+      `Copyright (c) 2026 seina369`. Ver `docs/loop/runs/2026-09-07T180244Z.md`.
+
+      **(b) — decidido: não escrever a guarda de texto. Medida, não suposta.** A heurística
+      proposta (recusar duas linhas de tabela com a mesma primeira coluna) foi rodada sobre
+      **5.020 arquivos `.md`** — a árvore atual mais as 79 branches do loop. Resultado:
+
+      | Alcance da varredura | Disparos | Verdadeiros positivos |
+      |---|---|---|
+      | repositório inteiro | ~1.100 | 31 (≈3 %) |
+      | só `docs/*.md` de topo | 64, em 33 branches | 31 (≈48 %) |
+      | `main` hoje (`34634d0`) | 0 | — |
+
+      **Ela pega o erro do #21 de verdade.** Em 31 branches, `docs/TEST_MATRIX.md` tinha duas
+      linhas `log final da suíte` dizendo **11.547** e **11.515** asserções — a contradição
+      literal, e ela some se a tabela for lida por cima. Mas o ruído é estrutural, não acidental:
+      `reference/volfied/` sozinho dispara ~1.040 vezes com mapas de registradores legítimos
+      (`$1000`…`$1006`, `VBLANK`), e mesmo no alcance estreito metade dos disparos é a coluna de
+      **categoria** de uma tabela agrupada (`apresentação` ×31, a data `2026-09-04` ×2). Separar
+      «chave que identifica» de «rótulo que agrupa» exige adesão por tabela — deixa de ser barata.
+      As duas variantes mais promissoras (cabeçalho `> **Verificado em**` duplicado, heading
+      repetido no mesmo documento — os artefatos típicos de união automática) disparam **zero**
+      vezes nos 5.020 arquivos.
+
+      Decisivo: **nenhuma das três pegaria os dois erros encontrados agora.** São *números certos
+      para outra árvore* e *uma afirmação verdadeira em 2026-09-03 e falsa hoje* — nenhum sinal
+      local no texto os denuncia. **O que funciona contra essa classe é derivar, não vigiar:** um
+      número derivado do runner (o caminho do #69 para o `TEST_MATRIX.md`) não pode contradizer a
+      árvore, porque não é digitado. Recomendação registrada: onde um doc precisar de contagem, ou
+      ela é derivada, ou vem acompanhada da árvore e do ambiente que a produziram — e o cabeçalho
+      diz que é citação, não medição desta sessão.
+
+- [ ] **`docs/PROJECT_CONTRACT.md:37` repete a afirmação falsa sobre o `.git/`** — «o `.git/`
+      encontrado está incompleto e ainda não forma um repositório válido». Conferido em
+      2026-09-07 contra as 79 branches do loop: **nenhuma** a corrige. Não foi consertada junto
+      com a de `IMPLEMENTATION_STATUS.md` porque 6 PRs abertos disputam esse arquivo — é edição
+      de uma linha para quem já estiver com ele na mão, ou para depois da drenagem.
+      *Pronto:* a linha diz o estado real do repositório, no mesmo PR que já tocar o contrato.
 
 ### P3 — experiência e estética (o alvo real)
 

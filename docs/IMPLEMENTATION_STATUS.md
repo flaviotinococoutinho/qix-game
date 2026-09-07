@@ -1,9 +1,12 @@
 # IMPLEMENTATION_STATUS
 
-> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** o verde de M2/G2 foi reconfirmado pela suíte e pela rota de captura headless.
-> O âmbar de release/hardware **não** foi reavaliado: exports, aparelho físico e assinatura
-> exigem macOS e SDKs ausentes na nuvem.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable (não-mono), Linux headless
+> **Alcance:** suíte e rota de captura reexecutadas nesta árvore; a contagem de testes desta
+> página foi recontada contra a saída do runner, e a nota sobre `.git/` foi conferida contra o
+> repositório real. O âmbar de release/hardware **não** foi reavaliado: exports, aparelho físico
+> e assinatura exigem macOS e SDKs ausentes na nuvem. Os números do run de shipping de
+> 2026-09-03 (bundle, APK, Metal HUD, framebuffer) são **citações daquele run**, não medições
+> desta sessão — eles vivem em `docs/SHIPPING_PASS.md` e não foram reproduzidos aqui.
 
 ## Gate atual
 
@@ -64,8 +67,12 @@ continuam pendentes.
 
 ## Evidências atuais
 
-- Runner headless em Godot 4.7.2 Mono com áudio dummy: **134 testes, 11.489 asserções,
-  0 falhas** em 2026-09-03.
+- Runner headless com áudio dummy sobre `34634d0`, em Godot 4.7.2-stable (não-mono) Linux:
+  **262 testes, 12.719 asserções, 0 falhas** em 6.446 ms, medido em 2026-09-07.
+  Esta contagem **muda a cada teste acrescentado** e por isso envelhece sozinha: quem precisar
+  do número corrente roda `tests/run_tests.gd` e lê a última linha, em vez de confiar nesta.
+  O run de shipping de 2026-09-03 registrou 134 testes / 11.489 asserções para a suíte daquela
+  árvore; esse par pertence ao instantâneo em `docs/SHIPPING_PASS.md`, não ao estado atual.
 - O runner final `20260903T065739Z-65912` terminou `overall_exit=0` e estado `complete`.
   O bundle macOS arm64 ad-hoc tem 101.199.872 bytes; export, thinning, payload, smoke, frame
   pacing, Metal HUD, framebuffer, `codesign` e varredura de leaks passaram.
@@ -117,10 +124,15 @@ Detalhes, comandos e limites estão em `docs/SHIPPING_PASS.md`, `docs/TEST_MATRI
 - Produzir artefatos de distribuição: assinatura Developer ID, notarização e entitlements no
   macOS; keystore de release, AAB, Play Console e testes de loja no Android. Os pacotes atuais são
   QA ad-hoc.
-- `.git/` é apenas um esqueleto incompleto: não há `HEAD`, objetos ou refs válidos, portanto
-  não é possível produzir diff/commit ou revisar regeneração com segurança equivalente a Git.
-- A licença raiz é byte a byte igual à licença do addon `curve2collision`; a licença pretendida
-  para o jogo ainda precisa ser confirmada antes de publicar.
+- **A licença raiz nomeia um terceiro como titular.** `LICENSE` (1.065 bytes, SHA-256
+  `daf1b5152a044905…`) é byte a byte igual a `addons/curve2collision/LICENSE`, e o texto diz
+  `MIT License / Copyright (c) 2026 seina369` — o autor do addon, não o autor do jogo. Enquanto
+  isso não for resolvido, o repositório publica o jogo sob a licença de outra pessoa.
+  A licença pretendida precisa ser escolhida e escrita antes de publicar.
+  **Nota para quem drenar a fila:** a comparação que torna este achado óbvio desaparece quando
+  `addons/curve2collision/` for removido (ADR-0010). Removida a pasta, o `LICENSE` da raiz passa
+  a parecer um MIT comum — a titularidade errada continua lá, só deixa de saltar à vista. Por
+  isso o achado está registrado aqui, e não só no PR de remoção.
 - Termos comerciais vigentes das imagens geradas precisam ser confirmados; a proveniência
   técnica está registrada em `assets/ASSET-PROVENANCE.md`.
 - Há pouco espaço livre no volume. O runner exige 2 GiB para export e 3 GiB antes de iniciar o
