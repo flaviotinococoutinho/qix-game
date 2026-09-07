@@ -8,6 +8,13 @@
 > `tools/verify_palette_contrast.gd`. A tabela do campo em “Contraste medido” **não** foi
 > remedida: continua com a data de 2026-09-04 impressa nela, e nada nesta execução mexeu na
 > paleta autorada.
+>
+> **Emenda de 2026-09-07** · commit `34634d0` · Godot 4.7.2-stable, Linux headless. Acrescentou-se
+> “O contorno do cursor”, que transcreve a [ADR-0012](decisions/ADR-0012-cursor-ink-outline.md).
+> A tabela de “Contraste do cursor contra o chão” foi **reconferida** hoje pelo mesmo comando e sai
+> idêntica à impressa — as suas seis linhas continuam válidas, e por isso a data dentro dela fica
+> como está. O que mudou não foi cor autorada nenhuma: foi de onde vem a leitura. Nenhuma paleta,
+> regra ou geometria de campo mudou, e nenhum checksum de replay se moveu.
 
 O G2 usa uma identidade original de **cartografia bioluminescente**: o jogador não
 “pinta” uma chapa sólida; ele estabiliza regiões de um mapa vivo e revela uma paisagem
@@ -114,13 +121,47 @@ Leitura:
   `tests/unit/cursor_contrast_test.gd` fixa essa dependência, para que ela não seja desfeita sem
   que a dívida seja revista.
 
-Como na seção acima, isto é **medição registrada, não correção**. Escolher a cor nova do cursor é
-decisão estética com olho humano na tela: a restrição que a medição impõe é que a candidata suba
-`CURSOR_*`×`BOUNDARY` acima de 3:1 **sem** derrubar os `CURSOR_*`×`FREE` que hoje passam — os dois
-chãos estão em extremos opostos da escala de luminância, então uma cor só os satisfaz no meio, ou
-a silhueta precisa de uma borda escura que não venha da paleta do campo.
-`PaletteContrast.CURSOR_FLOOR` guarda os números como catraca e `CURSOR_KNOWN_DEBT` faz o conserto
-de qualquer um dos três pares **falhar** o teste até que esta seção seja reescrita junto.
+As seis linhas acima **continuam nestes números** e os três pares sobre `BOUNDARY` continuam em
+`PaletteContrast.CURSOR_KNOWN_DEBT`: nenhuma cor autorada mudou desde a medição.
+`PaletteContrast.CURSOR_FLOOR` guarda-os como catraca e `CURSOR_KNOWN_DEBT` faz o conserto de
+qualquer um dos três **falhar** o teste até que esta seção seja reescrita junto. O que mudou em
+2026-09-07 é que a leitura deixou de repousar sobre eles — ver “O contorno do cursor”.
+
+## O contorno do cursor
+
+Decidido em **2026-09-07** pela [ADR-0012](decisions/ADR-0012-cursor-ink-outline.md), em resposta
+direta à dívida da tabela acima. A seção anterior deste documento propunha a restrição de projeto:
+subir os três `CURSOR_*`×`BOUNDARY` acima de 3:1 **sem** derrubar os `CURSOR_*`×`FREE` que hoje
+passam. Ela não tem solução em cor de silhueta, e é por isso que o item atravessou mais de vinte
+execuções sem dono: os dois chãos estão em extremos opostos da luminância — `BOUNDARY` é claro
+porque é assim que o campo revelado se lê, `FREE` é o mais escuro de cada paleta — e a silhueta
+tem de separar dos dois.
+
+Por isso o cursor não é lido pelas cores que empresta do campo, e sim por um **contorno de tinta de
+1 px** desenhado por baixo dele em `QixPlayerView` (`INK_REACH` 3,0 contra `BODY_REACH` 2,0). A
+tinta é o `free_color` da própria rodada, como no anel da ameaça: nenhuma constante estética nova
+entra no jogo, e o contorno acompanha qualquer paleta futura sem edição de código. Em *Lumen
+Cartography*, o cursor é a ponta do estilete sobre a carta, e a tinta é a sombra que ele projeta no
+papel — sobre `FREE`, onde tinta e chão coincidem, o contorno some, e é isso que se quer: ali as
+três camadas opacas já passam com folga de 5,38:1.
+
+| Par | Padrão | Abyssal | Aurora | Verdant | Meta 3:1 |
+|---|---|---|---|---|---|
+| `CURSOR_INK`×`BOUNDARY` | 8,93 | 9,57 | 9,01 | 9,98 | ok |
+
+Pior caso por paleta sobre os quatro modelos de visão, medido por `tools/verify_palette_contrast.gd`
+em 2026-09-07 — quase três vezes a meta, com a leitura ancorada em luminância em vez de matiz.
+
+Duas consequências de desenho vêm junto, para que o contorno seja um contorno e não um cursor
+engordado: a proa de direção nasce em `FACING_NEAR` 4,0 em vez de 3,0, para não começar dentro da
+própria tinta, preservando os seus 2 px de comprimento; e o halo pulsante passa de raio 4,0/5,0
+para 5,0/6,0, preservando a folga de 1 px que ele tinha contra a silhueta — colado à tinta, ele
+leria como parte do cursor em vez de como respiração em volta dele.
+
+`tests/unit/cursor_ink_outline_test.gd` é a guarda, e o contorno é apresentação pura: sincronizar a
+silhueta não altera `state_checksum()` nem avança o tick. **Falta o julgamento estético** — ninguém
+viu o contorno numa tela, em particular no instante em que o cursor deixa a borda para começar a
+trilha e a tinta se dissolve no chão.
 
 ## Barra de qualidade do slice
 
