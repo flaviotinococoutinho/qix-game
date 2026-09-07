@@ -124,14 +124,23 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`). Estado por pasta em
+      2026-09-06T23:00Z — **as sete estão reivindicadas, nenhuma mesclada**:
+      `curved_lines_2d` (#60), `phantom_camera` (#62), `guide` (#63), `GDDraw` (esta execução),
+      e `curve2collision`, `softbody2d`, `yard` ainda livres em disco.
+      A ADR exige, por remoção, a mesma evidência de posse de `uid://` usada na poda dos demos.
+      **Item ideal para uma execução curta** — pequeno, mecânico, sete vezes repetível, e a única
+      família do backlog em que dois PRs não disputam arquivo: cada um apaga uma pasta distinta.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
+
+      **As sete colidem num arquivo só, e é previsível:** cada remoção apaga a sua linha da tabela
+      de `addons/README.md` e reescreve a frase-resumo ("as N pastas ocupam X MB e declaram Y
+      cenas"). Mesclados em qualquer ordem, o segundo PR em diante conflita ali — conflito trivial,
+      mas quem drenar precisa recontar N/X/Y à mão em vez de aceitar qualquer um dos lados. Contagem
+      de referência medida aqui: as sete somam 11 504 KB e 101 cenas; `GDDraw` leva 1 856 KB e 1
+      cena, deixando 9 648 KB e 100 cenas.
 
 - [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,

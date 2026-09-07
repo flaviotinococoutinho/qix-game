@@ -1,10 +1,11 @@
 # `addons/` — o que está aqui e por quê
 
-> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** inventário das nove pastas de `addons/`, cruzado por caminho (`addons/<pasta>`) e
+> **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** inventário das oito pastas de `addons/`, cruzado por caminho (`addons/<pasta>`) e
 > por `class_name` contra `game/`, `ui/`, `app/`, `tools/`, `tests/`, `content/` e `project.godot`.
-> Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um problema aberto —
-> só registra quem consome o quê hoje.
+> `GDDraw` saiu nesta data pela ADR-0010; as outras seis `a-remover` continuam por remover, uma por
+> PR. Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um problema aberto
+> — só registra quem consome o quê hoje.
 
 Uma pasta em `addons/` sem uma linha aqui é uma decisão adiada: quem lê o repositório amanhã não
 consegue distinguir dependência real de resto de download. A regra e o porquê estão em
@@ -24,7 +25,6 @@ entre a tabela e o disco.
 
 | Pasta | Estado | Por que está aqui |
 |---|---|---|
-| `GDDraw` | `a-remover` | 1,9 MB de ferramenta de pintura de textura. Sem consumidor. |
 | `curve2collision` | `a-remover` | 48 KB para gerar colisão a partir de `Curve2D`. O jogo não usa física. |
 | `curved_lines_2d` | `a-remover` | 3,4 MB de vetor escalável e importador de SVG. A arte deste jogo é máscara R8 e shader, não SVG. |
 | `fennara` | `ferramenta` | Autoload `_fennara_game_capture` (`project.godot`) e GDExtension de captura para sessões com o editor aberto. `bin/` não é versionado — daí o `Can't open dynamic library` esperado em toda execução headless. |
@@ -34,8 +34,13 @@ entre a tabela e o disco.
 | `softbody2d` | `a-remover` | 112 KB de corpo mole por Voronoi. Sem física no domínio, por invariante 1. |
 | `yard` | `a-remover` | 1,1 MB de base de dados de recursos. `content/` já é transacional pela ADR-0008. |
 
-Somadas, as sete pastas `a-remover` ocupam ~11,5 MB e declaram 101 cenas que nenhum leitor deste
-jogo precisa abrir.
+Somadas, as seis pastas `a-remover` que restam ocupam ~9,4 MB e declaram 100 cenas que nenhum
+leitor deste jogo precisa abrir. Eram sete, ~11,3 MB e 101 cenas até a saída de `GDDraw`.
+
+A linha de `exclude_filter` de `export_presets.cfg` **continua citando as pastas já removidas**, e
+isso é deliberado: um checkout que rebaixe os addons pela AssetLib recria a pasta em disco, e o
+filtro cobre um caminho que o `.gitignore` não cobre. É a mesma razão pela qual `guide_examples/**`
+e `samples/**` seguem lá depois da poda dos demos. Não "limpe" isso.
 
 ## Como acrescentar um addon
 
