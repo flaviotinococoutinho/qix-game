@@ -13,6 +13,9 @@
 > `project.godot`. A posse de `addons/guide` foi remedida por `grep` antes da remoção desta data.
 > Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um problema aberto —
 > só registra quem consome o quê hoje.
+> `GDDraw` saiu nesta data pela ADR-0010; as outras seis `a-remover` continuam por remover, uma por
+> PR. Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um problema aberto
+> — só registra quem consome o quê hoje.
 
 Uma pasta em `addons/` sem uma linha aqui é uma decisão adiada: quem lê o repositório amanhã não
 consegue distinguir dependência real de resto de download. A regra e o porquê estão em
@@ -32,7 +35,6 @@ entre a tabela e o disco.
 
 | Pasta | Estado | Por que está aqui |
 |---|---|---|
-| `GDDraw` | `a-remover` | 1,9 MB de ferramenta de pintura de textura. Sem consumidor. |
 | `curve2collision` | `a-remover` | 48 KB para gerar colisão a partir de `Curve2D`. O jogo não usa física. |
 | `fennara` | `ferramenta` | Autoload `_fennara_game_capture` (`project.godot`) e GDExtension de captura para sessões com o editor aberto. `bin/` não é versionado — daí o `Can't open dynamic library` esperado em toda execução headless. |
 | `godot_ai` | `ferramenta` | Único plugin habilitado em `[editor_plugins]`, mais o autoload `_mcp_game_helper`. É a ponte MCP das sessões locais. |
@@ -48,6 +50,13 @@ Somadas, as seis pastas `a-remover` ocupam ~9,3 MB e declaram 71 cenas que nenhu
 
 Somadas, as seis pastas `a-remover` ocupam ~8,8 MB e declaram 82 cenas que nenhum leitor deste
 jogo precisa abrir.
+Somadas, as seis pastas `a-remover` que restam ocupam ~9,4 MB e declaram 100 cenas que nenhum
+leitor deste jogo precisa abrir. Eram sete, ~11,3 MB e 101 cenas até a saída de `GDDraw`.
+
+A linha de `exclude_filter` de `export_presets.cfg` **continua citando as pastas já removidas**, e
+isso é deliberado: um checkout que rebaixe os addons pela AssetLib recria a pasta em disco, e o
+filtro cobre um caminho que o `.gitignore` não cobre. É a mesma razão pela qual `guide_examples/**`
+e `samples/**` seguem lá depois da poda dos demos. Não "limpe" isso.
 
 ## Remoções já executadas
 
