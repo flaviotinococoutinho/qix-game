@@ -42,8 +42,15 @@ jobs:
             --godot "$HOME/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64" \
             --logs "${RUNNER_TEMP}/qix-headless" \
             --isolate-missing-editor-extension
-      - name: Sintaxe do relatório de superfície
-        run: bash -n tools/loop/unclaimed_surface.sh
+      # Só `unclaimed_surface.sh` era checado, e foi por isso que os dois relatórios de fila
+      # puderam divergir sem que nada reclamasse. O portão passa a cobrir a pasta inteira.
+      - name: Sintaxe do ferramental do loop
+        run: |
+          set -euo pipefail
+          for script in tools/loop/*.sh; do
+            echo "bash -n ${script}"
+            bash -n "${script}"
+          done
       - name: Evidências completas por commit
         if: always()
         uses: actions/upload-artifact@v4

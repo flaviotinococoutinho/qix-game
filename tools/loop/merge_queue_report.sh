@@ -10,10 +10,18 @@
 # Uso:
 #   tools/loop/merge_queue_report.sh                 # matriz de conflitos + posse + sobreposições
 #   tools/loop/merge_queue_report.sh --claims        # só o mapa de posse (a pergunta do passo 2)
+#   tools/loop/merge_queue_report.sh --order         # em que ordem a fila entra, cumulativamente
+#   tools/loop/merge_queue_report.sh --order 20 21   # testa uma ordem proposta
 #   tools/loop/merge_queue_report.sh --verify 8 11   # junta os dois PRs e roda a suíte
 #
 # Requer `git` com `merge-tree --write-tree` (>= 2.38) e, para `--verify`, um binário Godot em
 # $QIX_GODOT_BIN. Só lê refs remotos: não altera `main`, não altera a árvore de trabalho.
+#
+# `--order` era `tools/loop/merge_order_report.sh`, arquivo à parte desde o #31. O próprio #31
+# registrou por que nasceu separado e o que devia acontecer depois: "arquivo novo em vez de
+# `--order` dentro de `merge_queue_report.sh` porque o #30 está mexendo" nele, e "fundir depois
+# do #30" (`docs/loop/runs/2026-09-05T150119Z.md`). O #30 mesclou; os dois scripts passaram a
+# duplicar a enumeração da fila e a divergir na contagem. A fusão é essa dívida sendo paga.
 set -u
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -21,6 +29,7 @@ cd "${PROJECT_ROOT}" || exit 1
 
 BASE_REF="${QIX_LOOP_BASE_REF:-origin/main}"
 GODOT_BIN="${QIX_GODOT_BIN:-godot}"
+ORDER_WORKTREE="${QIX_LOOP_ORDER_WORKTREE:-/tmp/qix-merge-order}"
 
 # O ledger é editado por *toda* execução do loop, por contrato. Conflito nele é mecânico e
 # esperado; separá-lo do resto é o que torna o relatório legível.
@@ -152,6 +161,65 @@ cmd_claims() {
   print_claims "$(pr_numbers)"
 }
 
+# A pergunta que a matriz par-a-par não responde: **em que ordem dá para mesclar**, e onde a
+# corrente arrebenta. Cada PR do loop nasce do mesmo `main` e, sozinho, mescla limpo — a matriz
+# de `cmd_report` fica verde e a fila parece saudável. Mas ninguém mescla um PR sozinho:
+# mescla-se um depois do outro, e o segundo já encontra o ledger reescrito pelo primeiro. Medido
+# em 2026-09-05 com 11 PRs abertos: 11 de 11 limpos contra a base, e apenas 3 sobrevivem à
+# sequência. Origem: #31.
+#
+# Diferença deliberada para `build_worktree`, e a razão de as duas funções coexistirem: aqui o
+# conflito do ledger **não** é resolvido. `--verify` pergunta "o código combinado passa nos
+# testes?" e descarta o ledger porque ele não entra em teste nenhum; `--order` pergunta "onde a
+# corrente arrebenta para quem vai mesclar à mão?", e o ledger é justamente o elo que arrebenta.
+# Resolver aqui apagaria o achado. Não resolve nada, por isso: reconciliar o ledger por união
+# automática é decisão fechada contra (`docs/LOOP_LEDGER.md`, "Ao resolver conflito de
+# documentação").
+cmd_order() {
+  fetch_pr_heads
+  local prs
+  # Com argumentos, testa a ordem proposta **verbatim** — inclusive um PR fora da fila, que é
+  # como se pergunta "e se eu mesclasse este antes?". Sem argumentos, ordem cronológica: o
+  # número do PR cresce com o tempo, e é nessa ordem que a fila se formou.
+  if [ "$#" -gt 0 ]; then prs="$*"; else prs="$(pr_numbers)"; fi
+  [ -n "${prs// /}" ] || { echo "nenhum PR na fila"; return 0; }
+
+  rm -rf "${ORDER_WORKTREE}"
+  git worktree remove --force "${ORDER_WORKTREE}" 2>/dev/null
+  git worktree prune
+  git worktree add --quiet --detach "${ORDER_WORKTREE}" "${BASE_REF}" || return 1
+
+  echo "== Ordem de merge sobre ${BASE_REF} =="
+  echo "Fila: $(echo "${prs}" | tr '\n' ' ')"
+  echo
+
+  local clean=0 blocked="" pr files
+  for pr in ${prs}; do
+    if git -C "${ORDER_WORKTREE}" merge --no-edit --quiet "pr/${pr}" >/dev/null 2>&1; then
+      echo "  OK        #${pr}"
+      clean=$((clean + 1))
+    else
+      files=$(git -C "${ORDER_WORKTREE}" diff --name-only --diff-filter=U | tr '\n' ' ')
+      echo "  CONFLITO  #${pr}  em: ${files}"
+      blocked="${blocked} ${pr}"
+      git -C "${ORDER_WORKTREE}" merge --abort 2>/dev/null
+    fi
+  done
+
+  echo
+  echo "-- Veredito --"
+  echo "  ${clean} PR(s) entram em sequência sem trabalho manual."
+  if [ -n "${blocked}" ]; then
+    echo "  Precisam de resolução à mão, nesta ordem:${blocked}"
+    echo "  O ledger reconcilia-se à mão, por decisão fechada. Um merge por vez, lendo o backlog."
+  else
+    echo "  A fila inteira entra limpa."
+  fi
+
+  git worktree remove --force "${ORDER_WORKTREE}" 2>/dev/null
+  git worktree prune
+}
+
 cmd_report() {
   fetch_pr_heads
   local prs; prs=$(pr_numbers)
@@ -205,6 +273,8 @@ cmd_report() {
 case "${1:-}" in
   --verify) shift; cmd_verify "$@" ;;
   --claims) cmd_claims ;;
+  --order)  shift; cmd_order "$@" ;;
   ""|--report) cmd_report ;;
-  *) echo "uso: $0 [--report] | --claims | --verify <pr> <pr> [...]" >&2; exit 64 ;;
+  *) echo "uso: $0 [--report] | --claims | --order [<pr> ...] | --verify <pr> <pr> [...]" >&2
+     exit 64 ;;
 esac

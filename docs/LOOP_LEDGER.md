@@ -1,7 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** fusão dos dois relatórios de fila (P0) verificada com a suíte, a rota M2 e uma
+> comparação byte-a-byte da saída antiga contra a nova. A fila foi **medida** (15 PRs abertos,
+> #56–#70) mas **não** drenada: nada foi mesclado nesta execução. O backlog abaixo herda a
+> reconciliação de 2026-09-06 e não foi reauditado item a item.
+> **Alcance herdado (2026-09-06):** base integrada da #51, mais #52–#54; reconciliação a pedido
+> explícito do mantenedor.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
@@ -20,7 +25,10 @@ memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem sabe
    antes de qualquer edição.
 2. **Liste os PRs abertos do loop antes de escolher.** Um item com PR aberto não está livre.
    Consulte o estado atual no GitHub. Use `tools/loop/unclaimed_surface.sh` antes de escolher
-   (heurística por refs e camada) e `tools/loop/merge_queue_report.sh` depois de escolher.
+   (heurística por refs e camada) e `tools/loop/merge_queue_report.sh` depois de escolher —
+   `--claims` para posse por arquivo, `--order` para a sequência de merge, `--verify` para a
+   suíte sobre a árvore combinada. **São esses dois scripts, e só eles**: o
+   `merge_order_report.sh` foi fundido no `--order` (ver histórico abaixo).
    Refs de branches não provam, sozinhos, que os respectivos PRs continuam abertos.
 3. **Escolha exatamente UM item** — o de maior prioridade que caiba num PR pequeno e revisável.
    Um PR grande não é produtividade: é uma revisão que não vai acontecer.
@@ -116,11 +124,26 @@ Itens sem critério de pronto não entram aqui.
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
 
-- [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
-      `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
-      contagem. Achado de #31, reconfirmado aqui: os dois existem lado a lado na árvore integrada.
-      → Fundir num só, com a contagem correta (a de #30, que exclui PRs já mesclados).
-      *Pronto:* um único script em `tools/loop/`, e o protocolo acima apontando para ele.
+- [~] **Dois relatórios de fila onde deve haver um.** Reivindicado pelo PR desta execução
+      (`ai/loop-20260907T065854Z`): `merge_order_report.sh` (#31) virou o subcomando `--order` de
+      `merge_queue_report.sh` (#30) e o arquivo saiu. A fusão sempre foi o plano — o próprio #31
+      registrou que nasceu como arquivo à parte "porque o #30 está mexendo" no outro, e listou
+      "fundir depois do #30" como próximo passo (`docs/loop/runs/2026-09-05T150119Z.md`). O #30
+      mesclou; a dívida venceu.
+
+      **A duplicação real era a enumeração da fila, não a contagem.** Os dois já tinham
+      convergido na regra de contagem (ambos excluíam PR mesclado por ancestralidade) — o que
+      sobrava eram duas cópias de `in_queue`/`pr_numbers` e do fetch de `refs/pull/*`, livres para
+      divergir de novo. **O que o `--order` preserva de propósito:** ele *não* resolve o conflito
+      do ledger, ao contrário do `build_worktree` que o `--verify` usa. São perguntas diferentes —
+      `--verify` pergunta "o código combinado passa nos testes?" e descarta o ledger porque ele
+      não entra em teste nenhum; `--order` pergunta "onde a corrente arrebenta para quem vai
+      mesclar à mão?", e o ledger é justamente o elo que arrebenta. Conflatar as duas apagaria o
+      achado; está escrito no comentário das duas funções.
+
+      **Causa de fundo, agora fechada:** o portão de CI só rodava `bash -n` no
+      `unclaimed_surface.sh`. Os dois relatórios de fila não tinham guarda nenhuma, e foi por isso
+      que puderam divergir sem que nada reclamasse. O passo agora varre `tools/loop/*.sh`.
 
 ### P1 — higiene estrutural
 
@@ -301,6 +324,26 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
   vermelha. Duas conclusões: (a) só a suíte corrida sobre a árvore integrada prova que a fila
   mescla; (b) um PR que **remove** um símbolo público conflita silenciosamente com todo PR aberto
   que o use — ao remover, `grep` o símbolo nos ramos abertos, não só na árvore.
+
+## Estado da fila medido em 2026-09-07T07:00Z
+
+Medido com o `--order` recém-fundido, sobre `origin/main` em `34634d0`. É uma fotografia, não uma
+contagem viva: confirme no GitHub antes de agir.
+
+**15 PRs abertos (#56–#70). Em ordem cronológica, 4 entram limpos (#56, #58, #59, #62) e 11 pedem
+resolução à mão.** Onze dos onze conflitam em `docs/LOOP_LEDGER.md`, como esperado. O que **não**
+é mecânico:
+
+- **#63 conflita além do ledger** — `.gitignore`, `addons/README.md` e `docs/PROJECT_CONTRACT.md`.
+- **#64 e #66 conflitam em `addons/README.md`.** As cinco remoções da ADR-0010 abertas em paralelo
+  (#60 `curved_lines_2d`, #62 `phantom_camera`, #63 `guide`, #64 `GDDraw`, #66 `yard`) disputam
+  todas a mesma tabela de addons — é exatamente a contradição que o #67 propõe fechar derivando a
+  tabela do disco. **Mesclar o #67 primeiro provavelmente barateia as outras cinco.**
+- **Sobreposição silenciosa a verificar com `--verify`:** #61 × #70 tocam ambos
+  `game/audio/audio_director.gd`, e #61 × #69 tocam ambos `docs/TEST_MATRIX.md`. O merge textual
+  passa; quem decide é a suíte.
+
+`tools/loop/` não tinha dono na fila — foi por isso que este item pôde ser escolhido.
 
 ## Histórico
 
