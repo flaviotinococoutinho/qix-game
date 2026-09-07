@@ -11,6 +11,10 @@
 > **Alcance:** inventário das oito pastas de `addons/`, cruzado por caminho (`addons/<pasta>`), por
 > `uid://` e por `class_name` contra `game/`, `ui/`, `app/`, `tools/`, `tests/`, `content/` e
 > `project.godot`. A posse de `addons/guide` foi remedida por `grep` antes da remoção desta data.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** inventário das oito pastas de `addons/` (eram nove; `yard` saiu nesta data), cruzado
+> por caminho (`addons/<pasta>`), por `class_name` e por posse de `uid://` contra `game/`, `ui/`,
+> `app/`, `tools/`, `tests/`, `content/` e `project.godot`.
 > Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um problema aberto —
 > só registra quem consome o quê hoje.
 > `GDDraw` saiu nesta data pela ADR-0010; as outras seis `a-remover` continuam por remover, uma por
@@ -46,7 +50,6 @@ Somadas, as seis pastas `a-remover` ocupam ~7,9 MB e declaram 59 cenas que nenhu
 Somadas, as seis pastas `a-remover` ocupam ~9,3 MB e declaram 71 cenas que nenhum leitor deste
 | `phantom_camera` | `a-remover` | 2,2 MB de direção de câmera. O campo é 240×320 fixo, sem câmera que se mova. |
 | `softbody2d` | `a-remover` | 112 KB de corpo mole por Voronoi. Sem física no domínio, por invariante 1. |
-| `yard` | `a-remover` | 1,1 MB de base de dados de recursos. `content/` já é transacional pela ADR-0008. |
 
 Somadas, as seis pastas `a-remover` ocupam ~8,8 MB e declaram 82 cenas que nenhum leitor deste
 jogo precisa abrir.
@@ -83,6 +86,15 @@ A linha do `exclude_filter` **não** sai junto com a pasta: um checkout que reba
 AssetLib recria o diretório em disco, e `.gitignore` não cobre o payload de export. Reaparecendo,
 `addons_manifest_test.gd` fica vermelho por pasta sem linha no inventário — que é exatamente a
 barreira que a ADR-0010 quis comprar.
+Somadas, as seis pastas `a-remover` que restam ocupam ~10,4 MB e declaram 92 cenas que nenhum
+leitor deste jogo precisa abrir.
+
+`yard` (1,1 MB, 108 arquivos, 9 cenas) saiu em 2026-09-07, primeira das sete remoções previstas
+pela ADR-0010 a ser executada. A linha de `exclude_filter` **continua** citando `addons/yard/**`
+nos dois presets, pela mesma razão que `guide_examples/**` e `samples/**` continuam lá: um checkout
+que rebaixe o addon pela AssetLib recria o caminho em disco, e o filtro cobre o que o `.gitignore`
+não cobre. O teste só exige a linha enquanto a pasta é declarada; mantê-la é barato e cobre a
+recaída.
 
 ## Como acrescentar um addon
 
