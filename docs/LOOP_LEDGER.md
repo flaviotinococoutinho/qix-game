@@ -1,7 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** suíte completa (263 testes, 12734 asserções, 0 falhas) e rota M2 (825‰, `errors`
+> vazio) reexecutadas nesta árvore. Editados aqui **só** os itens que esta execução tocou: o P2 do
+> `boss_behavior_controller`, o P0 da drenagem (que #55 mesclou) e o `[~]` do HUD (#52, idem).
+> **O estado da fila neste arquivo continua desatualizado de propósito** — #56 e #57 reivindicam a
+> reconciliação e o teto de meta-PR proíbe um terceiro. Consulte a fila real no GitHub.
+> **Alcance herdado (2026-09-06, `c4cedb1`):** base integrada da #51, mais #52–#54.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
@@ -86,11 +91,16 @@ Itens sem critério de pronto não entram aqui.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
-- [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
-      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
-      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
-      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
-      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+- [x] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** ✅ mesclado como
+      **#55** (`34634d0`, "integrate open queue #20–#54"), que é a base desta execução. Metade do
+      critério de pronto cumpriu-se: `main` está muito além de `cba520a`. A outra metade não:
+      às 04:00Z de 2026-09-07 a fila estava de novo em **12 PRs abertos** (#56–#67), ou seja
+      voltou de 0 a 12 em ~9 h — a mesma cadência que o item seguinte descreve, agora medida uma
+      quinta vez. A reconciliação do estado da fila **não** foi feita aqui: #56 e #57 já a
+      reivindicam, e o teto de meta-PR do protocolo proíbe um terceiro.
+      Histórico preservado pelo que ele ensinou: o #19 drenou os 18 primeiros e a fila voltou a 30
+      em ~38 h; o #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
+      *Critério que era:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
@@ -168,11 +178,24 @@ Itens sem critério de pronto não entram aqui.
       zera `_paused_voices`. *Pronto:* uma só regra de guarda para música e vozes, com
       `audio_pause_test.gd` a continuar verde.
 
-- [ ] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** Achado
-      de #36: `domain_purity_test.gd` varre `game/simulation/`, `game/rules/` e `game/session/`,
-      mas o controlador do boss é domínio morando em `game/enemies/`, pasta que o invariante 6
-      trata como apresentação. Ou o arquivo muda de pasta, ou a varredura passa a conhecê-lo pelo
-      nome. *Pronto:* o arquivo está sob uma das duas guardas, e o `CLAUDE.md` diz qual.
+- [~] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** Achado
+      de #36, reivindicado pelo PR desta execução (`ai/loop-20260907T040000Z`), que **mediu o
+      buraco antes de tapá-lo**: um `Time.get_ticks_msec()` plantado no arquivo passava com
+      `262 testes, 0 falhas` e passa a falhar em `\bTime\.` (invariante 1). Escolhida a varredura
+      por nome (`DOMAIN_FILES` em `domain_purity_test.gd`), não a mudança de pasta — é a saída
+      reversível, e mover mexeria em cinco `preload` e num `class_name`. A costura entre as duas
+      guardas passou a ser mecânica: `test_no_file_falls_between_the_two_purity_guards` confronta
+      `EXEMPT_FILES` da guarda de apresentação com `DOMAIN_FILES` mais `UNGUARDED_BY_DESIGN` (só o
+      composition root), e uma isenção nova que não escolha um lado fica vermelha. Relato em
+      `docs/loop/runs/2026-09-07T040000Z.md`.
+
+- [ ] **`round_visual_definition.gd` é o mesmo problema no sentido inverso, e agora custa menos.**
+      Derivado da execução acima: apresentação morando em `game/rules/`, hoje tolerada por uma
+      exceção escrita **dentro do comentário das `RULES`** — prosa, não lista confrontável, e por
+      isso invisível para qualquer teste. O mecanismo de lista-com-motivo já existe do outro lado
+      da costura; falta aplicá-lo aqui. Ver também o item irmão logo abaixo, que enuncia a mesma
+      dívida pela via da guarda de valor real.
+      *Pronto:* a exceção é uma entrada declarada e verificada, ou o visual sai de `game/rules/`.
 
 - [ ] **`round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
       Achado de #25: é `Resource` de `game/rules/` com campos de cor, e cor é `float` por
@@ -246,7 +269,7 @@ O que continua aberto:
       por `round_transition_cadence_test.gd`: percorre a intro inteira e prova que checksum e
       replay não mexem. **Falta o julgamento estético:** ninguém viu a passagem numa tela.
 
-- [~] **Geometria real do HUD — #52 integrado no candidato de merge.**
+- [x] **Geometria real do HUD — #52, mesclado em `main` dentro do #55.**
       `tools/verify_hud_row_geometry.gd` mede a construção durante frames, não só as constantes
       no `_initialize()` do runner. O teste horizontal e os comentários corrigidos também
       foram preservados. A sonda passou a fazer parte do CI. Aprovação estética continua humana.
