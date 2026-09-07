@@ -1,10 +1,13 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** em 2026-09-07T09:00Z, só os marcadores do backlog foram reconciliados contra a fila
+> real do GitHub (17 PRs abertos, #56–#72) e dois itens foram reescritos — as remoções da ADR-0010
+> e o achado de licença. O corpo herdado de 2026-09-06 não foi reauditado.
+> Em 2026-09-06 (`c4cedb1`): base integrada da #51, mais #52–#54; reconciliação a pedido explícito
+> do mantenedor. As evidências finais ficam no workflow Verificação e em seu `manifest.json`,
+> vinculado ao commit e à árvore testados. Registros anteriores são históricos, não contagens
+> atuais. Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
 
 > **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
 > pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
@@ -116,7 +119,7 @@ Itens sem critério de pronto não entram aqui.
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
 
-- [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
+- [~] **Dois relatórios de fila onde deve haver um.** *(Reivindicado pelo #71, 2026-09-07.)* `tools/loop/merge_order_report.sh` (#31) e
       `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
       contagem. Achado de #31, reconfirmado aqui: os dois existem lado a lado na árvore integrada.
       → Fundir num só, com a contagem correta (a de #30, que exclui PRs já mesclados).
@@ -124,16 +127,26 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`). **As sete estão agora
+      reivindicadas, nenhuma mesclada:** `curved_lines_2d` #60, `phantom_camera` #62, `guide` #63,
+      `GDDraw` #64, `yard` #66, `softbody2d` #72 e `curve2collision` pelo PR desta execução
+      (`ai/loop-20260907T090000Z`). A ADR exige, por remoção, a mesma evidência de posse de
+      `uid://` usada na poda dos demos.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
-      corpo.
+      corpo. **Não escolha este item:** não sobrou pasta livre — o que falta é revisão humana dos
+      sete PRs, não mais trabalho do loop.
 
-- [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
+      **Duas lições de 2026-09-07T09:00Z, para quem drenar esses sete:**
+      (a) `addons/<pasta>/**` foi deixado de propósito no `exclude_filter` dos dois presets, pelo
+      mesmo precedente de `guide_examples/**` e `samples/**` (AssetLib recria a pasta em disco; o
+      `.gitignore` não cobre esse caminho) — e porque essa é **uma linha só** que os sete PRs
+      tocariam em conjunto. Se um dos sete a editar, os outros seis conflitam nela.
+      (b) O contador de asserções cai ~6 por pasta removida (asserções por-pasta de
+      `addons_manifest_test.gd`), e o de **testes** não muda. Uma queda de asserções depois destes
+      merges não é teste perdido; qualquer outro número, sim.
+
+- [~] *(Reivindicado pelo #69, 2026-09-07.)* **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
       #38, #39 e #41 acrescentaram testes depois. A árvore integrada roda **232 testes / 12534
       asserções**. → Reconciliar de novo e, de preferência, atacar a causa: a matriz é contagem
@@ -141,6 +154,16 @@ Itens sem critério de pronto não entram aqui.
       *Pronto:* a matriz bate com a saída de `run_tests.gd`, ou a contagem é gerada, não digitada.
 
 ### P2 — integridade de contexto
+
+- [ ] **[requer decisão do titular] A `LICENSE` da raiz é a licença de um addon de terceiro, com o
+      copyright dele.** Achado de 2026-09-07T09:00Z, ao remover `addons/curve2collision`.
+      `LICENSE` e `addons/curve2collision/LICENSE` tinham o mesmo SHA-256 (`daf1b515…`, 1065 bytes),
+      e o arquivo da raiz traz `Copyright (c) 2026 seina369` — o autor do addon nomeado como titular
+      do repositório inteiro. `docs/IMPLEMENTATION_STATUS.md` já registrava a coincidência desde
+      2026-09-04, mas numa redação que morria junto com a pasta; foi reescrita para se sustentar
+      sozinha. **O loop não pode fechar este item:** escolher a licença de um jogo é ato do titular,
+      não de um agente. *Pronto:* `LICENSE` declara a licença pretendida e o titular corretos, e a
+      pendência sai de `IMPLEMENTATION_STATUS`.
 
 - [x] **`session.records` só é preenchido pela via PLAYING→vitória/derrota.** ✅ entregue pelo #49
       (`ai/loop-20260906T115826Z`), integrado aqui: o contrato foi para o cabeçalho de
@@ -160,7 +183,7 @@ Itens sem critério de pronto não entram aqui.
       speed-up ou não? *Pronto:* ou existe produtor e teste de comportamento, ou as duas regras
       saem de `GameRules` (o que **invalida replays**, invariante 7 — é ADR, não commit).
 
-- [ ] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** Sobra do #46
+- [~] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** *(Reivindicado pelo #70, 2026-09-07.)* Sobra do #46
       (`ai/loop-20260906T085912Z`), que fez a pausa alcançar as oito vozes de SFX — antes ela
       parava só a música e o `death`/`game_over` terminava por cima do campo congelado. As vozes
       passaram a ser comandadas sempre; a música continua atrás de `is_inside_tree()`. No runtime
@@ -168,7 +191,7 @@ Itens sem critério de pronto não entram aqui.
       zera `_paused_voices`. *Pronto:* uma só regra de guarda para música e vozes, com
       `audio_pause_test.gd` a continuar verde.
 
-- [ ] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** Achado
+- [~] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** *(Reivindicado pelo #68, 2026-09-07.)* Achado
       de #36: `domain_purity_test.gd` varre `game/simulation/`, `game/rules/` e `game/session/`,
       mas o controlador do boss é domínio morando em `game/enemies/`, pasta que o invariante 6
       trata como apresentação. Ou o arquivo muda de pasta, ou a varredura passa a conhecê-lo pelo
@@ -224,13 +247,13 @@ O que continua aberto:
       `CURSOR_KNOWN_DEBT` e a seção de `ART_DIRECTION` reescritos no mesmo commit, e alguém
       confirmou por captura que o cursor não virou um borrão claro sobre o campo.
 
-- [ ] **O canal sonoro da exposição não foi feito.** O item original pedia som **e** háptica ao
+- [~] **O canal sonoro da exposição não foi feito.** *(Reivindicado pelo #61, 2026-09-07.)* O item original pedia som **e** háptica ao
       cruzar `TrailExposure.WARNING_RATIO`; #39 entregou só a háptica (`app/haptic_feedback.gd`).
       Falta o cue que suba com a exposição, com prioridade declarada entre vozes — o envelope por
       cue de #23 já dá a ferramenta. *Pronto:* cruzar o limiar é audível, com prioridade
       declarada, **sem alterar checksum**.
 
-- [ ] **`docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** Medido na árvore
+- [~] **`docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** *(Reivindicado pelo #65, 2026-09-07.)* Medido na árvore
       integrada: **zero** ocorrências de `ADR-0011` no documento de arte, embora a ADR decida um
       traço visual da ameaça; e a floritura de captura de #37 também não está escrita lá. Quem lê
       só o documento de arte não encontra nenhuma das duas.
