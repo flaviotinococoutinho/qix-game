@@ -1,7 +1,14 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** suíte completa (268 testes, 13.994 asserções, 0 falhas) e rota M2 reexecutadas
+> nesta árvore. Editados aqui **só** os dois itens que esta execução tocou: o P2 do
+> `round_visual_definition` e o item novo sobre `game/session/`.
+> **O estado da fila neste arquivo continua desatualizado de propósito** — a fila real estava em
+> **18 PRs abertos** (#56–#73) às 10:00Z; #56 e #57 reivindicam a reconciliação e o teto de
+> meta-PR do protocolo proíbe um terceiro. Consulte a fila real no GitHub.
+> **Alcance herdado (2026-09-06, `c4cedb1`):** base integrada da #51, mais #52–#54;
+> reconciliação a pedido explícito do mantenedor.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
@@ -174,10 +181,33 @@ Itens sem critério de pronto não entram aqui.
       trata como apresentação. Ou o arquivo muda de pasta, ou a varredura passa a conhecê-lo pelo
       nome. *Pronto:* o arquivo está sob uma das duas guardas, e o `CLAUDE.md` diz qual.
 
-- [ ] **`round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
-      Achado de #25: é `Resource` de `game/rules/` com campos de cor, e cor é `float` por
-      construção. Hoje passa por exceção nomeada na guarda. *Pronto:* ou a exceção está escrita
-      onde a guarda é enunciada, ou o visual sai de `game/rules/`.
+- [~] **`round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
+      Achado de #25, reivindicado pelo PR desta execução (`ai/loop-20260907T100000Z`), que
+      **mediu o buraco antes de tapá-lo** e encontrou um maior do que o item descrevia. O item
+      falava de atrito futuro na guarda de valor real; o que estava aberto era o invariante 8:
+      um `var _palette := content.visual` plantado em `GameSession._start_current_round` — a
+      apresentação a entrar no tick — passava com **`262 testes, 0 falhas`**. Nenhuma das duas
+      guardas de pureza podia vê-lo: a do domínio procura símbolos do mundo real (`Time.`,
+      `float`) e `content.visual` não é um deles; a da apresentação varre direção de chamada em
+      pastas de apresentação, e `game/session/` não é uma delas.
+      Escolhida a exceção declarada (`PRESENTATION_ONLY` em
+      `tests/unit/rules_presentation_exception_test.gd`, arquivo novo para não disputar
+      `domain_purity_test.gd` com o #68), não a mudança de pasta — que mexeria nos `.tres` de
+      `content/` e exigiria regeneração transacional. A isenção deixou de ser prosa e passou a
+      ser paga: sem `canonical_bytes()`, fora do `config_hash`, não nomeada pelo domínio, e uma
+      prova de comportamento com duas paletas opostas a fecharem no mesmo checksum. A linha de
+      ownership em `docs/PROJECT_CONTRACT.md` é o critério de pronto que o item pedia.
+      Relato em `docs/loop/runs/2026-09-07T100000Z.md`.
+
+- [ ] **`game/session/` não é varrido por guarda nenhuma na direção que importa.** Achado da
+      execução acima, e generalização da mutação que ela mediu: `presentation_purity_test.gd` não
+      varre `game/session/`, e `domain_purity_test.gd` varre-o **por símbolo do mundo real**, não
+      por direção de chamada. O resultado é que a sessão pode ler qualquer coisa de apresentação
+      sem ninguém ficar vermelho — o caso do visual está agora coberto por um teste dedicado, mas
+      **só o do visual**. → Levantar que outros tipos de apresentação são alcançáveis a partir de
+      `game/session/` e decidir se a guarda de direção passa a cobrir a pasta.
+      *Pronto:* ou `game/session/` está sob uma guarda de direção, ou está escrito por que não
+      precisa, com a lista do que foi levantado.
 
 - [ ] **A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.**
       `doc_freshness_header_test.gd` (#6) exige a linha `> **Verificado em**` e fica verde com ela
