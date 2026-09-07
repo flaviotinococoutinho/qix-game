@@ -1,10 +1,10 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** auditoria de frescor de `docs/PERFORMANCE.md` contra o domínio, e a anatomia do
+> conflito de `addons/README.md` medida em pares reais (#60×#62). Suíte verde nesta árvore.
+> Não mede tempo de GPU, frame pacing, export nem Android. Registros anteriores são históricos,
+> não contagens atuais — a fila real consulta-se no GitHub, não aqui.
 
 > **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
 > pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
@@ -133,6 +133,22 @@ Itens sem critério de pronto não entram aqui.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
 
+      **Anatomia do conflito, medida em 2026-09-07** (`ai/loop-20260907T130000Z`), afinando o
+      "seis abortos" do #76: **os removedores não conflitam na tabela de inventário**. Par #60
+      (linha 3) × #62 (linha 7): linhas não adjacentes, cada um remove a sua, essa parte mescla
+      limpa. Os sete colidem em **quatro fatos derivados escritos à mão** em volta da tabela —
+      (1) `Alcance: inventário das nove pastas`; (2) a frase `Somadas, as sete pastas… ~11,5 MB…
+      101 cenas`; (3) uma seção `## Remoções já executadas` inserida **no mesmo ponto de
+      ancoragem** pelos sete; (4) um parágrafo final sobre `exclude_filter` **idêntico** nos sete.
+      Nenhum dos quatro é o invariante da ADR-0010 ("pasta em disco tem linha que diz por quê") —
+      esse já mescla. É ornamento derivado a serializar sete PRs.
+      **Observação sobre o #67, que está aberto:** ele escolhe a resposta oposta — mantém a frase
+      de fecho e prova-a contra o disco. Fica correta e **continua** ponto de serialização, agora
+      com custo maior: hoje uma resolução errada da frase é um número feio; com o #67 mesclado é
+      build vermelho em cada uma das sete remoções. A alternativa não explorada é **não escrever o
+      derivado** (o log de remoções já tem casa por execução em `docs/loop/runs/`). Decisão do
+      mantenedor: guardar o derivado (#67) ou dissolvê-lo. Não abri PR concorrente de propósito.
+
 - [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
       #38, #39 e #41 acrescentaram testes depois. A árvore integrada roda **232 testes / 12534
@@ -187,6 +203,21 @@ Itens sem critério de pronto não entram aqui.
       integrado; (b) decidir se alguma guarda barata pega contradição interna (ex.: recusar duas
       linhas de tabela com a mesma primeira coluna). *Pronto:* nenhum doc de `docs/` com duas
       afirmações concorrentes sobre o mesmo fato, e a decisão sobre (b) escrita.
+
+      **`docs/PERFORMANCE.md` auditado em 2026-09-07** (`ai/loop-20260907T130000Z`) — o único
+      documento de topo que **nenhum** dos 21 PRs abertos tocava. Não mentia: falhava por
+      **alcance largo demais**. O cabeçalho protegia o documento inteiro com "depende de hardware
+      que a nuvem não tem", verdade para o tempo e falso para geometria e payload, que saem de
+      `BoardState` e são iguais em qualquer máquina. Remedido na nuvem: as seis linhas estruturais
+      conferem exatamente (`225x283`, 63.675 células, 63.675 × 254.700 bytes/refresh,
+      `texture_create_count` 0/1, `sample_capacity` 240) e as de tempo divergem como se espera
+      (p95 legado 50.978 µs contra 32.304 µs no M2). O alcance passa a datar as duas espécies em
+      separado e `tests/unit/performance_doc_geometry_test.gd` amarra a parte estrutural ao
+      domínio — mutação verificada vermelha antes de ser dada como guarda.
+      **Padrão a procurar nos que faltam** (`PROJECT_CONTRACT`, `IMPLEMENTATION_STATUS`,
+      `SHIPPING_PASS`, `ART_DIRECTION`): não só a afirmação falsa, também o alcance que declara
+      inverificável o que é perfeitamente reverificável — custa quatro dias de dúvida e não fica
+      vermelho nunca.
 
 ### P3 — experiência e estética (o alvo real)
 
