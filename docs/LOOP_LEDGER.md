@@ -1,10 +1,10 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** censo da fila (11 PRs abertos, #56–#66) por integração de facto dos 11 ramos, e a
+> guarda de fecho do manifesto de `addons/`. Suíte em `main` **262 testes / 12719 asserções**;
+> com a guarda, **263 / 12723**, 0 falhas. Registros anteriores são históricos, não contagens
+> atuais. Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
 
 > **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
 > pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
@@ -116,6 +116,12 @@ Itens sem critério de pronto não entram aqui.
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
 
+      **Quinta medição, 2026-09-07T03:00Z: a #55 mesclou e a fila voltou a 11 em ~7 h** (#56–#66),
+      contra o teto de dois do protocolo. O padrão está agora medido cinco vezes e não se corrige
+      sozinho — a drenagem manual compra horas, não dias. Enquanto não houver ADR, a execução que
+      encontrar o teto estourado faz o que esta fez: escolhe um item que **não dispute arquivo**
+      com nenhum PR aberto, em vez de somar o décimo segundo.
+
 - [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
       `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
       contagem. Achado de #31, reconfirmado aqui: os dois existem lado a lado na árvore integrada.
@@ -124,21 +130,36 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
       tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+      continuam em disco. **Cinco já têm PR aberto** (censo de 2026-09-07T03:00Z): `curved_lines_2d`
+      (#60), `phantom_camera` (#62), `guide` (#63), `GDDraw` (#64), `yard` (#66). **Livres:
+      `curve2collision` e `softbody2d`** — são as duas menores (48 KB e 112 KB, zero cenas), o que
+      as torna o resto mecânico do item, não o seu miolo.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
 
+      **Correção do "sem disputar arquivo com ninguém": as sete remoções disputam, sim, um arquivo
+      — `addons/README.md`.** Medido em 03:00Z integrando os 11 ramos abertos: #62–#66 conflitam
+      nele, e o conflito é **semântico**. Cada PR reescreve a frase de fecho da tabela recalculando-a
+      como se fosse a única remoção — #60 escreveu `as seis pastas … ~7,9 MB … 59 cenas`, #62
+      `~9,3 MB … 71 cenas`, #63 `~8,8 MB … 82 cenas`. Mescladas as cinco restam **duas** pastas, e
+      nenhum dos três números descreve essa árvore. Quem drenar a fila **recalcula o fecho à mão
+      depois do último merge**; `--ours`, `--theirs` e união automática todos mentem aqui.
+      Desde 03:00Z isso não passa mais em silêncio: ver o item de frescor no P2.
+
 - [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
-      #38, #39 e #41 acrescentaram testes depois. A árvore integrada roda **232 testes / 12534
-      asserções**. → Reconciliar de novo e, de preferência, atacar a causa: a matriz é contagem
-      escrita à mão sobre um runner que varre diretório.
+      #38, #39 e #41 acrescentaram testes depois. → Reconciliar de novo e, de preferência, atacar a
+      causa: a matriz é contagem escrita à mão sobre um runner que varre diretório.
       *Pronto:* a matriz bate com a saída de `run_tests.gd`, ou a contagem é gerada, não digitada.
+
+      **A defasagem cresceu, medida em 03:00Z:** o documento afirma **174 testes / 11.837
+      asserções** em três lugares (linhas 4, 22 e 76); `main` roda **262 / 12719**. São 88 testes de
+      atraso, e a divergência é justamente do tipo que o item de frescor do P2 acaba de mostrar ser
+      barato de amarrar — a contagem é derivada. Esta execução **não** mexeu na matriz de propósito:
+      o #61 a está editando, e um segundo editor no mesmo arquivo é o conflito que o teto de dois
+      PRs existe para evitar.
 
 ### P2 — integridade de contexto
 
@@ -187,6 +208,17 @@ Itens sem critério de pronto não entram aqui.
       integrado; (b) decidir se alguma guarda barata pega contradição interna (ex.: recusar duas
       linhas de tabela com a mesma primeira coluna). *Pronto:* nenhum doc de `docs/` com duas
       afirmações concorrentes sobre o mesmo fato, e a decisão sobre (b) escrita.
+
+      **(b) tem a primeira resposta, e ela é "sim, quando o fato é derivado".** Em 03:00Z
+      (`ai/loop-20260907T030045Z`), `test_removal_totals_match_the_folders_on_disk` passou a derivar
+      do disco quantas pastas continuam `a-remover` e quantas cenas somam, conferindo contra a frase
+      de fecho de `addons/README.md` — a linha que as cinco remoções abertas contradiziam entre si.
+      Provada por mutação: simulada a remoção de `yard` sem atualizar o fecho, a guarda acusa `sete
+      (7) mas a tabela declara 6` e `promete 101 cenas, mas o disco tem 92`. **A lição generaliza:
+      número derivado escrito à mão é o que envelhece primeiro, e é barato de amarrar; prosa de
+      julgamento não é, e não vale tentar.** Os megabytes ficaram deliberadamente de fora — 6,8 MB
+      por tamanho de arquivo contra 16 MB por blocos no mesmo checkout, e uma guarda sobre isso
+      ficaria vermelha conforme o sistema de arquivos. (a) continua por fazer.
 
 ### P3 — experiência e estética (o alvo real)
 
