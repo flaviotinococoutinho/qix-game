@@ -15,6 +15,10 @@
 > **Alcance:** inventário das oito pastas de `addons/` (eram nove; `yard` saiu nesta data), cruzado
 > por caminho (`addons/<pasta>`), por `class_name` e por posse de `uid://` contra `game/`, `ui/`,
 > `app/`, `tools/`, `tests/`, `content/` e `project.godot`.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** inventário das oito pastas de `addons/` (eram nove; `softbody2d` saiu nesta data),
+> cruzado por caminho (`addons/<pasta>`), por `class_name` e por posse de `uid://` contra `game/`,
+> `ui/`, `app/`, `tools/`, `tests/`, `content/` e `project.godot`.
 > Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um problema aberto —
 > só registra quem consome o quê hoje.
 > `GDDraw` saiu nesta data pela ADR-0010; as outras seis `a-remover` continuam por remover, uma por
@@ -95,6 +99,24 @@ nos dois presets, pela mesma razão que `guide_examples/**` e `samples/**` conti
 que rebaixe o addon pela AssetLib recria o caminho em disco, e o filtro cobre o que o `.gitignore`
 não cobre. O teste só exige a linha enquanto a pasta é declarada; mantê-la é barato e cobre a
 recaída.
+| `phantom_camera` | `a-remover` | 2,2 MB de direção de câmera. O campo é 240×320 fixo, sem câmera que se mova. |
+| `yard` | `a-remover` | 1,1 MB de base de dados de recursos. `content/` já é transacional pela ADR-0008. |
+
+Somadas, as seis pastas `a-remover` que restam ocupam ~11,4 MB e declaram 101 cenas que nenhum
+leitor deste jogo precisa abrir.
+
+`softbody2d` (112 KB, 14 arquivos, 0 cenas, 4 `.gd`) saiu em 2026-09-07, executando uma das sete
+remoções previstas pela ADR-0010. Era a pasta cuja permanência contradizia o invariante 1 de forma
+mais direta: um plugin de corpo mole por Voronoi só tem sentido com física, e o domínio deste jogo
+não tem física nenhuma — é ponto fixo 8.8 sobre `PackedByteArray`. Com ela saem três símbolos do
+namespace global (`SoftBody2D`, `SoftBody2DRigidBody`, `Voronoi2D`), sendo que `SoftBody2D` é
+exatamente o nome que alguém procurando "corpo/colisão" no autocompletar do editor encontraria
+primeiro — e encontraria uma resposta errada sobre como este jogo funciona.
+
+A linha de `exclude_filter` **continua** citando `addons/softbody2d/**` nos dois presets, pela
+mesma razão que `guide_examples/**` e `samples/**` continuam lá: um checkout que rebaixe o addon
+pela AssetLib recria o caminho em disco, e o filtro cobre o que o `.gitignore` não cobre. A guarda
+só exige a linha enquanto a pasta é declarada no manifesto; mantê-la é barato e cobre a recaída.
 
 ## Como acrescentar um addon
 
