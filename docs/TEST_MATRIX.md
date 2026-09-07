@@ -4,6 +4,14 @@
 > **Alcance:** `tests/run_tests.gd` reexecutado (264 testes, 12.728 asserções, 0 falhas) e
 > `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Os
 > testes Python do parser Metal HUD e o run de shipping não foram reexecutados.
+> **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** medido sobre `34634d0` acrescido do cue sonoro da exposição.
+> `tests/run_tests.gd` reexecutado (**268 testes, 12.751 asserções, 0 falhas**) e
+> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Só a
+> **contagem global** e a linha de **feedback** foram reconciliadas; as demais linhas de
+> "Cobertura automatizada" continuam a descrever o estado de `cba520a` e permanecem no item P1
+> do `LOOP_LEDGER`. Os testes Python do parser Metal HUD e o run de shipping não foram
+> reexecutados.
 
 Última validação automatizada: **2026-09-03**, Godot
 **4.7.2-stable.mono.official** em macOS. Run de shipping:
@@ -23,6 +31,11 @@ Resultado atual: **264 testes, 12.728 asserções, 0 falhas e nenhum warning do 
 **2026-09-07** sobre `34634d0` (a integração de #20–#54), Godot **4.7.2-stable.official**,
 build Linux headless não-mono, em sandbox de nuvem sem editor e sem `libfennara`. Na mesma
 execução, `tools/verify_m2_capture_route.gd` fechou com `errors` vazio e a rota em 825‰.
+Resultado atual: **268 testes, 12.751 asserções, 0 falhas e nenhum warning do jogo** — medido em
+**2026-09-06** sobre `34634d0` (a integração da fila até #55) acrescido do cue sonoro da exposição,
+Godot **4.7.2-stable.official**, build Linux headless não-mono, em sandbox de nuvem sem editor e
+sem `libfennara`. Na mesma execução, `tools/verify_m2_capture_route.gd` fechou com `errors` vazio e
+a rota em 825‰.
 
 **Inventário da suíte (derivado, não digitado):** 50 arquivos de teste · 264 casos `test_*`.
 
@@ -52,7 +65,7 @@ testes Python do parser Metal HUD (**10/10**) e o subconjunto direcionado da tra
 | replay | reprodução determinística, checksum, round-trip binário e rejeição atômica de versão/seed/regras/geometria/estado inicial incompatíveis |
 | checksum dourado | valores literais fixados para `RULES_VERSION`, `SCHEMA_VERSION`, seed e `config_hash` das três rodadas de produção, e para o checksum inicial/final/serializado de uma rota de 177 ticks com o chefe ativo — falha quando o contrato de replay se move, verde quando só a apresentação muda (invariantes 7 e 8) |
 | entrada | teclado/InputMap, direção única/sobreposição, D-pad, stick com histerese, A/X/Start, estado independente por gamepad, deduplicação InputMap×raw de A/Start, multitouch, disconnect/reset e equivalência canônica gamepad×touch |
-| feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum; intenção e prioridade declaradas por cue, escada de prioridade do som igual à da háptica, e alocação de voz que recusa cortar um cue mais importante |
+| feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum; intenção e prioridade declaradas por cue, escada de prioridade do som igual à da háptica, e alocação de voz que recusa cortar um cue mais importante; o limiar de exposição soa **e** se sente com a mesma prioridade (35), o aviso é recusado quando algo mais alto acontece no mesmo tick, e a aresta é lida sem ser consumida — checksum imóvel ao longo de oito `sync` |
 | boss | validação dos perfis WANDER/PURSUIT/SWEEP, octantes inteiros, jitter determinístico, reflexão, pulso de velocidade, limites seguros, hash de regras e replay incompatível rejeitado antes da mutação |
 | conteúdo | três rodadas ordenadas, IDs/seeds únicos, referências externas separadas, fundos 225×283 aprovados, alvo 80%, curva crescente e três perfis externos de boss |
 | geração transacional | shadow staging, lock exclusivo por projeto via loopback, WAL v3 ancorado ao SHA do manifest, hashes/tamanhos de payload/backup, state machine integral, targets terminais, rollback/cache e recovery após interrupção/processo morto |

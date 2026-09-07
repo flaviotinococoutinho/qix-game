@@ -34,6 +34,17 @@ func plan(events: Array[GameEvent], exposure_crossed: bool = false) -> Dictionar
 	return best
 
 
+## Leitura pura: diz se `exposure` atravessaria o limiar contra a memória deste tick, **sem
+## a avançar**.
+##
+## Existe para que a aresta continue a ter um dono só. O canal sonoro do mesmo limiar precisa
+## da mesma resposta, e se cada canal guardasse a sua cópia de `_previous_exposure` bastaria
+## um `sync` desemparelhado — um canal desligado, um tick de arranque — para o jogador sentir
+## e não ouvir. O hub pergunta aqui antes de chamar `sync`, que é quem avança a memória.
+func would_cross_warning(exposure: float) -> bool:
+	return TrailExposure.crossed_warning(_previous_exposure, exposure)
+
+
 ## `exposure` é a leitura de `TrailExposure` para o tick que acabou de ser confirmado. O
 ## default `0.0` preserva o comportamento de quem sincroniza só por eventos.
 ##

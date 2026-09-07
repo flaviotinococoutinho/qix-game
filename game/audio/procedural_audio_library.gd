@@ -53,6 +53,22 @@ const CUE_RECIPES := {
 		"onset": &"announce", "attack_ms": 20.0, "release_ms": 108.0,
 		"hz": 330.0, "end_hz": 660.0, "seconds": 0.24, "gain": 0.26, "wave": 0,
 	},
+	## O único cue que **não** nasce de um `GameEvent`: nasce de uma aresta lida sobre
+	## o snapshot confirmado (`TrailExposure.crossed_warning`). Por isso não aparece em
+	## `QixAudioDirector.cue_for_kind` — ver `QixAudioDirector.EXPOSURE_CUE`.
+	##
+	## Um terço maior a subir, em seno macio: abre para cima e não resolve. É o papel a
+	## esticar sob o traço longo, não um alarme — a exposição foi escolhida pelo jogador,
+	## e o jogo confirma a aposta em vez de a repreender. O ganho fica abaixo do `capture`
+	## (0,30) e o anúncio sobe com folga, para nunca competir com o transiente de um
+	## acontecimento de facto. A prioridade 35 é a mesma do pulso háptico do mesmo limiar
+	## (`QixHapticFeedback._exposure_pulse`): ouvir e sentir descrevem o mesmo instante.
+	&"exposure": {
+		"intent": "a trilha deixou de ser um compromisso e virou uma aposta",
+		"priority": 35,
+		"onset": &"announce", "attack_ms": 26.0, "release_ms": 90.0,
+		"hz": 466.16, "end_hz": 622.25, "seconds": 0.20, "gain": 0.22, "wave": 0,
+	},
 	&"capture": {
 		"intent": "confirma território conquistado; a recompensa do laço",
 		"priority": 40,
