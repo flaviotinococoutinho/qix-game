@@ -5,6 +5,8 @@
 > por `class_name` contra `game/`, `ui/`, `app/`, `tools/`, `tests/`, `content/` e `project.godot`.
 > A primeira das sete remoções da ADR-0010 (`curved_lines_2d`) foi executada nesta data, com posse
 > de `uid://` medida. Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um
+> Uma das sete remoções da ADR-0010 (`phantom_camera`) foi executada nesta data, com posse de
+> `uid://` medida. Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um
 > problema aberto — só registra quem consome o quê hoje.
 
 Uma pasta em `addons/` sem uma linha aqui é uma decisão adiada: quem lê o repositório amanhã não
@@ -30,11 +32,11 @@ entre a tabela e o disco.
 | `fennara` | `ferramenta` | Autoload `_fennara_game_capture` (`project.godot`) e GDExtension de captura para sessões com o editor aberto. `bin/` não é versionado — daí o `Can't open dynamic library` esperado em toda execução headless. |
 | `godot_ai` | `ferramenta` | Único plugin habilitado em `[editor_plugins]`, mais o autoload `_mcp_game_helper`. É a ponte MCP das sessões locais. |
 | `guide` | `a-remover` | 2,7 MB de motor de entrada unificado. A entrada deste jogo passa por `GameInputAdapter` e pela fronteira da ADR-0006, que não delega a ele. Os demos (`guide_examples/`) já foram podados. |
-| `phantom_camera` | `a-remover` | 2,2 MB de direção de câmera. O campo é 240×320 fixo, sem câmera que se mova. |
 | `softbody2d` | `a-remover` | 112 KB de corpo mole por Voronoi. Sem física no domínio, por invariante 1. |
 | `yard` | `a-remover` | 1,1 MB de base de dados de recursos. `content/` já é transacional pela ADR-0008. |
 
 Somadas, as seis pastas `a-remover` ocupam ~7,9 MB e declaram 59 cenas que nenhum leitor deste
+Somadas, as seis pastas `a-remover` ocupam ~9,3 MB e declaram 71 cenas que nenhum leitor deste
 jogo precisa abrir.
 
 ## Remoções já executadas
@@ -45,6 +47,7 @@ A ADR-0010 decide que cada `a-remover` sai numa PR própria, com a mesma evidên
 | Pasta | Quando | Evidência |
 |---|---|---|
 | `curved_lines_2d` | 2026-09-06 | 296 arquivos, 3,4 MB, 42 cenas, 17 `class_name`. Os **170 `uid://`** declarados dentro dela não aparecem **nenhuma vez** fora dela no repositório versionado; nenhum dos 17 `class_name` é citado em `game/`, `ui/`, `app/`, `tools/`, `tests/`, `content/` ou `project.godot`; a única citação do caminho era o próprio `exclude_filter`. Ver `docs/loop/runs/2026-09-06T195841Z.md`. |
+| `phantom_camera` | 2026-09-06 | 203 arquivos, 2,2 MB, 30 cenas, 11 `class_name`. Os **122 `uid://`** declarados dentro dela não aparecem **nenhuma vez** fora dela no repositório versionado; nenhum dos 11 `class_name` é citado em `game/`, `ui/`, `app/`, `tools/`, `tests/`, `content/` ou `project.godot`; a única citação do caminho era o próprio `exclude_filter`. Ver `docs/loop/runs/2026-09-06T215930Z.md`. |
 
 O `exclude_filter` de uma pasta removida **fica** em `export_presets.cfg`, e
 `tests/integration/shipping_export_test.gd` passa a exigi-lo por preset: um checkout que rebaixe

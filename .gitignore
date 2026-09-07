@@ -57,6 +57,12 @@ samples/
 # nenhum dos class_name aparecia em game/, ui/, app/, tools/, tests/, content/
 # ou project.godot. A arte deste jogo é máscara R8 e shader, não SVG.
 addons/curved_lines_2d/
+# phantom_camera (Phantom Camera 0.11.0.3): 203 arquivos, 2,2 MB, 30 cenas,
+# 11 class_name, mais 13 fontes C# que este projeto — build não-mono — nem
+# compila. Nenhum dos seus 122 uid:// era citado de fora dela e nenhum dos
+# class_name aparecia em game/, ui/, app/, tools/, tests/, content/ ou
+# project.godot. O campo é 240×320 fixo: não há câmera que se mova.
+addons/phantom_camera/
 
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
