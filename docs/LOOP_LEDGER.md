@@ -1,7 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** desta data, só o item P1 da ADR-0010 e o achado novo sobre `TEST_MATRIX.md` foram
+> remedidos, contra `main` em `34634d0` e contra a fila de 16 PRs abertos (#56–#71) lida no GitHub
+> às 07:58Z. O resto do backlog **não** foi reverificado nesta execução — em particular, a nota de
+> integração abaixo e o item P0 descrevem a fila de 2026-09-06 e estão desatualizados; #56 e #57
+> tratam disso.
+> **Alcance herdado (2026-09-06):** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
@@ -124,14 +129,30 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`). Estado em 2026-09-07T08Z:
+      **`softbody2d` saiu** (PR desta execução, `ai/loop-20260907T075842Z`, com as quatro
+      varreduras medidas e 262 testes verdes); cinco estão reivindicadas por PR aberto —
+      `curved_lines_2d` (#60), `phantom_camera` (#62), `guide` (#63), `GDDraw` (#64), `yard` (#66);
+      **`curve2collision` (48 KB, 1 `class_name`) é a única livre.** A ADR exige, por remoção, a
+      mesma evidência de posse de `uid://` usada na poda dos demos. **Item ideal para uma execução
+      curta** — pequeno, mecânico e repetível.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
+
+      **Atrito medido, e é do mecanismo, não das remoções:** as seis remoções tocam a mesma tabela
+      de `addons/README.md`, e cada uma reconta o fecho ("as sete pastas ocupam ~11,5 MB") à mão. O
+      #67 achou o mesmo e propõe derivar o fecho do disco — é a correção certa e nenhuma remoção
+      deve antecipá-la. Enquanto ela não mescla, **espere conflito só nessa frase** ao drenar, e
+      resolva-a recontando contra o disco, não por união.
+
+- [ ] **`docs/TEST_MATRIX.md:126` nomeia três fontes de ruído de diagnóstico cujas pastas estão a
+      sair.** A frase cita "exemplos do GUIDE sem o plugin correspondente, C# sem projeto
+      selecionável e entradas antigas do SoftBody2D no editor". `softbody2d` já saiu; `guide` (#63)
+      e o `.cs` de `yard` (#66) saem nos seus PRs. Nenhuma remoção deve corrigir a frase sozinha —
+      seriam três edições concorrentes no arquivo que o #69 já disputa.
+      *Pronto:* uma reconciliação única depois das sete remoções, dizendo quais fontes de ruído
+      sobram de facto.
 
 - [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
