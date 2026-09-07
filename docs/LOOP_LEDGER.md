@@ -316,6 +316,25 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
   antes de a árvore processar um frame, e a altura de um `Label` fica presa a um mínimo obsoleto
   (23 px). Depois do primeiro frame assenta no valor pedido. O comentário `# evita os 23 px padrão`
   em `_add_label` está correto no runtime real; não o "corrija" pelo que o runner mostra.
+- **Suíte verde não é portão verde, e essa diferença já reprovou um PR.** Medido em
+  2026-09-07T15:08Z no #79: `run_tests.gd` fechou com **265 testes, 0 falhas** e o CI reprovou
+  mesmo assim, porque `tools/ci/headless_gate.py` também conta **erros do motor** no log e viu
+  `engine_errors=3`. Causa: um `QixGameHud` que o teste criou e **não libertou** — o nó leva
+  consigo as `Label` filhas e o TextServer reporta `ShapedTextDataAdvanced`/`FontAdvanced` vazados
+  à saída. Regra prática: **todo teste que instancia um nó de UI chama `free()` em todos os
+  caminhos**, inclusive os que terminam num `ne()`/`eq()` no fim da função.
+  Como reproduzir o CI de facto, já que o portão recusa um checkout com cache
+  (`use a fresh checkout for optional native-editor isolation` vem de `.godot/extension_list.cfg`
+  já ter a fennara registada depois de um `--import` local):
+
+  ```bash
+  git clone -q --local --no-hardlinks -b <branch> <repo> /tmp/fresh
+  python3 /tmp/fresh/tools/ci/headless_gate.py --godot "$G" --project /tmp/fresh \
+    --logs /tmp/qix-gate --isolate-missing-editor-extension
+  ```
+
+  Sai um JSON com `status` e `engine_errors` por log (import, suíte, rota M2, geometria do HUD).
+  **Rode isto antes de empurrar**, não só a suíte.
 - **A descoberta de testes em `run_tests.gd` varre diretório.** Dois PRs podem acrescentar arquivos
   de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem. Prefira arquivo novo a edição
   em arquivo disputado.
