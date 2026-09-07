@@ -36,6 +36,10 @@ var _pause_started_msec := -1
 ## runtime headless nunca os inicia — relê-la devolveria `false` mesmo depois de a
 ## pausa ter sido aplicada, e o caminho de mix ficaria por testar.
 var _paused_voices := 0
+## Se a música recebeu a ordem de suspensão na última pausa. Pela mesma razão de
+## `_paused_voices`: reler `AudioStreamPlayer.stream_paused` devolve `false` fora
+## da árvore mesmo depois do `set`, portanto a ordem dada só é observável aqui.
+var _paused_music := false
 
 
 func _ready() -> void:
@@ -62,6 +66,7 @@ func shutdown() -> void:
 	_cue_cache.clear()
 	_round_index = -1
 	_release_all_voices()
+	_release_pause()
 
 
 func ensure_ready() -> void:
@@ -134,12 +139,17 @@ func apply_pause(paused: bool, now_msec: int) -> void:
 			_voice_free_msec[index] += elapsed
 		_last_trail_msec += elapsed
 	_paused = paused
-	if _music != null and _music.is_inside_tree():
+	# Uma só guarda para a música e para as oito vozes: `is_instance_valid`, nunca
+	# `is_inside_tree`. `stream_paused` só percorre os playbacks vivos, portanto é
+	# inócuo fora da árvore, e assim a ordem dada é a mesma no runtime e no runner
+	# de teste — que corre inteiro dentro de `_initialize()`, antes de a árvore
+	# existir. Enquanto a música tinha guarda própria, um director ainda fora da
+	# árvore contava as oito vozes como suspensas e deixava a música sem ordem
+	# nenhuma; `presentation_state` afirmava uma pausa que a música não recebeu.
+	_paused_music = false
+	if is_instance_valid(_music):
 		_music.stream_paused = paused
-	# Sem guarda de `is_inside_tree`: `stream_paused` só percorre os playbacks vivos,
-	# portanto é inócuo fora da árvore, e assim a ordem dada é a mesma no runtime e
-	# no runner de teste — que corre inteiro dentro de `_initialize()`, antes de a
-	# árvore existir.
+		_paused_music = paused
 	var commanded := 0
 	for voice in _voices:
 		if is_instance_valid(voice):
@@ -268,7 +278,12 @@ func presentation_state() -> Dictionary:
 	return {
 		"round_index": _round_index,
 		"music_loaded": _music != null and _music.stream != null,
-		"music_paused": _paused,
+		# `music_paused` é a ordem que a música recebeu, do mesmo modo que
+		# `paused_voices` é a que as vozes receberam. A *intenção* de pausa está em
+		# `mix_clock_frozen`; separá-las é o que torna visível uma música que ficou
+		# de fora da ordem — antes as duas eram o mesmo `_paused` e concordavam
+		# sempre, inclusive quando a música não tinha sido comandada.
+		"music_paused": _paused_music,
 		"mix_clock_frozen": _pause_started_msec >= 0,
 		"voice_count": _voices.size(),
 		"cached_music": _music_cache.size(),
@@ -288,6 +303,21 @@ func _busy_voice_count() -> int:
 
 func _release_all_voices() -> void:
 	_voice_priorities.fill(QixProceduralAudioLibrary.PRIORITY_IDLE)
+
+
+## Um director desligado não segura pausa nenhuma: sem streams, não há o que
+## suspender. Isto é `shutdown`, não `apply_pause(false, …)`, porque não há tempo
+## pausado a devolver a prazos de vozes que já foram soltas.
+##
+## Sem isto, desligar durante uma pausa deixava `_pause_started_msec` válido para
+## sempre, e `mix_now_msec` continuava a congelar o relógio de mix no instante da
+## pausa antiga — o primeiro cue depois de um recomeço datava do jogo anterior.
+func _release_pause() -> void:
+	_paused = false
+	_pause_started_msec = -1
+	_paused_voices = 0
+	_paused_music = false
+	_last_trail_msec = -TRAIL_THROTTLE_MSEC
 	_voice_free_msec.fill(0)
 	_voice_cursor = 0
 

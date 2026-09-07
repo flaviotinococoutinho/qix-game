@@ -99,6 +99,69 @@ func test_a_trail_cannot_steal_the_death_voice_across_a_pause() -> void:
 	director.free()
 
 
+func test_music_and_voices_obedecem_a_mesma_guarda_fora_da_arvore() -> void:
+	# A guarda da música era `is_inside_tree` e a das vozes `is_instance_valid`.
+	# Fora da árvore isso dava um director que contava as oito vozes como suspensas
+	# e nunca comandava a música — e ainda assim declarava `music_paused: true`,
+	# porque o campo reportava a intenção em vez da ordem dada.
+	#
+	# Isso não era um caso de canto: medido nesta suíte, `is_inside_tree()` é
+	# `false` para *todos* os nós dentro de `_initialize()`, mesmo depois de
+	# `root.add_child()` — a raiz ainda não entrou na árvore. Ou seja, sob a guarda
+	# antiga a música não recebia uma única ordem de pausa em teste nenhum,
+	# enquanto as oito vozes recebiam todas. O runtime real (com a árvore a
+	# processar frames) tomava o outro ramo, e era essa divergência entre o
+	# caminho medido e o caminho executado que o cabeçalho da classe existe para
+	# proibir. Por isso o `_director_in_tree()` dos outros testes não serve aqui:
+	# ele não põe nada dentro da árvore, e o nome só documenta a intenção.
+	var director := QixAudioDirector.new()
+	director.ensure_ready()
+
+	director.apply_pause(true, 1_000)
+	var state := director.presentation_state()
+	eq(
+		state["paused_voices"],
+		QixAudioDirector.SFX_VOICES,
+		"as vozes recebem a ordem fora da árvore",
+	)
+	eq(state["music_paused"], true, "e a música recebe a mesma ordem, sob a mesma guarda")
+	eq(state["mix_clock_frozen"], true, "a intenção de pausa continua registada à parte")
+
+	director.apply_pause(false, 2_000)
+	var resumed := director.presentation_state()
+	eq(resumed["paused_voices"], 0)
+	eq(resumed["music_paused"], false, "retomar solta música e vozes juntas")
+	director.free()
+
+
+func test_desligar_durante_a_pausa_nao_deixa_o_relogio_de_mix_congelado() -> void:
+	# `shutdown` corre em `_exit_tree`. Sem soltar a pausa, `_pause_started_msec`
+	# ficava válido para sempre e `mix_now_msec` datava todo cue seguinte do
+	# instante da pausa do jogo anterior.
+	var director := _director_in_tree()
+	director.play_cue(&"death")
+	director.apply_pause(true, 1_000)
+	eq(director.presentation_state()["mix_clock_frozen"], true, "pausado antes de desligar")
+
+	director.shutdown()
+	var state := director.presentation_state()
+	eq(state["mix_clock_frozen"], false, "desligar solta o relógio de mix")
+	eq(state["music_paused"], false, "um director sem stream não segura música suspensa")
+	eq(state["paused_voices"], 0, "nem vozes suspensas")
+	eq(state["busy_voices"], 0, "e nenhuma voz ocupada")
+
+	# A prova de que o relógio voltou a andar: um cue tocado depois do desligamento
+	# fica ocupado contra o relógio real, não contra o instante da pausa antiga.
+	var now := Time.get_ticks_msec()
+	director.play_cue(&"death")
+	eq(
+		_busy_count(director, now + QixProceduralAudioLibrary.duration_msec(&"death") - 1),
+		1,
+		"o cue novo é datado do relógio real",
+	)
+	director.free()
+
+
 func _director_in_tree() -> QixAudioDirector:
 	var director := QixAudioDirector.new()
 	(Engine.get_main_loop() as SceneTree).root.add_child(director)

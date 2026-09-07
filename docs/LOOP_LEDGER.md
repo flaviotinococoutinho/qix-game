@@ -1,7 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** só o item de áudio da execução de 06:00Z (P2) e as duas notas de ambiente que ele
+> mediu. O restante do backlog **não** foi reverificado nesta passagem e mantém as datas anteriores.
+> Contagem de fila medida em 2026-09-07T06:00Z: **14 PRs abertos** (#56–#69), não zero — as seções
+> abaixo que falam de fila drenada descrevem 2026-09-06 e estão por reconciliar (#56 e #57 tratam
+> disso). Suíte nesta árvore: 264 testes, 12730 asserções, 0 falhas.
+> **Alcance herdado:** base integrada da #51, mais #52–#54; reconciliação a pedido do mantenedor.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
@@ -160,13 +165,28 @@ Itens sem critério de pronto não entram aqui.
       speed-up ou não? *Pronto:* ou existe produtor e teste de comportamento, ou as duas regras
       saem de `GameRules` (o que **invalida replays**, invariante 7 — é ADR, não commit).
 
-- [ ] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** Sobra do #46
-      (`ai/loop-20260906T085912Z`), que fez a pausa alcançar as oito vozes de SFX — antes ela
-      parava só a música e o `death`/`game_over` terminava por cima do campo congelado. As vozes
-      passaram a ser comandadas sempre; a música continua atrás de `is_inside_tree()`. No runtime
-      real os dois caminhos coincidem, por isso não foi mexido. No mesmo saco: `shutdown()` não
-      zera `_paused_voices`. *Pronto:* uma só regra de guarda para música e vozes, com
-      `audio_pause_test.gd` a continuar verde.
+- [~] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** Reivindicado pelo PR
+      desta execução (`ai/loop-20260907T060000Z`). A guarda passou a ser uma só (`is_instance_valid`
+      para a música e para as oito vozes), `shutdown()` solta a pausa e
+      `presentation_state()["music_paused"]` passou a reportar **a ordem dada** em vez da intenção.
+      Relato em `docs/loop/runs/2026-09-07T060000Z.md`.
+
+      **A premissa "no runtime real os dois caminhos coincidem" era verdadeira e irrelevante.**
+      Medido nesta execução: `is_inside_tree()` é `false` para *todos* os nós dentro de
+      `_initialize()`, mesmo depois de `root.add_child()`. Sob a guarda antiga a música não recebia
+      **uma única** ordem de pausa em teste nenhum, enquanto as oito vozes recebiam todas — os dois
+      caminhos coincidiam só no runtime que a suíte nunca corre. E o teste existente afirmava
+      `music_paused == true` e passava, porque o campo reportava `_paused` (a intenção). *Lição:*
+      um snapshot de apresentação que reporta intenção em vez de ordem dada fica verde sobre um
+      facto que não é verdade — é a guarda de frescor de documentos outra vez, desta vez num teste.
+      Ao expor estado para teste, exponha o que foi **feito**, não o que se pretendia fazer.
+
+- [ ] **`_director_in_tree()` de `audio_pause_test.gd` mente no nome.** Achado da execução de
+      06:00Z: `root.add_child()` dentro de `_initialize()` não põe o nó dentro da árvore, portanto
+      o helper devolve um director tão fora da árvore como `QixAudioDirector.new()`. Não foi
+      renomeado nessa execução para não disputar o arquivo com o #61, que também mexe em áudio.
+      *Pronto:* ou o nome diz o que o helper faz, ou o helper põe o director dentro da árvore de
+      facto (o que exige processar um frame, e a suíte não processa).
 
 - [ ] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** Achado
       de #36: `domain_purity_test.gd` varre `game/simulation/`, `game/rules/` e `game/session/`,
@@ -279,6 +299,15 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
   ferramental. Não é erro.
 - `--import` é obrigatório **também depois de cada troca de branch** que traga script novo, senão
   o cache de `class_name` não conhece a classe e a falha não é a sua mudança.
+- **`is_inside_tree()` é `false` para tudo dentro de `_initialize()`** — inclusive depois de
+  `root.add_child(node)`, porque a raiz da `SceneTree` ainda não entrou na árvore nesse ponto.
+  Medido em 2026-09-07T06:00Z. Consequência: **todo código de apresentação atrás de uma guarda
+  `is_inside_tree()` está por testar**, e um teste que o exercite passa pelo ramo errado sem
+  dizer nada. Ao ler uma guarda dessas, presuma o ramo `false` até medir o contrário.
+- **`AudioStreamPlayer.stream_paused` relê `false` fora da árvore**, mesmo logo depois de lhe
+  atribuir `true` (medido na mesma execução). Não serve para verificar que a pausa foi comandada;
+  só a contabilidade do próprio director serve. Vale a suspeita para outras propriedades que
+  derivem de playbacks vivos.
 - **Medir X no runtime do runner é fiável; medir Y não é.** Tudo corre dentro de `_initialize()`,
   antes de a árvore processar um frame, e a altura de um `Label` fica presa a um mínimo obsoleto
   (23 px). Depois do primeiro frame assenta no valor pedido. O comentário `# evita os 23 px padrão`
