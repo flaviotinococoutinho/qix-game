@@ -29,6 +29,12 @@ comentário é normativo — mudou a ordem, mudou o comentário no mesmo commit.
 
 1. **O domínio não conhece o mundo real.** Nada em `game/simulation/`, `game/rules/` ou
    `game/session/` lê relógio, `Input`, `Tween`, física ou `delta`. Só inteiros e ponto fixo 8.8.
+   A pasta é o critério usual, não o único: `game/enemies/boss_behavior_controller.gd` é domínio
+   consultado dentro do tick e obedece a esta regra apesar de morar na apresentação — quem o guarda
+   é `tests/unit/domain_purity_test.gd`, que o varre pelo nome, e não a guarda do invariante 6, que
+   o isenta justamente por isso. As duas listas são confrontadas por
+   `test_no_file_falls_between_the_two_purity_guards`: uma isenção que não escolha um dos dois lados
+   fica vermelha.
 2. **`GameSimulation.step(intent)` avança exatamente um tick**, 60/s, na ordem documentada.
 3. **`BoardState` é a única autoridade sobre território.** `PackedByteArray`,
    estados `FREE/BOUNDARY/TRAIL/CLAIMED`. Ninguém mais escreve células.

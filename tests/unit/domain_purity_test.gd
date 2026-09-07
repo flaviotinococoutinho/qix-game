@@ -20,6 +20,25 @@ const DOMAIN_DIRS: Array[String] = [
 	"res://game/session",
 ]
 
+## Domínio que mora **fora** de `DOMAIN_DIRS`, com o motivo de morar lá. Sem esta lista o arquivo
+## cai num vão entre as duas guardas: o `presentation_purity_test.gd` o isenta por ser domínio, e
+## esta varredura nunca chegava à pasta dele. Isento de uma guarda e fora do alcance da outra é
+## exatamente o estado em que um `Time.get_ticks_msec()` entraria sem ninguém ficar vermelho.
+const DOMAIN_FILES: Dictionary = {
+	"res://game/enemies/boss_behavior_controller.gd":
+	"decisões puras do chefe, consultadas dentro do tick por GameSimulation; mora em game/enemies/ por proximidade temática, não por camada",
+}
+
+## O guarda da apresentação e este cobrem conjuntos disjuntos, e a fronteira entre eles é onde um
+## arquivo some. Estes são os arquivos isentos lá que **não** entram aqui — cada um por um motivo
+## que não é "é domínio". Qualquer isenção nova que não caia num dos dois lados fica vermelha.
+const UNGUARDED_BY_DESIGN: Dictionary = {
+	"res://app/bootstrap.gd":
+	"composition root: dirige o loop e lê o mundo real de propósito, então não é domínio nem apresentação",
+}
+
+const PRESENTATION_GUARD := "res://tests/unit/presentation_purity_test.gd"
+
 ## Cada regra é `[regex, invariante, por que é proibida]`. As regexes correm sobre a linha já
 ## limpa de comentários e literais de texto — ver `_strip_comments_and_strings`.
 const RULES: Array = [
@@ -148,7 +167,17 @@ func test_domain_has_no_real_world_symbols() -> void:
 			scanned += 1
 			for violation in _violations(text):
 				fail("%s%s" % [path.trim_prefix("res://"), violation])
-	ok(scanned >= 9, "esperava pelo menos 9 arquivos de domínio, varri %d" % scanned)
+	for path in DOMAIN_FILES:
+		var text := FileAccess.get_file_as_string(path)
+		ok(text != "", "não foi possível ler %s" % path)
+		ok(
+			not text.contains("\"\"\""),
+			"%s usa string de três aspas; o scanner não modela esse caso" % path,
+		)
+		scanned += 1
+		for violation in _violations(text):
+			fail("%s%s" % [path.trim_prefix("res://"), violation])
+	ok(scanned >= 10, "esperava pelo menos 10 arquivos de domínio, varri %d" % scanned)
 
 
 func test_scanner_catches_planted_violations() -> void:
@@ -176,6 +205,60 @@ func test_deterministic_rng_is_the_only_source_of_chance() -> void:
 		text.contains("func next_u32"),
 		"DeterministicRng perdeu next_u32; a guarda de acaso está apontando para o arquivo errado",
 	)
+
+
+## As duas guardas de pureza dividem a árvore, e é na costura que um arquivo desaparece: o
+## `presentation_purity_test.gd` isenta `boss_behavior_controller.gd` **por ser domínio**, e esta
+## varredura só olhava três pastas. Durante essa janela o arquivo estava fora das duas — nenhum
+## teste ficaria vermelho se alguém lhe pusesse um `Time.get_ticks_msec()` dentro.
+##
+## Este teste torna a costura mecânica: toda isenção da apresentação cai num de dois lados
+## declarados — coberta aqui (`DOMAIN_FILES`) ou fora das duas de propósito
+## (`UNGUARDED_BY_DESIGN`, hoje só o composition root). Uma isenção nova que não escolha um lado
+## fica vermelha no commit em que nasce, que é o único momento em que sai barato decidir.
+func test_no_file_falls_between_the_two_purity_guards() -> void:
+	for path in DOMAIN_FILES:
+		ok(FileAccess.file_exists(path), "entrada órfã: %s não existe mais" % path)
+		var reason: String = DOMAIN_FILES[path]
+		ok(reason.length() >= 20, "%s listado sem motivo escrito" % path)
+		for dir in DOMAIN_DIRS:
+			ok(
+				not path.begins_with(dir + "/"),
+				"%s já está em %s; a entrada avulsa é redundante" % [path, dir],
+			)
+
+	var guard := load(PRESENTATION_GUARD)
+	ok(guard != null, "não foi possível carregar %s" % PRESENTATION_GUARD)
+	var constants: Dictionary = guard.get_script_constant_map()
+	ok(
+		constants.has("EXEMPT_FILES"),
+		"a guarda da apresentação perdeu EXEMPT_FILES; esta verificação de costura está cega",
+	)
+	var exempt: Dictionary = constants.get("EXEMPT_FILES", {})
+
+	for path in DOMAIN_FILES:
+		ok(
+			exempt.has(path),
+			"%s é domínio mas a guarda da apresentação já não o isenta: ou volta a isentar, ou sai desta lista" % path,
+		)
+
+	for path in UNGUARDED_BY_DESIGN:
+		ok(FileAccess.file_exists(path), "entrada órfã: %s não existe mais" % path)
+		var reason: String = UNGUARDED_BY_DESIGN[path]
+		ok(reason.length() >= 20, "%s isento das duas guardas sem motivo escrito" % path)
+		ok(
+			not DOMAIN_FILES.has(path),
+			"%s não pode ser domínio guardado e isento por design ao mesmo tempo" % path,
+		)
+
+	for path in exempt:
+		ok(
+			DOMAIN_FILES.has(path) or UNGUARDED_BY_DESIGN.has(path),
+			(
+				"%s está isento da guarda da apresentação e fora do alcance da de domínio. "
+				+ "Declare-o em DOMAIN_FILES (se é domínio) ou em UNGUARDED_BY_DESIGN (com o motivo)."
+			) % path,
+		)
 
 
 ## Devolve uma descrição por violação, no formato `:linha: regex — porquê (invariante N)`.

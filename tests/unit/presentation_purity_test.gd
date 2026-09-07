@@ -50,6 +50,9 @@ const PRESENTATION_DIRS: Array[String] = [
 ## - `game/enemies/boss_behavior_controller.gd` é **domínio morando fora de `game/simulation/`**:
 ##   `GameSimulation` o carrega por `preload` e o consulta dentro do tick, com o
 ##   `DeterministicRng` na mão. Está em `game/enemies/` por proximidade temática, não por camada.
+##   Quem o guarda é `domain_purity_test.gd`, que o varre pelo nome (`DOMAIN_FILES`) — a isenção
+##   daqui muda de guarda, não dispensa de guarda. Se este arquivo sair da lista de lá, o teste
+##   `test_no_file_falls_between_the_two_purity_guards` fica vermelho.
 const EXEMPT_FILES: Dictionary = {
 	"res://app/bootstrap.gd": "composition root: é quem avança a sessão",
 	"res://game/enemies/boss_behavior_controller.gd": "domínio puro consultado dentro do tick",
