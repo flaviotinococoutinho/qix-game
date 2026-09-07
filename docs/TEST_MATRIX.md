@@ -1,16 +1,14 @@
 # TEST_MATRIX
 
 > **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** `tests/run_tests.gd` reexecutado (264 testes, 12.728 asserções, 0 falhas) e
-> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Os
-> testes Python do parser Metal HUD e o run de shipping não foram reexecutados.
-> **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** medido sobre `34634d0` acrescido do cue sonoro da exposição.
-> `tests/run_tests.gd` reexecutado (**268 testes, 12.751 asserções, 0 falhas**) e
-> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Só a
-> **contagem global** e a linha de **feedback** foram reconciliadas; as demais linhas de
-> "Cobertura automatizada" continuam a descrever o estado de `cba520a` e permanecem no item P1
-> do `LOOP_LEDGER`. Os testes Python do parser Metal HUD e o run de shipping não foram
+> **Alcance:** medido sobre a árvore que integra os 22 PRs abertos (#56–#77) em cima de
+> `34634d0`. `tests/run_tests.gd` reexecutado (**288 testes, 14.087 asserções, 0 falhas**) e
+> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Duas
+> declarações concorrentes — 264/12.728 do #69 e 268/12.751 do #61 — foram substituídas por esta:
+> cada uma estava certa sobre a sua própria árvore e ambas ficavam erradas juntas. Só a
+> **contagem global**, o **inventário** e a linha de **feedback** foram reconciliados; as demais
+> linhas de "Cobertura automatizada" continuam a descrever o estado de `cba520a` e permanecem no
+> item P1 do `LOOP_LEDGER`. Os testes Python do parser Metal HUD e o run de shipping **não** foram
 > reexecutados.
 
 Última validação automatizada: **2026-09-03**, Godot
@@ -27,17 +25,13 @@ cd /Users/flaviocoutinho/development/qiqix/qix-game
   --script res://tests/run_tests.gd
 ```
 
-Resultado atual: **264 testes, 12.728 asserções, 0 falhas e nenhum warning do jogo** — medido em
-**2026-09-07** sobre `34634d0` (a integração de #20–#54), Godot **4.7.2-stable.official**,
-build Linux headless não-mono, em sandbox de nuvem sem editor e sem `libfennara`. Na mesma
-execução, `tools/verify_m2_capture_route.gd` fechou com `errors` vazio e a rota em 825‰.
-Resultado atual: **268 testes, 12.751 asserções, 0 falhas e nenhum warning do jogo** — medido em
-**2026-09-06** sobre `34634d0` (a integração da fila até #55) acrescido do cue sonoro da exposição,
-Godot **4.7.2-stable.official**, build Linux headless não-mono, em sandbox de nuvem sem editor e
-sem `libfennara`. Na mesma execução, `tools/verify_m2_capture_route.gd` fechou com `errors` vazio e
-a rota em 825‰.
+Resultado atual: **288 testes, 14.087 asserções, 0 falhas e nenhum warning do jogo** — medido em
+**2026-09-07** sobre a árvore que integra os 22 PRs abertos (#56–#77) em cima de `34634d0`, Godot
+**4.7.2-stable.official**, build Linux headless não-mono, em sandbox de nuvem sem editor e sem
+`libfennara`. Na mesma execução, `tools/verify_m2_capture_route.gd` fechou com `errors` vazio e a
+rota em 825‰.
 
-**Inventário da suíte (derivado, não digitado):** 50 arquivos de teste · 264 casos `test_*`.
+**Inventário da suíte (derivado, não digitado):** 54 arquivos de teste · 288 casos `test_*`.
 
 Essa linha não é digitada de memória: `tests/unit/test_matrix_inventory_test.gd` refaz a mesma
 varredura de diretório que `tests/run_tests.gd` faz e fica **vermelho** se ela divergir — e exige
@@ -96,7 +90,7 @@ testes Python do parser Metal HUD (**10/10**) e o subconjunto direcionado da tra
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 264 testes, 12.728 asserções, 0 falhas, sem warning do jogo sobre `34634d0`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
+| log final da suíte | 288 testes, 14.087 asserções, 0 falhas, sem warning do jogo sobre a árvore que integra #56–#77 em `34634d0`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo
