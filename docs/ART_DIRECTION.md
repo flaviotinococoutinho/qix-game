@@ -1,6 +1,6 @@
 # Direção de arte — Lumen Cartography
 
-> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
 > **Alcance:** documento de intenção. A parte mecanizável dele — só `CLAIMED` revela o fundo,
 > paleta e máscara R8 — vive em `tests/unit/board_view_test.gd`; hierarquia, ritmo e leitura em
 > 240×320 continuam sem verificação automatizada, e ninguém na nuvem consegue ver o jogo.
@@ -15,6 +15,13 @@
 > idêntica à impressa — as suas seis linhas continuam válidas, e por isso a data dentro dela fica
 > como está. O que mudou não foi cor autorada nenhuma: foi de onde vem a leitura. Nenhuma paleta,
 > regra ou geometria de campo mudou, e nenhum checksum de replay se moveu.
+> Nesta data acrescentaram-se as seções “O contorno da ameaça” e “Onde a floritura da captura
+> acontece”. As duas **transcrevem** decisões já tomadas e já guardadas por teste — a ADR-0011 e
+> `tests/unit/capture_vfx_focus_test.gd` — para que quem lê só este documento as encontre. Nenhum
+> arquivo de código, paleta ou regra mudou nesta execução. As tabelas de “Contraste medido”
+> (2026-09-04) e “Contraste do cursor contra o chão” (2026-09-05) **foram reconferidas** hoje por
+> `tools/verify_palette_contrast.gd` e saem idênticas às impressas; por isso as datas dentro delas
+> ficam como estão — dizem quando a paleta foi decidida, não quando o comando correu.
 
 O G2 usa uma identidade original de **cartografia bioluminescente**: o jogador não
 “pinta” uma chapa sólida; ele estabiliza regiões de um mapa vivo e revela uma paisagem
@@ -26,7 +33,9 @@ cósmica que estava encoberta. A leitura do estado continua imediata mesmo em 24
    constante**: acelera e ergue o piso de luminância conforme a trilha se afasta da moldura
    (`TrailExposure`), de modo que a exposição seja legível antes do impacto. O aviso viaja por
    frequência e brilho, nunca por matiz.
-2. Jogador e chefe têm silhuetas compactas, núcleos contrastantes e leitura em 1×.
+2. Jogador e chefe têm silhuetas compactas, núcleos contrastantes e leitura em 1×. A do chefe
+   fecha por um anel de tinta cuja leitura não depende de matiz (ADR-0011); ver “O contorno da
+   ameaça”.
 3. `BOUNDARY` desenha o contorno seguro em ciano/verde.
 4. `CLAIMED` revela a ilustração original da rodada.
 5. `FREE` permanece sob uma cobertura azul-noturna para proteger a legibilidade.
@@ -79,9 +88,11 @@ Leitura:
   do shader — o glint xadrez do contorno e o pulso temporal da trilha. Sob deuteranopia sobram
   entre 35% e 65% da diferença cromática. É a decisão mais cara do jogo apoiada no canal mais
   frágil.
-- **A ameaça sobre borda e trilha depende de forma e movimento.** 1,28–1,42:1 sobre `BOUNDARY` e
-  1,83–2,04:1 sobre `TRAIL`, ambos no pior caso em deuteranopia. O losango do chefe e o halo do
-  jogador são hoje o que sustenta essas leituras, não a luminância.
+- **A ameaça não se separa de borda e trilha por cor.** 1,28–1,42:1 sobre `BOUNDARY` e
+  1,83–2,04:1 sobre `TRAIL`, ambos no pior caso em deuteranopia. Estes dois pares **continuam**
+  nestes números e continuam em `PaletteContrast.KNOWN_DEBT`: nenhuma cor autorada mudou desde a
+  medição. O que mudou em 2026-09-05 é que a leitura deixou de repousar sobre eles — ver “O
+  contorno da ameaça”.
 
 Isto é **medição registrada, não correção**. Ajustar a paleta muda o rosto do jogo e pede olho
 humano sobre a tela — nenhuma sessão headless pode aprovar essa troca. `PaletteContrast.PAIR_FLOOR`
@@ -163,20 +174,88 @@ silhueta não altera `state_checksum()` nem avança o tick. **Falta o julgamento
 viu o contorno numa tela, em particular no instante em que o cursor deixa a borda para começar a
 trilha e a tinta se dissolve no chão.
 
+## O contorno da ameaça
+
+Decidido em **2026-09-05** pela [ADR-0011](decisions/ADR-0011-threat-ink-outline.md), em resposta
+direta à dívida registrada em “Contraste medido”. Não existe cor de corpo que separe o chefe dos
+três chãos ao mesmo tempo: `BOUNDARY` e `TRAIL` são claros por construção — é assim que o campo
+revelado se lê contra `FREE` — e `FREE` é escuro. Uma ameaça escura o bastante para os dois
+primeiros perde o terceiro, que hoje passa.
+
+Por isso a ameaça não é lida pela cor do corpo, e sim por um **anel de tinta de 1 px** desenhado
+por baixo dela em `QixEnemyView` (`RIM_RADIUS` 5,0 contra `BODY_RADIUS` 4,0). A tinta é o
+`free_color` da própria rodada: nenhuma constante estética nova entra no jogo, e o anel acompanha
+qualquer paleta futura sem edição de código. Em *Lumen Cartography* o chefe é um buraco recortado
+na carta, e a tinta é a borda desse recorte — sobre `FREE`, onde tinta e chão coincidem, o anel
+some, porque um recorte não tem borda contra o próprio vazio.
+
+| Par | Pior razão | Pior visão | Meta 3:1 |
+|---|---|---|---|
+| tinta × `BOUNDARY` | 8,93 | deuteranopia | ok |
+| tinta × `TRAIL` | 11,23 | protanopia | ok |
+| tinta × `THREAT` | 3,73 | protanopia | ok |
+
+Esses três números não são medição nova: porque a tinta **é** o `free_color`, as três linhas são
+as três linhas `FREE`× da tabela de “Contraste medido”, tomadas no pior caso entre as quatro
+paletas em vez de por paleta — 8,93 é o mínimo da linha `FREE`×`BOUNDARY` (padrão), 11,23 o da
+`FREE`×`TRAIL` (Aurora Foundry) e 3,73 o da `FREE`×`THREAT` (padrão). Reler o anel a partir da
+tabela que já estava aqui é o ponto: o contorno não introduz uma cor a defender, ele reaproveita um
+par que o campo já sustenta. O canal que garante a leitura passa a ser luminância, não matiz, sem
+que nenhuma cor autorada mude.
+
+Duas consequências de desenho vêm junto, para que o anel seja um anel e não quatro arcos: os
+tendrils são desenhados **antes** dele, emergindo por trás da silhueta em vez de furá-la nos
+vértices; e as marcas de padrão (`PURSUIT`, `SWEEP`) nascem em `RIM_RADIUS`, para não abrir o
+contorno justamente na direção do movimento.
+
+`tests/unit/enemy_silhouette_contrast_test.gd` é a guarda: falha se o anel encolher até sumir, se
+a tinta deixar de ser o `free_color` autorado, se uma paleta nova tiver `free_color` claro demais
+para sustentar os três pares, ou se sincronizar a silhueta mexer em checksum ou tick (invariantes
+6 e 8). **Nada disto foi visto numa tela** — falta confirmar por captura que o anel lê como
+contorno e não como uma orla suja em volta do chefe.
+
+## Onde a floritura da captura acontece
+
+Uma captura muda o território inteiro, mas a mão do jogador acabou de estar num lugar só. Por isso
+o feedback de `QixCaptureVfx` é encenado em duas escalas ao longo dos 28 ticks de
+`CAPTURE_DURATION_TICKS`: a **moldura** pisca no campo inteiro, porque foi o campo que mudou; a
+**varredura** e as marcas acontecem sobre o `focus_rect` — a extensão da trilha que fechou a
+região, não o retângulo do campo.
+
+O recorte tem três regras, e todas existem por causa dos 240×320:
+
+- **Piso de 24 px por lado** (`MIN_FOCUS_SIDE`). Uma trilha reta tem 1 px de espessura: sem piso, a
+  floritura nasceria dentro de uma fenda e ninguém a veria. O piso cresce o recorte pelos dois
+  lados e depois o intersecta com o campo, então uma captura junto à moldura não desenha para fora
+  dela.
+- **As marcas ficam dentro.** Os centros nascem afastados de `MARKER_RADIUS` (2,0 px) da borda do
+  foco, para que a cruz inteira caiba no recorte; a quantidade sobe com o tamanho da captura, entre
+  4 e 12 marcas — peso proporcional ao ganho, sem uma partícula por célula.
+- **Sem trilha observada** — primeiro tick, sessão recém-criada — o foco degrada para o campo
+  inteiro. É o comportamento antigo, não um recorte errado.
+
+A extensão vem de leitura incremental da trilha já confirmada pelo domínio (`_track_trail`: custo
+por tick proporcional às células novas, sem cópia do board). É apresentação que observa, nunca
+antecipa — o foco é calculado no evento `CAPTURED`, a partir do que a trilha foi nos ticks
+anteriores (invariante 6). `tests/unit/capture_vfx_focus_test.gd` é a guarda, e
+`marker_positions()` é público exatamente porque não há tela para olhar. **Falta confirmar numa
+tela** que o piso de 24 px lê como foco e não como um retângulo arbitrário em volta do traço.
+
 ## Barra de qualidade do slice
 
 - Sem texto embutido, assinatura, watermark ou IP de terceiros.
 - Fundo válido exatamente em 225×283, sem crop em runtime.
 - Estados territoriais distinguíveis por forma, cor e luminância — cor não é o único
   canal para ameaça e segurança. **Parcialmente atendido**: verdadeiro para `FREE` contra
-  `BOUNDARY` e `TRAIL`; ainda não para `BOUNDARY`×`TRAIL` nem para a ameaça sobre esses dois
-  chãos. Ver “Contraste medido”.
+  `BOUNDARY` e `TRAIL`, e para a ameaça sobre os dois chãos claros desde o anel de tinta da
+  ADR-0011; ainda não para `BOUNDARY`×`TRAIL`. Ver “Contraste medido” e “O contorno da ameaça”.
 - Jogador e chefe com “núcleos contrastantes” e leitura em 1×. **Parcialmente atendido**:
   verdadeiro para o cursor sobre `FREE` (5,4:1 no pior caso); sobre `BOUNDARY` nenhuma camada
   opaca do cursor separa por luminância. Ver “Contraste do cursor contra o chão”.
 - Mudanças de rodada têm intro, resultado, confirmação opcional e continuidade clara de
   score/vidas.
-- Feedback de captura nasce de eventos confirmados e nunca antecipa resultado do domínio.
+- Feedback de captura nasce de eventos confirmados e nunca antecipa resultado do domínio, e é
+  encenado sobre a trilha que fechou a região. Ver “Onde a floritura da captura acontece”.
 - A apresentação pode ser trocada sem alterar checksum ou compatibilidade de replay.
 
 “AAA” neste marco é uma barra de coesão, resposta, legibilidade e mensuração do vertical slice.
