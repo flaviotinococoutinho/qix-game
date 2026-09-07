@@ -1,14 +1,17 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** medição da fila em 24 PRs abertos (#56–#79) — suíte completa em `main`, no head do
+> #78 e na árvore `#78 + #79`; sondas M2 e R8 no head do #78. Ver
+> `docs/loop/runs/2026-09-07T160000Z.md`. **Fora do alcance:** os PRs #56–#77 medidos
+> individualmente (só através da integração do #78), mérito visual, áudio físico e Android real.
+> Registros anteriores são históricos, não contagens atuais.
 
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+> **Integração autorizada (histórico, já resolvido):** `codex/resolve-open-prs-20260906` reuniu
+> #51–#54 e entrou em `main` como o #55 (`34634d0`). Mantido aqui só como registro.
+> **Estado atual da fila:** o candidato de integração é o **#78** (`d13aead`, cobre #56–#77),
+> verificado verde localmente em 2026-09-07T16:00Z. O #79 ficou de fora dele e **não** mescla
+> verde por cima — ver o primeiro item de P0. Consulte a fila real no GitHub antes de escolher.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -85,6 +88,34 @@ Itens sem critério de pronto não entram aqui.
 > é dívida que só ficou visível depois que o trabalho foi feito. Confira a fila antes de escolher.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
+
+- [ ] **A guarda de inventário do #69 acopla a fila inteira ao #78 — ordem de merge deixou de ser
+      livre.** Medido em 2026-09-07T16:00Z (`docs/loop/runs/2026-09-07T160000Z.md`), com a fila em
+      **24 PRs abertos** (#56–#79). `main` @ `34634d0` corre 262 testes verdes; o #78 (integra
+      #56–#77) corre **288 verdes**; **`#78 + #79` corre 291 com 2 falhas** — e o `git merge` dos
+      dois conflita só em `docs/LOOP_LEDGER.md`, ou seja, o código mescla limpo e a suíte não.
+      A causa não é defeito de nenhum dos dois: `tests/unit/test_matrix_inventory_test.gd`
+      (nasceu em `ebb4925`, #69, dentro do #78) compara o inventário declarado em
+      `docs/TEST_MATRIX.md` com o que o runner varre; o #79 acrescenta um arquivo de teste e
+      ramificou de `main`, onde a guarda não existe.
+      **Generalização — é isto que muda o planejamento:** enquanto o #78 não mesclar, *todo* PR
+      aberto ou futuro que acrescente arquivo de teste deixa o #78 vermelho ao encontrá-lo, **sem
+      dar conflito de `git`**. É a classe do `#25×#50`, mas já não é um par específico: é uma
+      guarda que qualquer PR de teste viola por construção.
+      → Mesclar o #78 **antes** dos PRs que acrescentam teste, e dar a cada um deles, depois, um
+      commit que atualize a linha de inventário da matriz. A ordem inversa custa uma suíte
+      vermelha por PR.
+      *Pronto:* o #78 em `main`, e o protocolo dizendo que PR que acrescenta teste atualiza a
+      linha de inventário no mesmo commit.
+
+- [ ] **O #79 versiona bytecode que o #78 acabou de remover.**
+      `tools/ci/__pycache__/{headless_gate,test_headless_gate}.cpython-311.pyc` entram versionados
+      pelo #79, que ramificou de `main` — cujo `.gitignore` não cobre `__pycache__/`. O #78 remove
+      os dois `.pyc` de `tools/profile/__pycache__/` que estão em `main` hoje; mesclado o #79
+      depois, a árvore volta a ter bytecode versionado. No mesmo saco: o `.gitignore` do #78 tem
+      `__pycache__/` **duas vezes** (linhas 77 e 86, mais `*.pyc` na 87) — dois PRs da fila
+      acrescentaram a mesma regra e a integração guardou as duas.
+      *Pronto:* nenhum `.pyc` versionado depois da drenagem, e uma só regra no `.gitignore`.
 
 - [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
       PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
