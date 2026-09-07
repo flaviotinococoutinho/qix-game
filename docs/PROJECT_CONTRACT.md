@@ -14,6 +14,11 @@
 > reverificada aqui. Engine, viewport, renderer e tick seguem conferidos em `project.godot`; a
 > tabela de ownership, por existência de arquivo. Alvos, tamanhos de export e estado do
 > ferramental MCP seguem do run macOS de 2026-09-03 e **não** foram reexecutados.
+> **Alcance:** as contagens de cenas e de `class_name` de vendor foram remedidas nesta data, após
+> a remoção de `addons/guide` (ADR-0010), e o comando de medição ficou escrito junto do número.
+> A tabela de addons perdeu a linha do `guide`. Engine, viewport, renderer e tick seguem conferidos em
+> `project.godot`; a tabela de ownership, por existência de arquivo. Alvos, tamanhos de export e
+> estado do ferramental MCP seguem do run macOS de 2026-09-03 e **não** foram reexecutados.
 
 Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; título público ainda não definido.
 
@@ -127,6 +132,9 @@ Inventário verificado em **2026-09-04** contra o checkout de `main` em `74c173a
 `phantom_camera` foi atualizada em **2026-09-06** pela remoção que a ADR-0010 decidiu. Existe
 porque as pastas em `addons/` não dizem, por si, quais participam do jogo: sem esta tabela, cada
 leitor refaz a mesma investigação e alguns concluem errado.
+Inventário verificado em **2026-09-04** contra o checkout de `main` em `74c173a`. Existe porque
+as pastas em `addons/` não dizem, por si, quais participam do jogo: sem esta tabela, cada leitor
+refaz a mesma investigação e alguns concluem errado.
 
 | Addon | Versão | Habilitado em `[editor_plugins]` | Consumido pelo jogo | Destino no export |
 |---|---|---|---|---|
@@ -134,6 +142,7 @@ leitor refaz a mesma investigação e alguns concluem errado.
 | `fennara` | 0.4.2 | não é plugin de editor — é `GDExtension` com bibliotecas `*.editor.*` | autoload `_fennara_game_capture` | `runtime/` embarca; `ai/`, `bin/`, `dist/` e o `.gdextension` excluídos |
 | `guide` (G.U.I.D.E) | 0.14.0 | não | **nenhum** | excluído em bloco |
 | ~~`curved_lines_2d`~~ (Scalable Vector Shapes 2D) | 2.33.3 | não | **nenhum** | **removido** do versionamento em 2026-09-06 (ADR-0010); filtro mantido |
+| `curved_lines_2d` (Scalable Vector Shapes 2D) | 2.33.3 | não | **nenhum** | excluído em bloco |
 | `phantom_camera` | 0.11.0.3 | não | **nenhum** | excluído em bloco |
 | `curved_lines_2d` (Scalable Vector Shapes 2D) | 2.33.3 | não | **nenhum** | excluído em bloco |
 | ~~`phantom_camera`~~ | 0.11.0.3 | não | **nenhum** | **removido** do versionamento em 2026-09-06 (ADR-0010); filtro mantido |
@@ -158,6 +167,15 @@ Como "nenhum" foi verificado — dois testes independentes sobre `app/`, `game/`
    `phantom_camera`. O **174** que esta linha registrava desde 2026-09-04 nunca conferiu com este
    método; a divergência de 2 é anterior a qualquer remoção e fica registrada aqui em vez de ser
    apagada em silêncio — quem quiser fechar a conta precisa dizer qual método usou.
+2. Dos `class_name` declarados pelos addons restantes, **nenhum** aparece como palavra nessas
+   árvores. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot` — era
+   esse o motivo de `guide` (G.U.I.D.E.) nunca ter sido consumido, e o motivo de ter podido sair;
+   a câmera é fixa em 240×320, não `phantom_camera`.
+
+   A contagem medida em 2026-09-06 é **97** (`grep -rhoE '^class_name +[A-Za-z0-9_]+' addons/`),
+   contra 176 antes da remoção de `addons/guide`. O número anterior registrado aqui, 174, foi
+   medido por outro critério e não confere com este `grep`; a partir daqui o comando fica escrito
+   junto do número, para que a próxima recontagem não precise adivinhar como esta foi feita.
 
 Nenhuma pasta de terceiros vive mais **fora** de `addons/`. As três que viviam — `samples/`
 (demos do `softbody2d`), `guide_examples/` (demos do `guide`) e `antipixel_state_machine/` —
@@ -165,6 +183,8 @@ foram removidas do versionamento, a última em 2026-09-05.
 
 Consequência prática para quem lê o repositório: das **61** cenas do checkout, **2** são do jogo
 — `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn` — e as outras **59** são de terceiros,
+Consequência prática para quem lê o repositório: das **84** cenas do checkout, **2** são do jogo
+— `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn` — e as outras **82** são de terceiros,
 todas em `addons/`. Isso vale como regra de leitura, não só como contagem: **um `.tscn` fora de
 `addons/` é do jogo.** Antes da poda eram 2 em 145, espalhadas por quatro raízes, e procurar uma
 cena do jogo pelo nome devolvia 98 % de ruído; a saída de `curved_lines_2d` (42 cenas) baixou o
@@ -186,6 +206,12 @@ O que esta tabela **não** decide, addon a addon: qual dos dormentes sai a segui
 decidiu que os sete saem, um por PR, com posse de `uid://` medida. Os que restam já não entram no
 payload (os `exclude_filter` de ambos os presets em `export_presets.cfg` os listam por nome),
 então o custo deles é de leitura e de busca, não de bytes entregues ao jogador.
+O que esta tabela **não** decide: se os addons dormentes devem ser removidos. Isso foi decidido na
+ADR-0010, e a execução acontece **uma pasta por PR**, com evidência de posse por remoção; o
+inventário em [`addons/README.md`](../addons/README.md) registra quais já saíram. Enquanto esperam,
+nenhuma delas entra no payload — os `exclude_filter` de ambos os presets em `export_presets.cfg`
+listam as sete por nome, e essa lista **fica** mesmo depois da pasta sair, porque um checkout que
+rebaixe os addons pela AssetLib recria o diretório em disco.
 
 ## Comandos reais
 

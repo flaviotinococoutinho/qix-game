@@ -63,6 +63,13 @@ addons/curved_lines_2d/
 # class_name aparecia em game/, ui/, app/, tools/, tests/, content/ ou
 # project.godot. O campo é 240×320 fixo: não há câmera que se mova.
 addons/phantom_camera/
+# ── Bytecode de Python ───────────────────────────────────────────────────────
+# `tools/ci/` tem testes que o workflow Verificação roda com `unittest`, e rodar
+# o mesmo comando localmente — que é o jeito certo de conferir antes de empurrar
+# — deixa `__pycache__/` para trás. Sem esta linha, toda execução que valida o
+# portão de CI aparece com artefato por versionar e é tentada a commitá-lo.
+__pycache__/
+*.py[cod]
 
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
