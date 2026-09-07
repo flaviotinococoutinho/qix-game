@@ -44,6 +44,20 @@ State Machine Antipixel Godot Documentation.pdf
 guide_examples/
 samples/
 
+# ── Bytecode de Python ───────────────────────────────────────────────────────
+# O ferramental de `tools/ci/` e `tools/profile/` é Python, e o próprio comando
+# documentado do portão de CI (`python3 -m unittest discover -s tools/ci`) escreve
+# `__pycache__/` na árvore de trabalho antes de terminar. Sem regra aqui, o
+# `git add -A` que o protocolo do loop prescreve varre esse bytecode para dentro
+# do commit: foi assim que `tools/profile/__pycache__/*.cpython-314.pyc` chegou a
+# `main` e que três PRs abertos acrescentaram `*.cpython-311.pyc` por cima.
+# É binário derivado, preso à versão do interpretador que o gerou — o que estava
+# versionado nem era do interpretador que a CI usa —, e binário o git não mescla:
+# num repositório com fila de PRs, cada cópia é um conflito que não tem resolução
+# útil. Regenerado por qualquer execução dos testes. Ver docs/PROJECT_CONTRACT.md.
+__pycache__/
+*.py[cod]
+
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp

@@ -1,14 +1,15 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless (nuvem)
+> **Alcance:** suíte completa em `main` (262 testes, 12719 asserções, 0 falhas) e nesta branch
+> (267 / 12729 / 0); rota M2 comparada byte a byte entre as duas; testes de Python de `tools/ci`
+> (12) e `tools/profile` (10); censo da fila de 27 PRs abertos por arquivo tocado.
+> **Fora do alcance:** mérito visual, áudio físico, Android real e export — a sandbox não roda o
+> jogo. Registros anteriores são históricos, não contagens atuais.
 
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+> **Estado da fila (2026-09-07T19:02Z):** aquela integração **mesclou** — é o `34634d0` que hoje é
+> `main` (PR #55, #20–#54). Desde então `main` não andou: **27 PRs abertos, #56–#82**, todos com a
+> mesma base. Consulte sempre a fila real no GitHub; esta linha envelhece em uma hora.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -86,11 +87,14 @@ Itens sem critério de pronto não entram aqui.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
-- [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
-      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
-      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
-      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
-      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+- [ ] **Drenar a fila de PRs abertos.** A integração de `ai/loop-20260906T140000Z` **mesclou**
+      (PR #55, #20–#54): metade do critério está cumprida — `main` andou para `34634d0`, além de
+      `cba520a`. A outra metade não: em 23 h a fila voltou a **27** (#56–#82), pior que os 30 de
+      antes. O #19 drenou os 18 primeiros; o #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram
+      na própria fila; agora o **#78** (integra #56–#77) repete o padrão pela quarta vez.
+      **A conclusão de quatro tentativas: integrar não drena — o merge em `main` é que drena, e ele
+      é humano.** Enquanto for assim, uma integração nova é só mais um PR na fila.
+      *Pronto:* fila em ≤ 2 PRs abertos, sustentada por mais de um ciclo do agendamento.
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
@@ -106,7 +110,19 @@ Itens sem critério de pronto não entram aqui.
       só a integração de facto vê. Enquanto a fila passar de ~10, vale reintegrar e medir.
 
 - [ ] **A cadência do loop excede a cadência de revisão, e isso é problema de projeto, não de
-      execução.** Medido quatro vezes (#31, #36, #40 e esta run): o loop produz 1 PR/h e a revisão
+      execução.**
+
+      **Remedido em 2026-09-07T19:02Z** (`docs/loop/runs/2026-09-07T190000Z.md`), e a escala mudou:
+      `main` está em `34634d0` desde 2026-09-06T19:41Z — **23 h 20 min parado, 27 PRs abertos**
+      (#56–#82), um por hora, sem falhar uma. Dois números que os meta-PRs abertos não têm:
+      **26 dos 27 tocam este arquivo**, logo todo par conflita por construção; e a superfície de
+      código reivindicada é **7 arquivos** em `game/`, `ui/` e `app/`. Ou seja: os PRs quase não
+      disputam código, disputam o ledger. Oito dos 27 (#56, #57, #58, #59, #71, #76, #78, #80) são
+      trabalho **sobre a fila** — 30 % das horas no mecanismo, não no jogo. E a integração deixou
+      de ser saída: o #78 integra #56–#77 e está ele próprio parado; o #80 mede que o #78 fica
+      vermelho contra o #79. **Só o mantenedor mescla — o loop não pode destravar isto.**
+
+      Medido antes quatro vezes (#31, #36, #40 e a run de 14:00Z): o loop produz 1 PR/h e a revisão
       humana é episódica. Entre 2026-09-05T02:57Z e 2026-09-06T04:56Z a fila foi de 0 a 22 sem que
       `main` andasse; dessas 22 execuções, **cinco** (#30, #31, #34, #36, #40) gastaram a hora
       inteira medindo ou consertando a própria fila em vez de tocar no jogo — ~23 % do esforço
@@ -116,7 +132,7 @@ Itens sem critério de pronto não entram aqui.
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
 
-- [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
+- [~] **[#71] Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
       `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
       contagem. Achado de #31, reconfirmado aqui: os dois existem lado a lado na árvore integrada.
       → Fundir num só, com a contagem correta (a de #30, que exclui PRs já mesclados).
@@ -124,7 +140,27 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+- [x] **Bytecode de Python entrava no versionamento pelo próprio comando da CI.** ✅ entregue por
+      esta execução (`ai/loop-20260907T190000Z`, `docs/loop/runs/2026-09-07T190000Z.md`).
+      `python3 -m unittest discover -s tools/ci` escreve `__pycache__/` na árvore antes de
+      terminar; o `.gitignore` não tinha regra nenhuma; o `git add -A` do passo 5 do protocolo
+      fechava o laço. Resultado medido: `main` versionava dois `*.cpython-314.pyc` — bytecode de um
+      interpretador que **não** é o da CI (3.11) — e três PRs abertos acrescentavam `*.cpython-311`
+      por cima. Corrigido com regra não ancorada (`__pycache__/`, `*.py[cod]`), remoção dos dois
+      arquivos e `tests/unit/python_bytecode_not_versioned_test.gd` a defender a regra (provado
+      vermelho ao apagá-la de propósito).
+
+- [ ] **`tools/profile/test_parse_metal_hud.py` não corre em portão nenhum.** Achado da execução de
+      2026-09-07T19:00Z: `verificacao.yml` descobre testes só em `tools/ci`
+      (`discover -s tools/ci`), e os **10 testes** de `tools/profile/` passam à mão sem que nada os
+      exija. Teste que nenhum portão corre é documentação com sintaxe de teste — o mesmo defeito
+      que a guarda de frescor tem em P2, na camada do ferramental. → Alargar a descoberta do
+      workflow, ou dizer por escrito por que aquela pasta fica de fora.
+      *Pronto:* os 10 testes correm na CI, ou a exclusão está justificada onde o workflow a faz.
+
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** Reivindicado, as
+      sete: `curved_lines_2d` #60, `phantom_camera` #62, `guide` #63, `GDDraw` #64, `yard` #66,
+      `softbody2d` #72, `curve2collision` #73 (censo de 2026-09-07T19:02Z). A decisão está
       tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
       continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
       `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
@@ -133,7 +169,7 @@ Itens sem critério de pronto não entram aqui.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
 
-- [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
+- [~] **[#69] `docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
       #38, #39 e #41 acrescentaram testes depois. A árvore integrada roda **232 testes / 12534
       asserções**. → Reconciliar de novo e, de preferência, atacar a causa: a matriz é contagem
@@ -160,7 +196,7 @@ Itens sem critério de pronto não entram aqui.
       speed-up ou não? *Pronto:* ou existe produtor e teste de comportamento, ou as duas regras
       saem de `GameRules` (o que **invalida replays**, invariante 7 — é ADR, não commit).
 
-- [ ] **`QixAudioDirector.sync` trata música e vozes com guardas diferentes.** Sobra do #46
+- [~] **[#70] `QixAudioDirector.sync` trata música e vozes com guardas diferentes.** Sobra do #46
       (`ai/loop-20260906T085912Z`), que fez a pausa alcançar as oito vozes de SFX — antes ela
       parava só a música e o `death`/`game_over` terminava por cima do campo congelado. As vozes
       passaram a ser comandadas sempre; a música continua atrás de `is_inside_tree()`. No runtime
@@ -168,18 +204,18 @@ Itens sem critério de pronto não entram aqui.
       zera `_paused_voices`. *Pronto:* uma só regra de guarda para música e vozes, com
       `audio_pause_test.gd` a continuar verde.
 
-- [ ] **`game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** Achado
+- [~] **[#68] `game/enemies/boss_behavior_controller.gd` é domínio fora do alcance da guarda.** Achado
       de #36: `domain_purity_test.gd` varre `game/simulation/`, `game/rules/` e `game/session/`,
       mas o controlador do boss é domínio morando em `game/enemies/`, pasta que o invariante 6
       trata como apresentação. Ou o arquivo muda de pasta, ou a varredura passa a conhecê-lo pelo
       nome. *Pronto:* o arquivo está sob uma das duas guardas, e o `CLAUDE.md` diz qual.
 
-- [ ] **`round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
+- [~] **[#74] `round_visual_definition.gd` é o próximo atrito previsível da guarda de valor real.**
       Achado de #25: é `Resource` de `game/rules/` com campos de cor, e cor é `float` por
       construção. Hoje passa por exceção nomeada na guarda. *Pronto:* ou a exceção está escrita
       onde a guarda é enunciada, ou o visual sai de `game/rules/`.
 
-- [ ] **A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.**
+- [~] **[#77 · #82, parcial] A guarda de frescor prova presença de cabeçalho, não veracidade do conteúdo.**
       `doc_freshness_header_test.gd` (#6) exige a linha `> **Verificado em**` e fica verde com ela
       presente — mesmo quando o corpo mente. #21 corrigiu `TEST_MATRIX.md`, que afirmava quatro
       contagens concorrentes e passava em tudo; **os demais docs que passaram pela mesma união
@@ -211,7 +247,7 @@ O que continua aberto:
       `ART_DIRECTION` reescritos no mesmo commit, e alguém confirmou por captura que o campo não
       ficou lavado. **É o maior item de estética livre do backlog.**
 
-- [ ] **Escolher de onde o cursor tira sua cor.** #28 mediu e provou o problema, mas parou na
+- [~] **[#75, ADR-0012] Escolher de onde o cursor tira sua cor.** #28 mediu e provou o problema, mas parou na
       medição. Hoje `QixPlayerView.sync` empresta as três camadas da paleta do campo
       (`boundary_color`, `accent_color`, `trail_hot_color`), e é isso que trava
       `CURSOR_OUTER`×`BOUNDARY` em 1,00:1 para qualquer paleta que alguém autore — com o núcleo em
@@ -224,13 +260,13 @@ O que continua aberto:
       `CURSOR_KNOWN_DEBT` e a seção de `ART_DIRECTION` reescritos no mesmo commit, e alguém
       confirmou por captura que o cursor não virou um borrão claro sobre o campo.
 
-- [ ] **O canal sonoro da exposição não foi feito.** O item original pedia som **e** háptica ao
+- [~] **[#61] O canal sonoro da exposição não foi feito.** O item original pedia som **e** háptica ao
       cruzar `TrailExposure.WARNING_RATIO`; #39 entregou só a háptica (`app/haptic_feedback.gd`).
       Falta o cue que suba com a exposição, com prioridade declarada entre vozes — o envelope por
       cue de #23 já dá a ferramenta. *Pronto:* cruzar o limiar é audível, com prioridade
       declarada, **sem alterar checksum**.
 
-- [ ] **`docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** Medido na árvore
+- [~] **[#65] `docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** Medido na árvore
       integrada: **zero** ocorrências de `ADR-0011` no documento de arte, embora a ADR decida um
       traço visual da ameaça; e a floritura de captura de #37 também não está escrita lá. Quem lê
       só o documento de arte não encontra nenhuma das duas.
