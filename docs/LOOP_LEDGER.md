@@ -10,6 +10,16 @@
 > pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
 > Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
 
+> **Contagem de fila de 2026-09-07T11:00Z — o P0 abaixo NÃO está fechado.** `main` está em
+> `34634d0` e verde (262 testes), mas a fila voltou a **19 PRs abertos** (#56–#74) desde o merge
+> do #55, e `main` não andou nesse intervalo. Quinta medição do mesmo gargalo (#31, #36, #40, a
+> run de 14:00Z e esta). Efeito colateral que muda a escolha de quem ler isto a seguir: **quase
+> todo o backlog abaixo está reivindicado** por um desses 19 — as sete remoções da ADR-0010 em
+> #60/#62/#63/#64/#66/#72/#73, a `TEST_MATRIX` em #69, a pausa do áudio em #70, o domínio do
+> chefe em #68, a exceção do visual em #74, a ADR-0011 no doc de arte em #65, o som da exposição
+> em #61, a fusão dos relatórios de fila em #71. Confira no GitHub antes de escolher: as marcas
+> `[ ]` abaixo estão desatualizadas por não terem sido reconciliadas desde o #55.
+
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
@@ -70,6 +80,7 @@ nos testes e mente para o leitor. A integração de 23:00Z produziu 703 linhas c
 | Contador de percentagem sobe em degraus | `docs/decisions/ADR-0009` |
 | `addons/` só hospeda pasta com estado declarado | `docs/decisions/ADR-0010` |
 | A ameaça tem contorno que não depende de cor | `docs/decisions/ADR-0011` |
+| O cursor tem contorno que não depende de cor | `docs/decisions/ADR-0012` |
 | Identidade visual é *Lumen Cartography* | `docs/ART_DIRECTION.md` |
 | Volfied é referência de gênero, não alvo de clone | `reference/volfied/README.md` |
 | Histórico do loop é um arquivo por execução | `docs/loop/runs/README.md` |
@@ -211,18 +222,19 @@ O que continua aberto:
       `ART_DIRECTION` reescritos no mesmo commit, e alguém confirmou por captura que o campo não
       ficou lavado. **É o maior item de estética livre do backlog.**
 
-- [ ] **Escolher de onde o cursor tira sua cor.** #28 mediu e provou o problema, mas parou na
-      medição. Hoje `QixPlayerView.sync` empresta as três camadas da paleta do campo
-      (`boundary_color`, `accent_color`, `trail_hot_color`), e é isso que trava
-      `CURSOR_OUTER`×`BOUNDARY` em 1,00:1 para qualquer paleta que alguém autore — com o núcleo em
-      1,04–1,12:1, ou seja, nem o centro do cursor separa. Sobre `FREE` as três camadas passam com
-      folga (5,4:1 no pior caso), e é isso que restringe o conserto: a candidata precisa subir os
-      três `CURSOR_*`×`BOUNDARY` acima de 3:1 **sem** derrubar os `CURSOR_*`×`FREE`, e os dois
-      chãos estão em extremos opostos da luminância. Ou a cor fica no meio, ou a silhueta ganha
-      borda escura própria que não venha da paleta do campo.
-      *Pronto:* os três pares acima de 3:1 nas quatro paletas, com `CURSOR_FLOOR`,
-      `CURSOR_KNOWN_DEBT` e a seção de `ART_DIRECTION` reescritos no mesmo commit, e alguém
-      confirmou por captura que o cursor não virou um borrão claro sobre o campo.
+- [~] **Escolher de onde o cursor tira sua cor.** Reivindicado pelo PR de `ai/loop-20260907T110000Z`
+      (relato em `docs/loop/runs/2026-09-07T110000Z.md`), que **não** escolheu uma cor nova: a
+      restrição do item não tem solução em cor, e é por isso que ele atravessou mais de vinte
+      execuções. Os dois chãos estão em extremos opostos da luminância — sobre `FREE` as três
+      camadas passam com 5,38:1 justamente por serem claras — então nenhuma silhueta separa dos
+      dois. A saída foi a da ADR-0011, aplicada à mesma forma de problema: **contorno de tinta de
+      1 px em `free_color`** por baixo da silhueta (ADR-0012), com `CURSOR_INK×BOUNDARY` medido em
+      8,93–9,98:1 nas quatro paletas e nas quatro visões. `CURSOR_KNOWN_DEBT` fica como estava, de
+      propósito: os pares cromáticos não melhoraram, a leitura é que deixou de depender deles.
+      Guarda em `tests/unit/cursor_ink_outline_test.gd`. **Falta o julgamento estético** — ninguém
+      viu o contorno numa tela, em particular no instante em que o cursor deixa a borda e a tinta
+      se dissolve no chão. Se o PR for fechado sem mesclar, o item volta a `[ ]` com o critério
+      original.
 
 - [ ] **O canal sonoro da exposição não foi feito.** O item original pedia som **e** háptica ao
       cruzar `TrailExposure.WARNING_RATIO`; #39 entregou só a háptica (`app/haptic_feedback.gd`).

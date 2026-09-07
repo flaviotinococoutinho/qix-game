@@ -70,12 +70,14 @@ const PAIRS := [
 	["TRAIL", "THREAT"],
 ]
 
-## As três camadas opacas da silhueta 5×5 de `QixPlayerView._draw`, de fora para dentro. O halo de
+## As quatro camadas opacas de `QixPlayerView._draw`, de fora para dentro: o contorno de tinta e a
+## silhueta 5×5 que ele envolve (ADR-0012). O halo de
 ## `accent_color` fica de fora de propósito: é desenhado com alfa sobre o chão, então a cor que
 ## chega ao olho depende do que está atrás — não é um valor que esta medição possa afirmar.
 ## `tests/unit/cursor_contrast_test.gd` amarra este mapa ao `presentation_colors()` real da view,
 ## para que renomear a cor de uma camada não deixe a medição medindo outra coisa.
 const CURSOR_LAYERS := [
+	["CURSOR_INK", "free_color"],
 	["CURSOR_OUTER", "boundary_color"],
 	["CURSOR_ACCENT", "accent_color"],
 	["CURSOR_CORE", "trail_hot_color"],
@@ -85,7 +87,13 @@ const CURSOR_LAYERS := [
 ## partida inteira sobre um destes dois chãos: `BOUNDARY` enquanto anda protegido, `FREE` enquanto
 ## desenha. Cada camada é medida contra os dois porque a silhueta só é legível pela camada que
 ## sobreviver ao chão do momento.
+## `CURSOR_INK` aparece só contra `BOUNDARY`, e a ausência é deliberada: sobre `FREE` a tinta **é**
+## o chão, mede ~1:1 por construção e some — é isso que se quer, porque ali as camadas opacas já
+## passam com folga. Medi-la contra `FREE` como par de legibilidade afirmaria uma leitura que o
+## desenho não pretende. Mesma escolha de `enemy_silhouette_contrast_test.gd` para o anel da
+## ameaça. Ver `docs/decisions/ADR-0012-cursor-ink-outline.md`.
 const CURSOR_PAIRS := [
+	["CURSOR_INK", "BOUNDARY"],
 	["CURSOR_OUTER", "FREE"],
 	["CURSOR_OUTER", "BOUNDARY"],
 	["CURSOR_ACCENT", "FREE"],
@@ -116,6 +124,7 @@ const KNOWN_DEBT := ["BOUNDARY×TRAIL", "BOUNDARY×THREAT", "TRAIL×THREAT"]
 ## sobre a paleta padrão e as três rodadas autoradas, arredondada para baixo. Os três pares sobre
 ## `BOUNDARY` estão registrados como dívida, não como aprovação — ver `docs/ART_DIRECTION.md`.
 const CURSOR_FLOOR := {
+	"CURSOR_INK×BOUNDARY": 8.92,
 	"CURSOR_OUTER×FREE": 12.10,
 	"CURSOR_OUTER×BOUNDARY": 1.00,
 	"CURSOR_ACCENT×FREE": 5.30,
@@ -125,7 +134,12 @@ const CURSOR_FLOOR := {
 }
 
 ## Mesma função de `KNOWN_DEBT`, para o cursor. Que a lista tenha **as três** camadas é o achado:
-## sobre `BOUNDARY` nenhuma parte opaca do cursor separa por luminância, em nenhuma paleta.
+## sobre `BOUNDARY` nenhuma cor autorada da silhueta separa por luminância, em nenhuma paleta.
+##
+## A lista **continua** completa depois da ADR-0012, e isso é correto — os pares cromáticos não
+## melhoraram. O que mudou é que a leitura deixou de depender deles: `CURSOR_INK×BOUNDARY`, acima,
+## carrega-a a 8,93:1. Fechar a dívida cromática segue em aberto, agora sem urgência. Mesma
+## consequência que a ADR-0011 registrou para `BOUNDARY`×`THREAT` e `TRAIL`×`THREAT`.
 const CURSOR_KNOWN_DEBT := [
 	"CURSOR_OUTER×BOUNDARY",
 	"CURSOR_ACCENT×BOUNDARY",
