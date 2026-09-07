@@ -1,14 +1,15 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** suíte na base (262 testes, 12719 asserções, 0 falhas) e integração *de facto* dos 20
+> PRs abertos #56–#75 numa branch de medição descartada. Atualizados: o estado da fila e os itens
+> P0/P1 que a medição de 12:00Z contradisse. Registros anteriores são históricos, não contagens
+> atuais. Mérito visual, áudio físico, Android real e export continuam sem validação.
 
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+> **Estado da fila em 2026-09-07T12:00Z: 20 PRs abertos (#56–#75).** A fila #20–#55 drenou em
+> `34634d0`; esta é uma fila nova, formada em ~19 h. Os 20 nascem de `34634d0`, nenhum atrasado, e
+> **não mesclam sozinhos**: seis abortam em `addons/README.md` e a guarda do #69 deixa a árvore
+> vermelha. Medição e ordem de merge sugerida em `docs/loop/runs/2026-09-07T120039Z.md`.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -86,11 +87,17 @@ Itens sem critério de pronto não entram aqui.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
-- [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
-      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
-      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
-      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
-      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+- [x] **Drenar a fila #20–#55.** ✅ mesclado em `34634d0` (PR #55). O #19 drenou os 18 primeiros.
+      **E a fila voltou a 20 em ~19 h** (#56–#75, medido em 2026-09-07T12:00Z) — mais rápido do que
+      as 38 h da vez anterior. O item abaixo é a razão pela qual isto se repete.
+
+- [ ] **Drenar a fila #56–#75 — mas ela não mescla sozinha.** Medido em 12:00Z: os 20 nascem de
+      `34634d0`, nenhum atrasado, e ainda assim a integração sequencial chega a **14 de 20**. Seis
+      abortam em `addons/README.md` (P1, remoções da ADR-0010) e a árvore resultante fica
+      **vermelha** por causa da guarda do #69 (P1). O custo real da drenagem já não é reescrever o
+      ledger à mão: são **nove resoluções obrigatórias** (seis de manifesto, três de matriz).
+      Ordem de merge sugerida e evidência em `docs/loop/runs/2026-09-07T120039Z.md`.
+      *Pronto:* `main` além de `34634d0` e a fila em ≤ 2 PRs abertos.
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
@@ -124,14 +131,42 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** Reivindicado pelos
+      sete PRs abertos #60, #62, #63, #64, #66, #72, #73 — um por pasta (`curved_lines_2d`,
+      `phantom_camera`, `guide`, `GDDraw`, `yard`, `softbody2d`, `curve2collision`). **Não escolha
+      este item: o trabalho existe sete vezes, só não mescla.**
+
+      ⚠️ **Correção medida em 12:00Z:** este item dizia "sete vezes repetível, **sem disputar
+      arquivo com ninguém**". É **falso**. Os sete editam a mesma tabela de manifesto em
+      `addons/README.md`, e por isso estão **totalmente serializados**: na integração sequencial o
+      primeiro removedor passa e os outros seis abortam, todos no mesmo arquivo. O #67 **não**
+      resolve — ele deriva do disco a *guarda* (`addons_manifest_test.gd`) e não toca na tabela em
+      prosa. Evidência: `docs/loop/runs/2026-09-07T120039Z.md`, achado 2.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
-      corpo.
+      corpo. **Antes disso**, ver o item novo abaixo sobre a tabela em prosa.
+
+- [ ] **`addons/README.md` é uma tabela em prosa que serializa toda remoção — a causa, não o
+      sintoma.** Nascido da medição de 12:00Z. Enquanto a lista de addons for texto editado à mão,
+      cada remoção reescreve a mesma linha-vizinhança e conflita com todas as outras; sete PRs
+      independentes custam seis resoluções à mão. O #67 já provou o caminho para a *guarda*
+      (derivar do disco); falta fazer o mesmo com a **tabela lida por humanos**, ou aceitar por
+      escrito que as remoções são estritamente sequenciais.
+      *Pronto:* ou a tabela de `addons/README.md` é gerada de disco (e duas remoções quaisquer
+      mesclam em qualquer ordem sem conflito), ou a ADR-0010 declara a serialização e o backlog
+      deixa de prometer sete PRs paralelos.
+
+- [ ] **A guarda de inventário do #69 é insatisfazível em paralelo — resolver antes de mesclá-la.**
+      Nascido da medição de 12:00Z, achado 1. O #69 (aberto) troca a contagem digitada da matriz
+      por uma derivada e instala `tests/unit/test_matrix_inventory_test.gd`, que exige que a linha
+      de inventário bata com a varredura do runner. Isso torna um número de documentação um
+      **invariante global que quebra o build**, e o número depende de *quais outros PRs mesclaram*
+      — coisa que nenhum PR pode saber sobre o seu par. Quatro PRs abertos acrescentam teste (#61,
+      #69, #74, #75). Medido: `main`+#69 = 264 testes, **0 falhas**; `main`+#69+#61, com o conflito
+      **resolvido à mão**, = 270 testes, **2 falhas**. É o padrão #25×#50 outra vez — `git merge`
+      verde, suíte vermelha —, agora por acoplamento e não por remoção de símbolo.
+      *Pronto:* ou a linha derivada é gerada por ferramenta em vez de digitada no doc (e acrescentar
+      um teste deixa de exigir editar a matriz), ou o #69 documenta que cada PR que acrescenta teste
+      precisa de correção à mão na ordem de merge, e o protocolo acima diz isso.
 
 - [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
@@ -269,6 +304,12 @@ reporta `4.7.2.stable.official.ed1daf0bf`. O `--import` obrigatório roda até o
 mono. Suíte completa (232 testes) em ~6 s; `verify_m2_capture_route.gd` e `profile_board_view.gd`
 em segundos. Nesta sessão não há desculpa para PR sem verificação — se uma execução não rodou os
 comandos, o motivo tem que ser dito, não omitido.
+
+**O `main` local do checkout mente. Use `origin/main`.** Medido em 12:00Z: num sandbox recém-clonado
+o `HEAD` está em `34634d0` mas a ref local `main` aponta para `74c173a` (2026-09-03). Medir a fila
+com `git diff main...origin/<branch>` dá merge-base de quatro dias atrás e ~495 arquivos alterados
+por PR — número inteiramente falso, e convincente o bastante para se escrever num PR. Faça
+`git fetch origin main` e compare sempre contra `origin/main`.
 
 Ruído esperado, **não** regressão — não gaste uma execução investigando:
 
