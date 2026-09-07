@@ -1,9 +1,12 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** só o item P1 da ADR-0010 foi reverificado nesta data (estado por pasta e fila de
+> PRs que as reivindicam). **O resto deste arquivo não foi reverificado em 2026-09-07** — o bloco
+> de integração abaixo e as seções P0 descrevem a fila como estava em 2026-09-06 e há quatro
+> PRs abertos (#56–#59) a reconciliá-los. As evidências finais ficam no workflow Verificação e em
+> seu `manifest.json`, vinculado ao commit e à árvore testados. Registros anteriores são
+> históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
 
 > **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
@@ -124,12 +127,17 @@ Itens sem critério de pronto não entram aqui.
 
 ### P1 — higiene estrutural
 
-- [ ] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
-      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`), mas as sete pastas
-      continuam em disco: `GDDraw`, `curve2collision`, `curved_lines_2d`, `guide`,
-      `phantom_camera`, `softbody2d`, `yard`. A ADR exige, por remoção, a mesma evidência de posse
-      de `uid://` usada na poda dos demos. **Item ideal para uma execução curta** — pequeno,
-      mecânico e sete vezes repetível, sem disputar arquivo com ninguém.
+- [~] **Executar as sete remoções decididas na ADR-0010 — uma pasta por PR.** A decisão está
+      tomada e a guarda existe (`tests/unit/addons_manifest_test.gd`). Estado por pasta em
+      2026-09-07T01:58Z: `yard` **removida** por esta execução (`ai/loop-20260907T015837Z`);
+      `curved_lines_2d` (#60), `phantom_camera` (#62), `guide` (#63) e `GDDraw` (#64) têm PR aberto
+      — não escolha nenhuma delas. **Livres: `curve2collision` (48 KB) e `softbody2d` (112 KB).**
+      A ADR exige, por remoção, a mesma evidência de posse de `uid://` usada na poda dos demos.
+      **Item ideal para uma execução curta** — pequeno, mecânico e repetível, sem disputar arquivo
+      com ninguém: a receita das quatro varreduras está em `docs/loop/runs/2026-09-07T015837Z.md`.
+      Aprendido ao executar a primeira: a entrada de `exclude_filter` da pasta **fica** em
+      `export_presets.cfg` (mesma razão de `guide_examples/**`), o que também evita que as
+      remoções irmãs disputem essa linha; a guarda só a exige enquanto a pasta é declarada.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
 

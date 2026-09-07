@@ -1,8 +1,9 @@
 # `addons/` — o que está aqui e por quê
 
-> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** inventário das nove pastas de `addons/`, cruzado por caminho (`addons/<pasta>`) e
-> por `class_name` contra `game/`, `ui/`, `app/`, `tools/`, `tests/`, `content/` e `project.godot`.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** inventário das oito pastas de `addons/` (eram nove; `yard` saiu nesta data), cruzado
+> por caminho (`addons/<pasta>`), por `class_name` e por posse de `uid://` contra `game/`, `ui/`,
+> `app/`, `tools/`, `tests/`, `content/` e `project.godot`.
 > Não julga a qualidade de nenhum addon nem se algum deles resolveria melhor um problema aberto —
 > só registra quem consome o quê hoje.
 
@@ -32,10 +33,16 @@ entre a tabela e o disco.
 | `guide` | `a-remover` | 2,7 MB de motor de entrada unificado. A entrada deste jogo passa por `GameInputAdapter` e pela fronteira da ADR-0006, que não delega a ele. Os demos (`guide_examples/`) já foram podados. |
 | `phantom_camera` | `a-remover` | 2,2 MB de direção de câmera. O campo é 240×320 fixo, sem câmera que se mova. |
 | `softbody2d` | `a-remover` | 112 KB de corpo mole por Voronoi. Sem física no domínio, por invariante 1. |
-| `yard` | `a-remover` | 1,1 MB de base de dados de recursos. `content/` já é transacional pela ADR-0008. |
 
-Somadas, as sete pastas `a-remover` ocupam ~11,5 MB e declaram 101 cenas que nenhum leitor deste
-jogo precisa abrir.
+Somadas, as seis pastas `a-remover` que restam ocupam ~10,4 MB e declaram 92 cenas que nenhum
+leitor deste jogo precisa abrir.
+
+`yard` (1,1 MB, 108 arquivos, 9 cenas) saiu em 2026-09-07, primeira das sete remoções previstas
+pela ADR-0010 a ser executada. A linha de `exclude_filter` **continua** citando `addons/yard/**`
+nos dois presets, pela mesma razão que `guide_examples/**` e `samples/**` continuam lá: um checkout
+que rebaixe o addon pela AssetLib recria o caminho em disco, e o filtro cobre o que o `.gitignore`
+não cobre. O teste só exige a linha enquanto a pasta é declarada; mantê-la é barato e cobre a
+recaída.
 
 ## Como acrescentar um addon
 
