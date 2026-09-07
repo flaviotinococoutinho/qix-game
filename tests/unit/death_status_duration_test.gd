@@ -66,6 +66,7 @@ func test_death_cause_does_not_outlive_a_short_dying_phase() -> void:
 		BOSS_CONTACT_TEXT,
 		"a mensagem de morte cobriu a linha de estado depois de o jogador ter o controlo de volta",
 	)
+	hud.free()
 
 
 func test_death_status_does_not_touch_the_domain() -> void:
