@@ -133,6 +133,11 @@ Itens sem critério de pronto não entram aqui.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
 
+      **Quatro das sete já estão reivindicadas** (medido no GitHub em 2026-09-07T01:00Z, depois de
+      os PRs #60–#64 nascerem): `curved_lines_2d` no #60, `phantom_camera` no #62, `guide` no #63 e
+      `GDDraw` no #64. Livres: **`curve2collision`, `softbody2d` e `yard`** — só estas três; abrir
+      um quinto PR sobre uma das quatro acima é duplicação.
+
 - [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
       reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
       #38, #39 e #41 acrescentaram testes depois. A árvore integrada roda **232 testes / 12534
@@ -230,10 +235,15 @@ O que continua aberto:
       cue de #23 já dá a ferramenta. *Pronto:* cruzar o limiar é audível, com prioridade
       declarada, **sem alterar checksum**.
 
-- [ ] **`docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** Medido na árvore
-      integrada: **zero** ocorrências de `ADR-0011` no documento de arte, embora a ADR decida um
-      traço visual da ameaça; e a floritura de captura de #37 também não está escrita lá. Quem lê
-      só o documento de arte não encontra nenhuma das duas.
+- [~] **`docs/ART_DIRECTION.md` não registra duas decisões visuais já tomadas.** Reivindicado pelo
+      PR de `ai/loop-20260907T010048Z`: as seções “O contorno da ameaça” (ADR-0011, com link) e
+      “Onde a floritura da captura acontece” (#37) entram no documento de arte, e três afirmações
+      que a ADR-0011 tornou obsoletas — hierarquia, leitura de “Contraste medido”, barra do slice —
+      são corrigidas para o documento não guardar duas versões do mesmo fato.
+      Achado do caminho: os três números do anel na ADR-0011 **não são medição independente** —
+      são o mínimo entre as quatro paletas das linhas `FREE`× que a tabela do campo já tinha
+      (8,93 / 11,23 / 3,73), porque a tinta é o `free_color`. A seção nova diz a derivação em vez de
+      imprimir uma quarta tabela que envelheceria sozinha. Ver `docs/loop/runs/2026-09-07T010048Z.md`.
       *Pronto:* as duas decisões referenciadas na seção que lhes corresponde.
 
 - [x] **O tempo da transição entre rodadas não tem ritmo.** ✅ entregue pelo #50
