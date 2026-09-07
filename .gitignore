@@ -44,6 +44,20 @@ State Machine Antipixel Godot Documentation.pdf
 guide_examples/
 samples/
 
+# ── Addons removidos pela ADR-0010 ───────────────────────────────────────────
+# Uma pasta que estava como `a-remover` em addons/README.md e saiu do
+# versionamento. Ignorar impede que um checkout que a rebaixe pela AssetLib a
+# recommite por acidente — mas NÃO a esconde: ela reaparecendo em disco,
+# addons_manifest_test.gd fica vermelho por pasta sem linha no manifesto, que é
+# exatamente a barreira que a ADR-0010 quis. Quem decidir mantê-la escreve a
+# linha com o estado novo e faz `git add -f`.
+#
+# curved_lines_2d (Scalable Vector Shapes 2D 2.33.3): 296 arquivos, 3,4 MB,
+# 42 cenas, 17 class_name. Nenhum dos seus 170 uid:// era citado de fora dela e
+# nenhum dos class_name aparecia em game/, ui/, app/, tools/, tests/, content/
+# ou project.godot. A arte deste jogo é máscara R8 e shader, não SVG.
+addons/curved_lines_2d/
+
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
