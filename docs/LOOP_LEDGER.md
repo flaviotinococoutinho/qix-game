@@ -1,14 +1,16 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless (nuvem)
+> **Alcance:** suíte completa reexecutada (265 testes, 12785 asserções, 0 falhas) e
+> `verify_m2_capture_route.gd` (`errors` vazio, rota em 825‰). A posse por arquivo abaixo foi
+> remedida contra `origin/main`. Mérito visual, áudio físico, Android real, export e QA de
+> shipping continuam sem validação nesta sessão. Registros anteriores são históricos, não
+> contagens atuais.
 
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+> **Estado da fila em 2026-09-07T15:04Z:** `main` em `34634d0`; **#56–#78 abertos, 23 no total**,
+> contra o limite operacional de dois que o protocolo abaixo fixa. Nada mesclou desde o #55. Os
+> censos de posse de 2026-09-06 (16:00Z e 17:01Z) foram medidos contra uma `main` que já não
+> existe: **não valem mais**. A medição válida está em `docs/loop/runs/2026-09-07T150442Z.md`.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -86,11 +88,13 @@ Itens sem critério de pronto não entram aqui.
 
 ### P0 — a fila e a cadência (nada abaixo importa enquanto isto não anda)
 
-- [~] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** Reivindicado pelo
-      PR desta execução (`ai/loop-20260906T140000Z`), que integra **#20–#50** numa branch só, com
-      o ledger reconciliado à mão e medida verde. O #19 drenou os 18 primeiros; a fila voltou a 30
-      em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila.
-      *Pronto:* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
+- [x] **Drenar a fila de PRs abertos — a integração que cobre a fila inteira.** ✅ mesclado: `main`
+      está em `34634d0` (merge do #55, que integrou #20–#54), muito além de `cba520a`. O critério
+      de pronto foi cumprido **por algumas horas**: em 2026-09-07T15:04Z a fila já está de volta a
+      **23** (#56–#78). Fecha-se o item porque a integração foi entregue; o que **não** se resolveu
+      é a causa, e essa é o item seguinte — não abra outra integração antes de lê-lo. O #19 drenou
+      os 18 primeiros; a fila voltou a 30 em ~38 h. O #36 (16 PRs) e o #42 (22 PRs) nasceram e
+      envelheceram na própria fila.
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
@@ -106,7 +110,11 @@ Itens sem critério de pronto não entram aqui.
       só a integração de facto vê. Enquanto a fila passar de ~10, vale reintegrar e medir.
 
 - [ ] **A cadência do loop excede a cadência de revisão, e isso é problema de projeto, não de
-      execução.** Medido quatro vezes (#31, #36, #40 e esta run): o loop produz 1 PR/h e a revisão
+      execução.** **Quinta medição, 2026-09-07T15:04Z:** o #55 drenou a fila a zero e ela voltou a
+      **23** (#56–#78) em ~19 h — 1 PR/h, exatamente a cadência do agendamento, sem que `main`
+      andasse um commit. A drenagem não é a cura: é o ciclo. Enquanto isto não for decidido, cada
+      execução escolhe entre colidir com um PR aberto e não tocar no jogo.
+      Medido quatro vezes antes (#31, #36, #40 e a run de 14:00Z): o loop produz 1 PR/h e a revisão
       humana é episódica. Entre 2026-09-05T02:57Z e 2026-09-06T04:56Z a fila foi de 0 a 22 sem que
       `main` andasse; dessas 22 execuções, **cinco** (#30, #31, #34, #36, #40) gastaram a hora
       inteira medindo ou consertando a própria fila em vez de tocar no jogo — ~23 % do esforço
@@ -250,6 +258,31 @@ O que continua aberto:
       `tools/verify_hud_row_geometry.gd` mede a construção durante frames, não só as constantes
       no `_initialize()` do runner. O teste horizontal e os comentários corrigidos também
       foram preservados. A sonda passou a fazer parte do CI. Aprovação estética continua humana.
+
+- [x] **A causa da morte durava 45 ticks e a morte dura `death_ticks`.** ✅ entregue por esta
+      execução (`ai/loop-20260907T150442Z`), com o defeito reproduzido antes do conserto e
+      `tests/unit/death_status_duration_test.gd` a defendê-lo. A linha de estado nomeava
+      `CONTATO!` / `ESCUDO ESGOTADO` por um prazo de flash escrito à mão no HUD, sem relação com
+      `rules.death_ticks`: com o padrão 60, a causa sumia nos **últimos 15 quadros** da sequência;
+      com qualquer `death_ticks` < 45 ela **sobrevivia à reentrada** e cobria a linha do jogo vivo.
+      A causa passou a ser estado da fase `DYING`, escrito só pelo evento `PLAYER_DIED` confirmado
+      e zerado por `PLAYER_RESPAWNED`. Checksum medido igual. **Falta o julgamento estético:**
+      ninguém viu a sequência numa tela.
+
+- [ ] **Os quatro canais da morte declaram quatro durações diferentes, e nenhuma é a do domínio.**
+      Achado desta execução ao consertar o item acima, **não medido além da leitura estática**: a
+      fase `DYING` dura `rules.death_ticks` = 60 ticks (1,0 s), mas a háptica pulsa 380 ms
+      (`app/haptic_feedback.gd`), o cue de áudio `death` dura 0,42 s (`game/audio/audio_director.gd`)
+      e o pisca-pisca do cursor usa um passo fixo de 4 ticks (`game/player/player_view.gd:41`,
+      que também não conhece `death_ticks` — com uma sequência curta o pisca corta a meio de um
+      ciclo). Quatro números, nenhum a conhecer os outros: o mesmo defeito que o HUD tinha, três
+      vezes. Não é pedir que todos durem 1,0 s — háptica curta e som curto são escolhas legítimas;
+      é pedir que a escolha esteja **escrita e derivada**, em vez de ser uma constante que ninguém
+      revisita quando `death_ticks` muda.
+      *Pronto:* cada canal ou deriva de `rules.death_ticks` ou tem, no comentário, a razão de não
+      derivar; e um teste prova que variar `death_ticks` não deixa nenhum canal a tocar depois da
+      reentrada. **Hoje os três arquivos estão reivindicados** (#61, #75) — só é trabalhável
+      depois de a fila drenar.
 
 - [ ] **[requer sessão humana] Calibrar a curva de exposição.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
