@@ -1,7 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** nesta passagem só o item P2 da guarda de frescor foi reverificado (suíte completa,
+> 265 testes verdes) e a fila foi recontada no GitHub: **28 PRs abertos, #56–#83**, com `main`
+> parado em `34634d0`. As demais linhas de backlog **não** foram reverificadas nesta execução e
+> continuam valendo o que a reconciliação anterior deixou. Registro histórico anterior:
+> base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
 > As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
 > commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
@@ -183,10 +187,22 @@ Itens sem critério de pronto não entram aqui.
       `doc_freshness_header_test.gd` (#6) exige a linha `> **Verificado em**` e fica verde com ela
       presente — mesmo quando o corpo mente. #21 corrigiu `TEST_MATRIX.md`, que afirmava quatro
       contagens concorrentes e passava em tudo; **os demais docs que passaram pela mesma união
-      automática não foram auditados**. → (a) auditar os outros documentos contra o código
-      integrado; (b) decidir se alguma guarda barata pega contradição interna (ex.: recusar duas
-      linhas de tabela com a mesma primeira coluna). *Pronto:* nenhum doc de `docs/` com duas
-      afirmações concorrentes sobre o mesmo fato, e a decisão sobre (b) escrita.
+      automática não foram auditados**.
+
+      **(b) está decidido e entregue** por `ai/loop-20260907T200316Z`: sim, uma guarda barata pega
+      contradição — mas de **forma**, não de conteúdo. `tests/unit/doc_internal_consistency_test.gd`
+      recusa (i) dois títulos de seção iguais no mesmo documento e (ii) duas linhas da mesma tabela
+      sob a mesma primeira coluna com respostas diferentes. São as duas formas em que a união
+      automática já fabricou contradição (as cinco seções "estado da fila" de 23:00Z; as quatro
+      contagens de `TEST_MATRIX.md`) e ambas passavam verdes na guarda de cabeçalho. Alcance:
+      `docs/*.md`, `docs/decisions/*.md`, `docs/loop/*.md`. `docs/loop/runs/` fica **fora com
+      causa medida** — ver a nota de ambiente abaixo. A árvore está limpa nos dois detectores; a
+      prova de que eles enxergam está no teste de mutação do relato da execução.
+
+      **(a) continua aberto e é o que resta deste item.** #77 auditou `PERFORMANCE.md` e #82
+      auditou `IMPLEMENTATION_STATUS.md`; os demais não. A guarda de (b) **não** substitui a
+      auditoria: ela pega contradição de forma, nunca afirmação falsa bem formatada.
+      *Pronto:* nenhum doc de `docs/` com duas afirmações concorrentes sobre o mesmo fato.
 
 ### P3 — experiência e estética (o alvo real)
 
@@ -286,6 +302,12 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - **A descoberta de testes em `run_tests.gd` varre diretório.** Dois PRs podem acrescentar arquivos
   de teste sem se tocarem — foi o que permitiu #3 e #5 coexistirem. Prefira arquivo novo a edição
   em arquivo disputado.
+- **`docs/loop/runs/` está fora da guarda de coerência interna, e a causa foi medida.** Um relato
+  de execução lista legitimamente o mesmo comando em linhas diferentes da mesma tabela, com
+  medidas diferentes — `2026-09-06T160022Z.md` faz isso com `tests/run_tests.gd` e com o portão
+  `verificacao.yml`. Ali a primeira coluna repetida não é contradição: é histórico append-only.
+  Aplicar `doc_internal_consistency_test.gd` naquela pasta trocaria uma guarda por ruído. A regra
+  vale para os documentos que afirmam **como está agora**, que são os que podem se contradizer.
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.
