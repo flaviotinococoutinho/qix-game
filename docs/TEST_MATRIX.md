@@ -1,7 +1,7 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** `tests/run_tests.gd` reexecutado (174 testes, 11.837 asserções, 0 falhas) e
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** `tests/run_tests.gd` reexecutado (264 testes, 12.728 asserções, 0 falhas) e
 > `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Os
 > testes Python do parser Metal HUD e o run de shipping não foram reexecutados.
 
@@ -19,10 +19,19 @@ cd /Users/flaviocoutinho/development/qiqix/qix-game
   --script res://tests/run_tests.gd
 ```
 
-Resultado atual: **174 testes, 11.837 asserções, 0 falhas e nenhum warning do jogo** — medido em
-**2026-09-05** sobre `cba520a` (a integração dos 18 PRs do loop), Godot **4.7.2-stable.official**,
+Resultado atual: **264 testes, 12.728 asserções, 0 falhas e nenhum warning do jogo** — medido em
+**2026-09-07** sobre `34634d0` (a integração de #20–#54), Godot **4.7.2-stable.official**,
 build Linux headless não-mono, em sandbox de nuvem sem editor e sem `libfennara`. Na mesma
 execução, `tools/verify_m2_capture_route.gd` fechou com `errors` vazio e a rota em 825‰.
+
+**Inventário da suíte (derivado, não digitado):** 50 arquivos de teste · 264 casos `test_*`.
+
+Essa linha não é digitada de memória: `tests/unit/test_matrix_inventory_test.gd` refaz a mesma
+varredura de diretório que `tests/run_tests.gd` faz e fica **vermelho** se ela divergir — e exige
+que todas as afirmações `N testes, M asserções, K falhas` deste documento repitam os mesmos
+números. Foi por não existir essa volta que a matriz atravessou onze PRs anunciando 174 testes
+enquanto o runner corria 262. A contagem de **asserções** continua sendo instantâneo datado: ela
+só existe depois de executar a suíte, e quem responde por ela é o cabeçalho acima, não a guarda.
 
 Os números de shipping mais abaixo continuam sendo os do run de macOS de **2026-09-03**: export,
 assinatura e QA de dispositivo não rodam na nuvem, então essa evidência **não** foi refeita. Os
@@ -52,6 +61,7 @@ testes Python do parser Metal HUD (**10/10**) e o subconjunto direcionado da tra
 | shipping | ícone quadrado, presets sem segredo, filtros, dispatch pela cena principal, smoke de áudio com marker/watchdog, seleção segura do serial, frame pacing e contratos de framebuffer/Metal HUD |
 | integração | existência, carga, campanha/feedback/touch ligados, camadas obrigatórias da cena principal, permissão Android de vibração e 60 Hz persistidos no projeto |
 | captura de erros | o runner de testes falha por erro de script ocorrido depois de uma asserção, e limpa a janela entre testes |
+| inventário desta matriz | a contagem de arquivos e de casos `test_*` é derivada pela mesma varredura de diretório do runner e conferida contra a linha declarada aqui; toda afirmação `N testes, M asserções, K falhas` do documento precisa repetir os mesmos números. Fora do alcance de propósito: a contagem de asserções (só existe depois de executar) e os demais `docs/*.md`, cujos números de outro ambiente são registro histórico |
 | invariantes 1 e 4 | varredura estática de `game/simulation`, `game/rules` e `game/session` por símbolo do mundo real (acaso global, relógio, `Input`, `Tween`, física, `await`, `_process`); o próprio scanner é validado contra amostras positivas e negativas, de modo que ele não pode passar sem olhar |
 | invariante 10 | SHA-256 de todo arquivo de mídia de `assets`, `game`, `ui`, `app`, `content`, `tools`, `tests` e `reference` conferido contra `assets/ASSET-PROVENANCE.md`; hash declarado sem arquivo correspondente é recusado como órfão salvo em linha `(removido)`; arquivo marcado `(removido)` não pode reaparecer; a checagem é exercitada contra bytes de controle não declarados e o padrão da tabela é validado numa linha sintética, para que uma reformatação não a transforme em laço vazio |
 
@@ -73,7 +83,7 @@ testes Python do parser Metal HUD (**10/10**) e o subconjunto direcionado da tra
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 174 testes, 11.837 asserções, 0 falhas, sem warning do jogo sobre `cba520a`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
+| log final da suíte | 264 testes, 12.728 asserções, 0 falhas, sem warning do jogo sobre `34634d0`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo

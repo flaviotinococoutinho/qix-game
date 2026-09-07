@@ -1,14 +1,15 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `c4cedb1` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** base integrada da #51, mais #52–#54; reconciliação a pedido explícito do mantenedor.
-> As evidências finais ficam no workflow Verificação e em seu `manifest.json`, vinculado ao
-> commit e à árvore testados. Registros anteriores são históricos, não contagens atuais.
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** backlog editado nos itens tocados pela execução de 05:03:59Z (matriz de teste,
+> relatórios de fila, guarda de frescor). Suíte reexecutada sobre `34634d0`: **264 testes, 12.728
+> asserções, 0 falhas**. As demais seções são herdadas e **não** foram reauditadas nesta passagem.
 > Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
 
-> **Integração autorizada:** `codex/resolve-open-prs-20260906` reúne #51–#54, preservando os
-> pais de merge e a resolução #25×#50 já testada. O merge em `main` depende do CI do HEAD final.
-> Censos de 16:00Z e 17:01Z foram preservados como histórico; consulte a fila real no GitHub.
+> **Estado da fila em 2026-09-07T05:03Z:** o #55 mesclou (`main` em `34634d0`, integrando #20–#54)
+> e a fila voltou a **13 PRs abertos** (#56–#68) em ~10 h. Isto é a quarta confirmação do item P0
+> logo abaixo: a cadência do loop excede a de revisão. Censos anteriores são históricos; consulte
+> a fila real no GitHub antes de escolher.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -116,11 +117,17 @@ Itens sem critério de pronto não entram aqui.
       por dia; ou automatizar a integração (o que esta execução fez à mão).
       *Pronto:* uma ADR curta com a política escolhida, e o agendamento ajustado para ela.
 
-- [ ] **Dois relatórios de fila onde deve haver um.** `tools/loop/merge_order_report.sh` (#31) e
-      `tools/loop/merge_queue_report.sh` (#30) respondem à mesma pergunta e já divergiram na
-      contagem. Achado de #31, reconfirmado aqui: os dois existem lado a lado na árvore integrada.
-      → Fundir num só, com a contagem correta (a de #30, que exclui PRs já mesclados).
-      *Pronto:* um único script em `tools/loop/`, e o protocolo acima apontando para ele.
+- [x] **~~Dois relatórios de fila onde deve haver um.~~ A premissa caiu — item encerrado sem fusão.**
+      Reavaliado em 2026-09-07 lendo os dois scripts: eles **não** respondem à mesma pergunta.
+      `merge_queue_report.sh` (#30) é **par a par contra `main`** — matriz de conflitos e posse de
+      arquivos. `merge_order_report.sh` (#31) é **cumulativo em sequência**, num worktree
+      descartável, e o cabeçalho dele diz por que o outro não bastava: cada PR do loop nasce do
+      mesmo `main` e, sozinho, mescla limpo; ninguém mescla um PR sozinho. Medido em 2026-09-05:
+      11 de 11 limpos par a par, **3** sobrevivendo à sequência. E a divergência de contagem que
+      motivava a fusão **já foi corrigida**: hoje os dois carregam o mesmo filtro de ancestralidade
+      (`merge-base --is-ancestor` contra a base), que era o que inflava a fila com PRs mesclados.
+      Fundi-los destruiria a distinção que custou uma execução para ser descoberta. Ver
+      `docs/loop/runs/2026-09-07T050359Z.md`.
 
 ### P1 — higiene estrutural
 
@@ -133,12 +140,18 @@ Itens sem critério de pronto não entram aqui.
       *Pronto:* cada pasta marcada `a-remover` no manifesto saiu, uma por PR, com a evidência no
       corpo.
 
-- [ ] **`docs/TEST_MATRIX.md` está devendo linhas — dívida acumulada de várias execuções.** #21
-      reconciliou a matriz à mão contra 174 testes, mas #24, #25, #26, #29, #32, #33, #35, #37,
-      #38, #39 e #41 acrescentaram testes depois. A árvore integrada roda **232 testes / 12534
-      asserções**. → Reconciliar de novo e, de preferência, atacar a causa: a matriz é contagem
-      escrita à mão sobre um runner que varre diretório.
-      *Pronto:* a matriz bate com a saída de `run_tests.gd`, ou a contagem é gerada, não digitada.
+- [~] **`docs/TEST_MATRIX.md` está devendo linhas.** Reivindicado pelo PR de
+      `ai/loop-20260907T050359Z`, que fez as **duas** metades do critério de pronto: a matriz foi
+      reconciliada (afirmava 174 testes / 11.837 asserções desde `cba520a`; o runner corria 262) e a
+      causa foi atacada — `tests/unit/test_matrix_inventory_test.gd` deriva o inventário pela mesma
+      varredura de diretório do runner e fica vermelho se a matriz divergir. Verde em **264 testes,
+      12.728 asserções** sobre `34634d0`, com a guarda provada nos três sentidos (planta na contagem
+      de casos, planta numa segunda contagem de asserções, arquivo de teste novo).
+      **Custo deliberado:** a partir daí, PR que acrescenta teste fica vermelho até bumpar uma linha
+      da matriz — `TEST_MATRIX.md` vira ponto de conflito a mais. Era a ausência dessa pressão que
+      deixou o documento derivar 88 casos. Quem drenar a fila: o **#61** acrescenta um teste e
+      ficará vermelho ao mesclar depois deste PR; o conserto é mecânico (a mensagem de falha imprime
+      a linha exata), não é regressão do #61.
 
 ### P2 — integridade de contexto
 
@@ -184,9 +197,28 @@ Itens sem critério de pronto não entram aqui.
       presente — mesmo quando o corpo mente. #21 corrigiu `TEST_MATRIX.md`, que afirmava quatro
       contagens concorrentes e passava em tudo; **os demais docs que passaram pela mesma união
       automática não foram auditados**. → (a) auditar os outros documentos contra o código
-      integrado; (b) decidir se alguma guarda barata pega contradição interna (ex.: recusar duas
-      linhas de tabela com a mesma primeira coluna). *Pronto:* nenhum doc de `docs/` com duas
-      afirmações concorrentes sobre o mesmo fato, e a decisão sobre (b) escrita.
+      integrado. *Pronto:* nenhum doc de `docs/` com duas afirmações concorrentes sobre o mesmo fato.
+
+      **(b) está decidido** (2026-09-07, `ai/loop-20260907T050359Z`): guarda barata pega, sim, mas
+      **não** pela heurística que este item propunha. Medida a proposta de "recusar duas linhas de
+      tabela com a mesma primeira coluna" contra todo o `docs/`: três ocorrências, e duas são
+      cabeçalhos legítimos de tabelas distintas no mesmo doc (`Métrica`, `Verificação`) — sinal
+      pobre demais para virar guarda. O que funciona é ancorar a afirmação a algo **derivável do
+      disco**, e não a outra afirmação: `test_matrix_inventory_test.gd` deriva a contagem de casos
+      pela varredura do runner. Onde não há derivação possível (asserções), a guarda exige apenas
+      que o documento não carregue **duas** contagens concorrentes para o mesmo run.
+      **E há um limite que não deve ser afrouxado:** a guarda para em `TEST_MATRIX.md` de propósito.
+      Ver o item novo abaixo.
+
+- [ ] **Números de outro ambiente parecem atuais em `IMPLEMENTATION_STATUS.md` e `SHIPPING_PASS.md`.**
+      Achado ao construir a guarda acima. Ambos citam **134 testes, 11.489 asserções**
+      (`IMPLEMENTATION_STATUS.md:67`, `SHIPPING_PASS.md:228`) de um run de shipping em macOS de
+      2026-09-03. O número é **verdadeiro por ser histórico** — e por isso a guarda de inventário
+      não os alcança: forçá-los a bater com a árvore de hoje seria falsificar evidência que a nuvem
+      não pode reproduzir. O risco é de leitura, não de contradição: nada na linha avisa o leitor
+      apressado de que aquilo é outro ambiente e outra data. → Marcar a proveniência **na própria
+      linha**, não só no cabeçalho do documento. *Pronto:* toda contagem de suíte em `docs/` diz, na
+      linha, o ambiente e a data de que veio — ou é derivada.
 
 ### P3 — experiência e estética (o alvo real)
 
@@ -266,7 +298,8 @@ O que continua aberto:
 
 Verificado em 2026-09-06: o build Linux headless `4.7.2-stable` baixa sem bloqueio de rede e
 reporta `4.7.2.stable.official.ed1daf0bf`. O `--import` obrigatório roda até o fim e **não** exige
-mono. Suíte completa (232 testes) em ~6 s; `verify_m2_capture_route.gd` e `profile_board_view.gd`
+mono. Suíte completa (264 testes sobre `34634d0`, remedido em 2026-09-07) em ~4,5 s;
+`verify_m2_capture_route.gd` e `profile_board_view.gd`
 em segundos. Nesta sessão não há desculpa para PR sem verificação — se uma execução não rodou os
 comandos, o motivo tem que ser dito, não omitido.
 
