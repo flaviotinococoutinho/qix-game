@@ -10,6 +10,17 @@
 > viewport, renderer e tick seguem conferidos em `project.godot`; a tabela de ownership, por
 > existência de arquivo. Alvos, tamanhos de export e estado do ferramental MCP seguem do run
 > macOS de 2026-09-03 e **não** foram reexecutados.
+> **Alcance:** só a linha nova da tabela de ownership (`RoundVisualDefinition`), cujas
+> três afirmações — sem `canonical_bytes()`, fora do `config_hash`, não nomeada pelo domínio —
+> são verificadas por `tests/unit/rules_presentation_exception_test.gd` na suíte reexecutada aqui
+> (268 testes, 13.994 asserções, 0 falhas). **Nenhuma outra seção foi reverificada nesta data**;
+> os alcances abaixo continuam a valer com as datas que declaram.
+> **Alcance herdado (2026-09-05, `cba520a`):** a seção § Raízes foi remedida nesta data —
+> contagem de cenas, `uid://` e
+> `class_name` de `antipixel_state_machine/` conferidos por `grep` e pelo cache de classes
+> globais antes da remoção. Engine, viewport, renderer e tick seguem conferidos em
+> `project.godot`; a tabela de ownership, por existência de arquivo. Alvos, tamanhos de export e
+> estado do ferramental MCP seguem do run macOS de 2026-09-03 e **não** foram reexecutados.
 
 Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; título público ainda não definido.
 
@@ -95,6 +106,7 @@ diferentes do mesmo risco.
 | Território | `BoardState` (`game/simulation/board_state.gd`) | única autoridade; `PackedByteArray`; estados `FREE/BOUNDARY/TRAIL/CLAIMED` |
 | Regras | `GameRules` (`game/rules/game_rules.gd`) | `Resource` imutável em runtime |
 | Campanha | `CampaignDefinition` + `RoundContent` | ordem, transições e referências autoráveis; uma simulação/replay por rodada |
+| Paleta da rodada | `RoundVisualDefinition` (`game/rules/round_visual_definition.gd`) | **apresentação hospedada em `game/rules/`** — a única exceção da pasta, por ficar ao lado do `RoundContent` que a autora. Não tem `canonical_bytes()`, logo fica fora do `config_hash`; nenhum arquivo de `game/simulation/` ou `game/session/` a nomeia, logo não entra no tick. A isenção é declarada e verificada em `tests/unit/rules_presentation_exception_test.gd`, não presumida: um `Color` novo noutro arquivo da pasta, ou o domínio a ler `.visual`, ficam vermelhos |
 | Tick | `GameSimulation.step(intent)` | sem `delta`; ordem fixa documentada no arquivo |
 | Captura | `FloodFillCaptureResolver` | puro; devolve `CapturePlan` ou `CaptureError`; não muta nada |
 | Acaso | `DeterministicRng` | xorshift32 com seed explícita; único ponto de aleatoriedade |

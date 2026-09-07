@@ -69,6 +69,11 @@ addons/yard/
 # .github/workflows/verificacao.yml, e quem o roda localmente para reproduzir o
 # portão ganha __pycache__/ com os .pyc de headless_gate. São derivados do
 # .py ao lado, nunca fonte da verdade.
+# ── Bytecode de Python ───────────────────────────────────────────────────────
+# O portão de CI é Python (`tools/ci/`) e o próprio workflow corre
+# `python3 -m unittest discover -s tools/ci`. Quem reproduz o CI localmente —
+# que é o que este projeto pede antes de qualquer "passa" — gera o cache no
+# mesmo comando. É artefato reproduzível, como `.godot/`, não fonte da verdade.
 __pycache__/
 *.py[cod]
 
