@@ -80,3 +80,8 @@ __pycache__/
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
+
+# Bytecode do Python: `tools/ci/` tem testes que o portão roda, e rodá-los localmente
+# deixa `__pycache__/` na árvore. Binário gerado não se versiona.
+__pycache__/
+*.pyc
