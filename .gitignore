@@ -49,9 +49,11 @@ samples/
 # o mesmo comando localmente — que é o jeito certo de conferir antes de empurrar
 # — deixa `__pycache__/` para trás. Sem esta linha, toda execução que valida o
 # portão de CI aparece com artefato por versionar e é tentada a commitá-lo.
-__pycache__/
-*.py[cod]
 
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
+
+# Bytecode derivado de Python, em qualquer profundidade.
+__pycache__/
+*.py[cod]
