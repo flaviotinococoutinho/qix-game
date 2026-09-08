@@ -117,6 +117,16 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [~] **Não versionar bytecode Python (#83).** Regras globais `__pycache__/` e `*.py[cod]`,
   remoção do bytecode já rastreado inclusive o acrescentado por #79. A guarda textual não
   consulta o índice Git: conferir também `git ls-files`. *Pronto:* ambos os exames verdes.
+  **Os dois exames existem desde 2026-09-08:** a guarda em GDScript prova a regra, e o passo
+  «Bytecode de Python fora do índice» de `verificacao.yml` prova o índice com `git ls-files` —
+  é ele que apanha o bytecode que #79 traz, porque `.gitignore` não expulsa arquivo já rastreado.
+
+- [ ] **`tools/profile/test_parse_metal_hud.py` não corre em portão nenhum.** `verificacao.yml`
+  descobre testes só em `tools/ci` (`discover -s tools/ci`); os **10 testes** de `tools/profile/`
+  passam à mão e nada os exige. Teste que nenhum portão corre é documentação com sintaxe de teste.
+  Achado de 2026-09-07T19:00Z (`docs/loop/runs/2026-09-07T190000Z.md`), perdido na reconciliação
+  da fila e reposto aqui. *Pronto:* os 10 testes correm na CI, ou a exclusão está justificada
+  onde o workflow a faz.
 
 ### P2 — integridade de contexto e contratos
 

@@ -36,6 +36,21 @@ jobs:
           chmod +x ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64
       - name: Regressões do próprio portão de CI
         run: python3 -m unittest discover -s tools/ci -p 'test_*.py' -v
+      # A guarda em GDScript (`python_bytecode_not_versioned_test.gd`) prova que a *regra* existe
+      # no `.gitignore`; não consulta o índice do Git, porque um teste headless não o alcança e
+      # `.pyc` em disco é legítimo. Este passo é a outra metade: prova que o índice está limpo.
+      # Sem os dois, um arquivo já rastreado continua rastreado — o `.gitignore` não o expulsa.
+      - name: Bytecode de Python fora do índice
+        run: |
+          set -euo pipefail
+          rastreado="$(git ls-files | grep -E '(^|/)__pycache__/|\.py[cod]$' || true)"
+          if [ -n "${rastreado}" ]; then
+            echo "Bytecode de Python versionado:" >&2
+            echo "${rastreado}" >&2
+            echo "É binário derivado e o Git não o mescla. Use: git rm --cached <arquivo>" >&2
+            exit 1
+          fi
+          echo "índice limpo de bytecode de Python"
       - name: Importação, suíte, rota M2 e geometria real do HUD
         run: |
           python3 tools/ci/headless_gate.py \
