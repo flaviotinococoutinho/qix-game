@@ -66,10 +66,29 @@ func presentation_colors() -> Dictionary:
 	return {"body": _body, "core": _core, "accent": _accent, "ink": _ink}
 
 
+## Ponto em que um raio na direção `direction` cruza o losango de raio `radius`.
+##
+## O anel é um losango, não um círculo: a distância do centro à sua borda vale `radius` sobre os
+## eixos e `radius/√2` nas diagonais. Multiplicar uma direção normalizada por `RIM_RADIUS`, como
+## se o anel fosse circular, acerta só nas quatro direções axiais — e o chefe anda em dezasseis
+## (`BossBehaviorController.DIRECTION_X`). Nas outras doze a marca nascia até 1,46 px fora do
+## contorno, mais do que a espessura de 1 px do próprio anel: deixava de ser a proa da silhueta e
+## virava um ponto solto ao lado dela, no rumo em que o jogador mais precisa de ler a ameaça.
+##
+## Pura e estática: o teste de âncora usa a mesma função que `_draw`, então a geometria medida é
+## a geometria desenhada — o mesmo contrato de `diamond()`.
+static func rim_point(direction: Vector2, radius: float) -> Vector2:
+	var span := absf(direction.x) + absf(direction.y)
+	if span <= 0.0:
+		return Vector2.ZERO
+	return direction * (radius / span)
+
+
 ## Geometria da silhueta, para quem precisa provar que o anel de tinta envolve o corpo sem que
-## nada da apresentação precise renderizar um frame.
+## nada da apresentação precise renderizar um frame. `mark_origin` é onde a proa de PURSUIT e a
+## haste de SWEEP encostam no anel para o rumo observado no último `sync`.
 func silhouette_geometry() -> Dictionary:
-	return {"body": _diamond, "rim": _rim}
+	return {"body": _diamond, "rim": _rim, "mark_origin": rim_point(_facing, RIM_RADIUS)}
 
 
 func presentation_state() -> Dictionary:
@@ -119,14 +138,16 @@ func _draw() -> void:
 	draw_rect(Rect2(0.0, 0.0, 1.0, 1.0), Color.WHITE)
 
 	# A silhueta comunica o contrato de movimento antes que ele ameace a trilha. As marcas nascem
-	# na borda do anel, não na do corpo, para não abrir o contorno na direção do movimento.
+	# na borda do anel, não na do corpo, para não abrir o contorno na direção do movimento — e a
+	# borda do anel é `rim_point`, não `RIM_RADIUS`, porque o anel é losango (ver a função).
+	var mark_origin := rim_point(_facing, RIM_RADIUS)
 	match _behavior_pattern:
 		BossBehaviorProfileScript.Pattern.PURSUIT:
 			var nose := _facing * (11.0 if _surging else 9.0)
-			draw_line(_facing * RIM_RADIUS, nose, _core, 1.0)
+			draw_line(mark_origin, nose, _core, 1.0)
 			draw_circle(nose, 1.5, _core, false, 1.0)
 		BossBehaviorProfileScript.Pattern.SWEEP:
 			draw_arc(Vector2.ZERO, 7.0, 0.0, TAU, 16, aura, 1.0)
-			draw_line(_facing * RIM_RADIUS, _facing * 9.0, _core, 1.0)
+			draw_line(mark_origin, _facing * 9.0, _core, 1.0)
 		_:
 			pass

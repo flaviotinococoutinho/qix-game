@@ -750,8 +750,32 @@ func _test_root(suffix: String) -> String:
 	return "user://transaction-tests/%s" % suffix
 
 
+func _safe_cleanup_absolute(path: String) -> String:
+	# Caminho vazio de fixture incompleta não pode virar res:// e apagar o checkout.
+	# A limpeza só aceita descendentes de user://, nunca sua raiz nem o projeto.
+	if path.is_empty():
+		return ""
+	var absolute := ProjectSettings.globalize_path(path).simplify_path()
+	var user_root := ProjectSettings.globalize_path("user://").simplify_path().trim_suffix("/")
+	if not absolute.begins_with(user_root + "/"):
+		return ""
+	return absolute
+
+
+func test_cleanup_is_limited_to_user_fixture_children() -> void:
+	for path in ["", "res://", "user://", "user://../", "res://tests"]:
+		eq(_safe_cleanup_absolute(path), "", "limpeza não pode atingir raiz/projeto: " + path)
+	var fixture := "user://transaction-tests/cleanup-safety"
+	var absolute := ProjectSettings.globalize_path(fixture).simplify_path()
+	eq(_safe_cleanup_absolute(fixture), absolute)
+	eq(_safe_cleanup_absolute(absolute), absolute, "recursão permite somente filhos de user://")
+
+
 func _cleanup_tree(path: String) -> void:
-	var absolute := ProjectSettings.globalize_path(path)
+	var absolute := _safe_cleanup_absolute(path)
+	if absolute.is_empty():
+		fail("limpeza recusada fora dos dados temporários: " + path)
+		return
 	if not DirAccess.dir_exists_absolute(absolute):
 		return
 	var directory := DirAccess.open(absolute)

@@ -76,6 +76,9 @@ var _objective_fill: ColorRect
 var _shield_fill: ColorRect
 var _flash_message: String = ""
 var _flash_ticks: int = 0
+## Causa da última morte **observada**, ou `-1` enquanto nenhuma foi. Não é um flash com prazo
+## próprio: quem lhe dá duração é a fase DYING do domínio. Ver `_status_text`.
+var _death_reason: int = -1
 var _shown_permille: int = -1
 var _counter_delay: int = 0
 var _shown_score: int = -1
@@ -253,12 +256,16 @@ func _capture_flash(events: Array[GameEvent]) -> void:
 				_flash_message = "CAPTURA +%d" % event.data.get("filled_delta", 0)
 				_flash_ticks = 75
 			GameEvent.Kind.PLAYER_DIED:
-				var reason: int = event.data.get("reason", GameSimulation.DeathReason.BOSS_CONTACT)
-				if reason == GameSimulation.DeathReason.SHIELD_EXPIRED:
-					_flash_message = "ESCUDO ESGOTADO · REENTRADA"
-				else:
-					_flash_message = "CONTATO! · REENTRADA"
-				_flash_ticks = 45
+				_death_reason = event.data.get("reason", GameSimulation.DeathReason.BOSS_CONTACT)
+				# A morte não entra na fila de flashes: ela tem fase própria no domínio e a linha
+				# de estado passa a ser dela até à reentrada. Zerar o prazo pendente impede que um
+				# "CAPTURA +n" ou um "ESCUDO CRÍTICO" anterior reapareça do outro lado da morte,
+				# anunciando um estado que o jogador já não tem.
+				_flash_ticks = 0
+				_flash_message = ""
+			GameEvent.Kind.PLAYER_RESPAWNED:
+				# A causa deixa de existir no mesmo tick em que o jogador recupera o controlo.
+				_death_reason = -1
 			GameEvent.Kind.SHIELD_CRITICAL:
 				_flash_message = "ESCUDO CRÍTICO"
 				_flash_ticks = 120
@@ -283,8 +290,20 @@ func _status_text(simulation: GameSimulation, session: GameSession, paused: bool
 		GameSimulation.Phase.GAME_OVER:
 			return "FIM DE JOGO · ENTER"
 		GameSimulation.Phase.DYING:
-			if _flash_ticks > 0:
-				return _flash_message
+			# A causa da morte dura exatamente a fase que o domínio abriu para ela
+			# (`rules.death_ticks`), não um prazo próprio do HUD. Antes eram 45 ticks fixos: com o
+			# `death_ticks` padrão (60) a causa sumia nos últimos 15 quadros da sequência, e com
+			# qualquer `death_ticks` abaixo de 45 ela sobrevivia à reentrada e cobria a linha do
+			# jogo vivo. Contato e escudo esgotado são erros diferentes e pedem correções
+			# diferentes: o nome do erro tem de durar o tempo em que o jogador está a olhar para
+			# ele, e acabar quando ele volta a ter o controlo.
+			# Defendido por `tests/unit/death_status_duration_test.gd`.
+			if _death_reason == GameSimulation.DeathReason.SHIELD_EXPIRED:
+				return "ESCUDO ESGOTADO · REENTRADA"
+			if _death_reason >= 0:
+				return "CONTATO! · REENTRADA"
+			# Ninguém observou o evento — a fase foi vista já a decorrer. O HUD não inventa uma
+			# causa que não lhe foi confirmada (invariante 6).
 			return "REENTRADA EM CURSO"
 	if _flash_ticks > 0:
 		return _flash_message

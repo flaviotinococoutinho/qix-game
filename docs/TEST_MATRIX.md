@@ -1,49 +1,29 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** medido sobre a árvore que integra os 22 PRs abertos (#56–#77) em cima de
-> `34634d0`. `tests/run_tests.gd` reexecutado (**288 testes, 14.087 asserções, 0 falhas**) e
-> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Duas
-> declarações concorrentes — 264/12.728 do #69 e 268/12.751 do #61 — foram substituídas por esta:
-> cada uma estava certa sobre a sua própria árvore e ambas ficavam erradas juntas. Só a
-> **contagem global**, o **inventário** e a linha de **feedback** foram reconciliados; as demais
-> linhas de "Cobertura automatizada" continuam a descrever o estado de `cba520a` e permanecem no
-> item P1 do `LOOP_LEDGER`. Os testes Python do parser Metal HUD e o run de shipping **não** foram
-> reexecutados.
-
-Última validação automatizada: **2026-09-03**, Godot
-**4.7.2-stable.mono.official** em macOS. Run de shipping:
-`20260903T065739Z-65912`, `runner_status=complete`, `runner_exit=0`, `overall_exit=0`.
+> **Verificado em** 2026-09-07 · commit `d13aead` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** preparação da PR #78 sobre `ca745780`, com resultados vinculados à árvore nos logs do gate.
+> **Resultado:** 309 testes, 14838 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
+> Exportação, assinatura, Android físico e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
 
 ```bash
-cd /Users/flaviocoutinho/development/qiqix/qix-game
-/Applications/Godot_mono.app/Contents/MacOS/Godot \
-  --headless --audio-driver Dummy \
-  --path /Users/flaviocoutinho/development/qiqix/qix-game \
-  --script res://tests/run_tests.gd
+python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado atual: **288 testes, 14.087 asserções, 0 falhas e nenhum warning do jogo** — medido em
-**2026-09-07** sobre a árvore que integra os 22 PRs abertos (#56–#77) em cima de `34634d0`, Godot
-**4.7.2-stable.official**, build Linux headless não-mono, em sandbox de nuvem sem editor e sem
-`libfennara`. Na mesma execução, `tools/verify_m2_capture_route.gd` fechou com `errors` vazio e a
-rota em 825‰.
+Resultado atual: **309 testes, 14838 asserções, 0 falhas** — árvore preparada sobre
+`ca745780`; resultados de outras branches não são intercambiáveis.
 
-**Inventário da suíte (derivado, não digitado):** 54 arquivos de teste · 288 casos `test_*`.
+**Inventário da suíte (derivado, não digitado):** 59 arquivos de teste · 309 casos `test_*`.
 
-Essa linha não é digitada de memória: `tests/unit/test_matrix_inventory_test.gd` refaz a mesma
-varredura de diretório que `tests/run_tests.gd` faz e fica **vermelho** se ela divergir — e exige
-que todas as afirmações `N testes, M asserções, K falhas` deste documento repitam os mesmos
-números. Foi por não existir essa volta que a matriz atravessou onze PRs anunciando 174 testes
-enquanto o runner corria 262. A contagem de **asserções** continua sendo instantâneo datado: ela
-só existe depois de executar a suíte, e quem responde por ela é o cabeçalho acima, não a guarda.
+A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
+de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
+Os logs retêm diagnósticos e o código de saída. A extensão nativa opcional ausente é isolada
+explicitamente pelo gate; seus scripts runtime permanecem. Isso não é QA da extensão nativa.
 
-Os números de shipping mais abaixo continuam sendo os do run de macOS de **2026-09-03**: export,
-assinatura e QA de dispositivo não rodam na nuvem, então essa evidência **não** foi refeita. Os
-testes Python do parser Metal HUD (**10/10**) e o subconjunto direcionado da transação de conteúdo
-(**22 testes, 353 asserções**) também são daquele run e não foram reexecutados aqui.
+As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09-03**,
+`20260903T065739Z-65912`; não foram substituídas por testes headless. A tabela de cobertura
+é descritiva, e o inventário autoritativo continua sendo a descoberta de testes desta árvore.
 
 ## Cobertura automatizada
 
@@ -90,7 +70,7 @@ testes Python do parser Metal HUD (**10/10**) e o subconjunto direcionado da tra
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 288 testes, 14.087 asserções, 0 falhas, sem warning do jogo sobre a árvore que integra #56–#77 em `34634d0`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
+| log final da suíte | 309 testes, 14838 asserções, 0 falhas, sem warning do jogo sobre a árvore que integra #56–#77 em `34634d0`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo

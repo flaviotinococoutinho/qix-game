@@ -337,6 +337,8 @@ func _busy_voice_count() -> int:
 
 func _release_all_voices() -> void:
 	_voice_priorities.fill(QixProceduralAudioLibrary.PRIORITY_IDLE)
+	_voice_free_msec.fill(0)
+	_voice_cursor = 0
 
 
 ## Um director desligado não segura pausa nenhuma: sem streams, não há o que
@@ -352,8 +354,6 @@ func _release_pause() -> void:
 	_paused_voices = 0
 	_paused_music = false
 	_last_trail_msec = -TRAIL_THROTTLE_MSEC
-	_voice_free_msec.fill(0)
-	_voice_cursor = 0
 
 
 static func cues_for_events(events: Array[GameEvent]) -> Array[StringName]:
