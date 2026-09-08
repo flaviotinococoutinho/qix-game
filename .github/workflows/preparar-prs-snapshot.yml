@@ -1,0 +1,43 @@
+# Ferramenta temporária de manutenção: só executa nesta branch, sem escrita no repositório.
+name: Snapshot da preparação de PRs
+on:
+  push:
+    branches: [maintenance/prepare-prs-57-86-20260908]
+    paths: [.github/workflows/preparar-prs-snapshot.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v4
+        id: godot
+        with:
+          path: ~/godot-bin
+          key: godot-4.7.2-stable-linux-x86_64
+      - name: Prepara engine e histórico sem credenciais
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/qix-review" "$HOME/godot-bin"
+          if [ ! -f "$HOME/godot-bin/Godot_v4.7.2-stable_linux.x86_64" ]; then
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/godot.zip" https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+            unzip -q -o "$RUNNER_TEMP/godot.zip" -d "$HOME/godot-bin"
+          fi
+          for pr in $(seq 57 86); do
+            git fetch --no-tags origin "refs/pull/$pr/head:refs/remotes/review/pr-$pr"
+          done
+          git bundle create "$RUNNER_TEMP/qix-review/repository.bundle" --all
+          cp "$HOME/godot-bin/Godot_v4.7.2-stable_linux.x86_64" "$RUNNER_TEMP/qix-review/"
+          git rev-parse origin/main > "$RUNNER_TEMP/qix-review/base-sha.txt"
+          git for-each-ref --format='%(refname) %(objectname)' refs/remotes/review/ > "$RUNNER_TEMP/qix-review/heads.txt"
+          # Bundle contém objetos e refs Git, nunca .git/config, tokens ou credenciais.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qix-review-snapshot
+          path: ${{ runner.temp }}/qix-review
+          retention-days: 1
