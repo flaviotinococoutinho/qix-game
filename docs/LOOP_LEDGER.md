@@ -143,6 +143,9 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [~] **Não versionar bytecode Python (#83).** Regras globais `__pycache__/` e `*.py[cod]`,
   remoção do bytecode já rastreado inclusive o acrescentado por #79. A guarda textual não
   consulta o índice Git: conferir também `git ls-files`. *Pronto:* ambos os exames verdes.
+  **Os dois exames existem desde 2026-09-08:** a guarda em GDScript prova a regra, e o passo
+  «Bytecode de Python fora do índice» de `verificacao.yml` prova o índice com `git ls-files` —
+  é ele que apanha o bytecode que #79 traz, porque `.gitignore` não expulsa arquivo já rastreado.
 
 - [ ] **Cobrir o parser Metal HUD no gate (#83).** O workflow inspecionado descobre testes
   Python em tools/ci, enquanto `tools/profile/test_parse_metal_hud.py` tem regressões próprias

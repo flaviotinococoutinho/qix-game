@@ -52,6 +52,12 @@ jobs:
             exit 1
           fi
           echo "índice limpo de bytecode de Python"
+      - name: Regressões MCP, assets e parser Metal
+        run: |
+          python3 -B -m unittest discover -s tools/mcp -p 'test_*.py' -v
+          python3 -B -m unittest discover -s tools/assets -p 'test_*.py' -v
+          python3 -B -m unittest discover -s tools/profile -p 'test_*.py' -v
+          python3 -B tools/assets/validate_lumen_models.py
       - name: Importação, suíte, rota M2 e geometria real do HUD
         run: |
           python3 tools/ci/headless_gate.py \
