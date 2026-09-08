@@ -1,0 +1,26 @@
+name: Snapshot complementar da PR 87
+on:
+  push:
+    branches: [maintenance/prepare-prs-57-86-20260908]
+    paths: [.github/workflows/preparar-pr87-snapshot.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Exporta somente objetos novos da PR
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pr87"
+          git fetch --no-tags origin refs/pull/87/head:refs/remotes/review/pr-87
+          git bundle create "$RUNNER_TEMP/pr87/pr87.bundle" refs/remotes/review/pr-87 ^ca745780ad3242695ba7411416da87c6b490c609
+          git rev-parse refs/remotes/review/pr-87 > "$RUNNER_TEMP/pr87/head.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qix-review-pr87
+          path: ${{ runner.temp }}/pr87
+          retention-days: 1
