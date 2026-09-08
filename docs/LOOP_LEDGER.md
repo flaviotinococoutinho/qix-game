@@ -105,6 +105,21 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 
 ## Backlog — prioridade decrescente
 
+> **Medição de 2026-09-08T06:00Z: a fila está em ZERO PRs abertos.** Confirmado por
+> `list_pull_requests(state=open)` → lista vazia; `main` em `3f2d96e`. Portanto **todo `[~]` abaixo
+> está obsoleto**: nenhum PR aberto reivindica coisa alguma. Não leia um `[~]` como "ocupado" sem
+> conferir a fila real. A reconciliação marca-a-marca **não** foi feita nesta execução, e é item
+> próprio logo abaixo — um `[~]` cujo PR mesclou vira `[x]`, um que fechou sem mesclar volta a
+> `[ ]`, e essa distinção exige olhar o desfecho de cada PR, não a contagem.
+
+- [ ] **Reconciliar as marcas `[~]` órfãs contra o desfecho real de cada PR.** A drenagem de
+  2026-09-08 esvaziou a fila (32 → 0) sem que as marcas fossem atualizadas, então o backlog afirma
+  posse que não existe — o oposto do que a legenda de #34 promete, e a forma mais barata de fazer a
+  próxima execução desistir de um item livre. *Pronto:* nenhum `[~]` sem PR aberto correspondente,
+  cada mudança justificada pelo desfecho (mesclado → `[x]`, fechado sem mesclar → `[ ]` com o
+  motivo numa linha).
+
+
 ### P0 — integração e capacidade de revisão
 
 - [~] **Concluir integração Atlas + bundle #78 e fila #59–#90, autorizada pelo usuário.**
@@ -174,7 +189,7 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [~] **Pausa e ciclo de vida do áudio (#70).** Música e vozes usam guarda coerente;
   shutdown solta a pausa. A liberação de vozes deve continuar zerando prazos e rodízio,
   inclusive ao desabilitar áudio, sem depender de shutdown. *Pronto:* regressões verdes.
-- [~] **Cobertura de pureza do boss (#68).** O controller agora está em
+- [x] **Cobertura de pureza do boss (#68, mesclado).** O controller agora está em
   `game/simulation/enemies/boss_behavior_controller.gd`, coberto pela pasta de domínio.
   Preservar o scanner ampliado e remover exceções do caminho antigo nas duas guardas.
 - [~] **Exceção visual em regras (#74).** `RoundVisualDefinition` admite cores; isso não
