@@ -182,3 +182,16 @@ func _first_busy(priorities: PackedInt32Array) -> int:
 		if priorities[index] != QixProceduralAudioLibrary.PRIORITY_IDLE:
 			return index
 	return -1
+
+
+func test_disable_releases_voice_deadlines_and_rotation() -> void:
+	var director := _director_in_tree()
+	director.play_cue(&"death")
+	ok(director._voice_cursor > 0, "o cue precisa avançar o rodízio antes da liberação")
+	director.set_enabled(false)
+	eq(director._voice_cursor, 0, "desabilitar também reinicia o rodízio das vozes")
+	var deadlines := PackedInt64Array()
+	deadlines.resize(QixAudioDirector.SFX_VOICES)
+	eq(director._voice_free_msec, deadlines, "vozes liberadas não retêm prazos do playback anterior")
+	eq(director.presentation_state()["busy_voices"], 0)
+	director.free()
