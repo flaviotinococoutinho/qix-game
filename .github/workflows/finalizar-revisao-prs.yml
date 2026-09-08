@@ -1,0 +1,33 @@
+name: Registra revisão técnica e prontidão das PRs
+on:
+  push:
+    branches: [maintenance/prepare-prs-57-86-20260908]
+    paths: [.github/maintenance/finalize_reviews.py]
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: qix-preparacao-evidencias-34174855021
+          run-id: 34174855021
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/preparation-evidence
+      - name: Confere heads e registra apenas COMMENT, nunca APPROVE
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/maintenance/finalize_reviews.py
+      - name: Retém fotografia de prontidão
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qix-prontidao-final-${{ github.run_id }}
+          path: ${{ runner.temp }}/qix-final-review
+          if-no-files-found: warn
+          retention-days: 14
