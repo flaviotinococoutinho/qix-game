@@ -139,6 +139,16 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [~] **Documentação coerente (#65, #76, #77, #82, #84).** Decisões de arte referenciadas,
   geometria atual distinguida de tempos históricos, disponibilidade de Git corrigida,
   seções e chaves de tabela sem contradição. *Pronto:* guardas e inspeção da integração verdes.
+  **A guarda textual de contradição foi medida e recusada — não a construa.** O #82 rodou a
+  heurística de «duas linhas de tabela com a mesma primeira coluna» sobre 5.020 arquivos `.md`
+  (árvore + 79 branches): ela pega o erro do #21 (31 branches com 11.547 vs 11.515 asserções na
+  mesma linha), mas com ≈3 % de precisão no repositório — só o `reference/volfied/` dispara ~1.040
+  vezes com mapas de registradores legítimos — e ≈48 % mesmo restrita a `docs/*.md`, onde metade
+  dos disparos é coluna de categoria. As variantes «`> **Verificado em**` duplicado» e «heading
+  repetido» disparam zero vezes. E nenhuma das três pegaria os dois erros que o #82 achou, que são
+  *números certos para outra árvore* e *afirmação verdadeira ontem e falsa hoje*. **Derivar vence
+  vigiar:** é o caminho do #69, e a matriz derivada desta branch já o exerce. Medição completa em
+  `docs/loop/runs/2026-09-07T180244Z.md`.
 - [ ] **Procedência da licença raiz (#73).** Preservar o aviso de `IMPLEMENTATION_STATUS`:
   não substituir titularidade ou licença sem decisão do mantenedor e verificação de direitos.
 
