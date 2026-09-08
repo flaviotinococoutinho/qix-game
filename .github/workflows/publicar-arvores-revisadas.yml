@@ -1,0 +1,45 @@
+name: Publica árvores revisadas das 31 PRs
+on:
+  push:
+    branches: [maintenance/prepare-prs-57-86-20260908]
+    paths: [.github/maintenance/branch-plan.json]
+permissions:
+  contents: write
+  pull-requests: read
+concurrency:
+  group: qix-publicacao-revisada-20260908
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-4.7.2-stable-linux-x86_64
+      - name: Garante engine fixada
+        run: |
+          set -euo pipefail
+          if [ ! -f "$HOME/godot-bin/Godot_v4.7.2-stable_linux.x86_64" ]; then
+            mkdir -p "$HOME/godot-bin"
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/godot.zip" https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+            unzip -q -o "$RUNNER_TEMP/godot.zip" -d "$HOME/godot-bin"
+          fi
+          chmod +x "$HOME/godot-bin/Godot_v4.7.2-stable_linux.x86_64"
+      - name: Reconstitui hashes, testa candidato e publica sem sobrescrita
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 .github/maintenance/reconstruct_prepared.py
+      - name: Retém evidências completas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qix-preparacao-evidencias-${{ github.run_id }}
+          path: ${{ runner.temp }}/qix-publication/evidence
+          if-no-files-found: warn
+          retention-days: 14
