@@ -1,9 +1,27 @@
 # Performance do board e probes de shipping
 
-> **Verificado em** 2026-09-03 · commit `ab512ef` · Godot 4.7.2-stable.mono, macOS/Apple M2
-> **Alcance:** números medidos na máquina local. Nada aqui foi remedido depois: frame pacing e
-> GPU dependem de hardware que a sessão de nuvem não tem, e um microbenchmark rodado em outra
-> máquina não substituiria estes valores — substituiria a pergunta.
+> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
+> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
+**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
+
+
+Medição atual do palco Atlas Vivo (2026-09-07), executável exportado no Apple M2:
+
+| Recorte | p95 | p99 | Máximo | Limite da evidência |
+|---|---:|---:|---:|---|
+| `GameSimulation.step`, 3.600 ticks | 102 µs | 123 µs | 34.004 µs | CPU, escudo ampliado na cópia de perfil; pico de captura continua relevante |
+| GL Compatibility, 600 frames | 18,497 ms | 19,691 ms | 71,472 ms | limite explícito de 60 FPS, percurso automático na borda |
+| Metal/mobile, 600 frames | 19,213 ms | 20,784 ms | 22,071 ms | renderer alternativo usado para medição externa de GPU |
+
+Logs e JSON em `build/modernization/`. O primeiro ensaio GL sem limite de FPS ficou
+sem cadência de apresentação; foi preservado como diagnóstico e não fundamenta os números
+acima. Nenhuma dessas amostras substitui soak nem mede o pior caso de todas as capturas.
+O Metal HUD complementar passou com 1.398 pares válidos: GPU p95 0,69 ms e máximo 1,82 ms;
+frame máximo 38,68 ms, zero stalls acima de 150 ms. O parser passou 16 testes Python após
+corrigir o reconhecimento do timestamp inicial, exigindo contexto temporal do mesmo processo
+em vez de descartar intervalos grandes em qualquer posição.
+
+O restante deste documento descreve a medição histórica anterior, explicitamente datada.
 
 Medição final local em 2026-09-03, Godot 4.7.2-stable Mono, macOS/Apple M2. O
 microbenchmark do board é headless; frame pacing e GPU vêm do bundle macOS arm64 exportado no

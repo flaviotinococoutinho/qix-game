@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="RoundVisualDefinition" format=3]
 
-[ext_resource type="Texture2D" path="res://assets/backgrounds/verdant_singularity_v2.png" id="1_mgnfu"]
-[ext_resource type="Script" path="res://game/rules/round_visual_definition.gd" id="2_t67sm"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/verdant_singularity_v2.png" id="1_bia0h"]
+[ext_resource type="Script" path="res://game/rules/round_visual_definition.gd" id="2_amblq"]
 
 [resource]
-script = ExtResource("2_t67sm")
+script = ExtResource("2_amblq")
 display_name = "VERDANT SINGULARITY"
-subtitle = "Feche o atlas vivo antes que o núcleo desperte."
-background = ExtResource("1_mgnfu")
+subtitle = "O núcleo colapsa. Sele-o, ou saia com 80% e viva com isso."
+background = ExtResource("1_bia0h")
 free_color = Color(0.02745098, 0.101960786, 0.08627451, 1)
 boundary_color = Color(0.44313726, 1, 0.7490196, 1)
 trail_color = Color(1, 0.8784314, 0.4, 1)

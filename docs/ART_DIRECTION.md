@@ -1,9 +1,9 @@
 # Direção de arte — Lumen Cartography
 
-> **Verificado em** 2026-09-03 · commit `ab512ef` · autoria de G2, sem execução
-> **Alcance:** documento de intenção. A parte mecanizável dele — só `CLAIMED` revela o fundo,
-> paleta e máscara R8 — vive em `tests/unit/board_view_test.gd`; hierarquia, ritmo e leitura em
-> 240×320 continuam sem verificação automatizada, e ninguém na nuvem consegue ver o jogo.
+> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
+> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
+**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
+
 
 O G2 usa uma identidade original de **cartografia bioluminescente**: o jogador não
 “pinta” uma chapa sólida; ele estabiliza regiões de um mapa vivo e revela uma paisagem

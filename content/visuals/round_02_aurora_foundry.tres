@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="RoundVisualDefinition" format=3]
 
-[ext_resource type="Texture2D" path="res://assets/backgrounds/aurora_foundry.png" id="1_41hi0"]
-[ext_resource type="Script" path="res://game/rules/round_visual_definition.gd" id="2_7lp0t"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/aurora_foundry.png" id="1_53p3f"]
+[ext_resource type="Script" path="res://game/rules/round_visual_definition.gd" id="2_ldluf"]
 
 [resource]
-script = ExtResource("2_7lp0t")
+script = ExtResource("2_ldluf")
 display_name = "AURORA FOUNDRY"
-subtitle = "Recupere a forja onde luz e metal ainda respiram."
-background = ExtResource("1_41hi0")
+subtitle = "A forja se defende: dardos vêm das bordas, vagalumes patrulham a linha."
+background = ExtResource("1_53p3f")
 free_color = Color(0.07450981, 0.050980393, 0.14117648, 1)
 boundary_color = Color(0.40392157, 0.9098039, 1, 1)
 trail_color = Color(1, 0.78431374, 0.34117648, 1)

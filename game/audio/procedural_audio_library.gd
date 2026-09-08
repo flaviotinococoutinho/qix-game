@@ -22,51 +22,151 @@ const CUE_RECIPES := {
 		"intent": "pontua que a trilha começou; é o cue mais frequente e o mais barato de perder",
 		"priority": 10,
 		"hz": 740.0, "end_hz": 920.0, "seconds": 0.055, "gain": 0.19, "wave": 1,
+		"attack_msec": 2.0, "decay_msec": 12.0, "sustain": 0.35, "release_msec": 25.0,
 	},
 	&"round_start": {
 		"intent": "abre a rodada; anuncia, não reage",
 		"priority": 20,
 		"hz": 262.0, "end_hz": 523.0, "seconds": 0.34, "gain": 0.28, "wave": 0,
+		"attack_msec": 14.0, "decay_msec": 60.0, "sustain": 0.65, "release_msec": 130.0,
 	},
 	&"respawn": {
 		"intent": "devolve o controle ao jogador depois da morte",
 		"priority": 30,
 		"hz": 330.0, "end_hz": 660.0, "seconds": 0.24, "gain": 0.26, "wave": 0,
+		"attack_msec": 10.0, "decay_msec": 45.0, "sustain": 0.55, "release_msec": 100.0,
 	},
 	&"capture": {
 		"intent": "confirma território conquistado; a recompensa do laço",
 		"priority": 40,
 		"hz": 392.0, "end_hz": 784.0, "seconds": 0.22, "gain": 0.30, "wave": 0,
+		"attack_msec": 4.0, "decay_msec": 35.0, "sustain": 0.48, "release_msec": 130.0,
 	},
 	&"reject": {
 		"intent": "diz que o laço não fechou — erro de leitura, não punição",
 		"priority": 45,
 		"hz": 180.0, "end_hz": 110.0, "seconds": 0.16, "gain": 0.25, "wave": 2,
+		"attack_msec": 3.0, "decay_msec": 22.0, "sustain": 0.30, "release_msec": 85.0,
 	},
 	&"shield": {
 		"intent": "avisa que o escudo entrou no fim; é um relógio, não um impacto",
-		"priority": 50,
+		"priority": 92,
 		"hz": 880.0, "end_hz": 880.0, "seconds": 0.12, "gain": 0.22, "wave": 1,
+		"attack_msec": 6.0, "decay_msec": 18.0, "sustain": 0.60, "release_msec": 35.0,
 	},
 	&"round_clear": {
 		"intent": "fecha a rodada; carrega a continuidade para a próxima",
 		"priority": 80,
 		"hz": 523.0, "end_hz": 1047.0, "seconds": 0.52, "gain": 0.34, "wave": 0,
+		"attack_msec": 8.0, "decay_msec": 90.0, "sustain": 0.70, "release_msec": 240.0,
 	},
 	&"campaign_complete": {
 		"intent": "fecha a campanha inteira; o cue mais raro do jogo",
 		"priority": 90,
 		"hz": 440.0, "end_hz": 1320.0, "seconds": 0.92, "gain": 0.34, "wave": 0,
+		"attack_msec": 12.0, "decay_msec": 140.0, "sustain": 0.65, "release_msec": 400.0,
 	},
 	&"game_over": {
 		"intent": "encerra a tentativa; nada depois dele importa mais que ele",
 		"priority": 95,
 		"hz": 220.0, "end_hz": 55.0, "seconds": 0.75, "gain": 0.34, "wave": 2,
+		"attack_msec": 5.0, "decay_msec": 120.0, "sustain": 0.40, "release_msec": 420.0,
 	},
 	&"death": {
 		"intent": "a perda de vida; o acontecimento mais alto da sessão",
 		"priority": 100,
 		"hz": 130.0, "end_hz": 44.0, "seconds": 0.42, "gain": 0.42, "wave": 2,
+		"attack_msec": 3.0, "decay_msec": 55.0, "sustain": 0.32, "release_msec": 280.0,
+	},
+	&"walker_spawn": {
+		"intent": "um patrulheiro emerge na borda; sinal curto de uma nova rota perigosa",
+		"priority": 91, "hz": 220.0, "end_hz": 330.0, "seconds": 0.13, "gain": 0.17, "wave": 3,
+		"attack_msec": 5.0, "decay_msec": 20.0, "sustain": 0.35, "release_msec": 70.0,
+	},
+	&"dart_arm": {
+		"intent": "telegrapha um dardo antes de armar; o tom ascendente pede atenção à direção",
+		"priority": 91, "hz": 1200.0, "end_hz": 1800.0, "seconds": 0.10, "gain": 0.11, "wave": 3,
+		"attack_msec": 4.0, "decay_msec": 15.0, "sustain": 0.40, "release_msec": 35.0,
+	},
+	&"dart_fire": {
+		"intent": "confirma o disparo já armado; estalo breve para não mascarar o telegraph seguinte",
+		"priority": 91, "hz": 1600.0, "end_hz": 650.0, "seconds": 0.045, "gain": 0.12, "wave": 2,
+		"attack_msec": 1.5, "decay_msec": 8.0, "sustain": 0.25, "release_msec": 28.0,
+	},
+	&"trail_cut": {
+		"intent": "um dardo cortou a trilha; impacto seco identifica ameaça imediata ao traçado",
+		"priority": 94, "hz": 340.0, "end_hz": 70.0, "seconds": 0.16, "gain": 0.34, "wave": 2,
+		"attack_msec": 2.0, "decay_msec": 25.0, "sustain": 0.25, "release_msec": 95.0,
+	},
+	&"ember": {
+		"intent": "uma brasa persegue a trilha; dois pulsos ásperos pedem movimento contínuo",
+		"priority": 93, "hz": 300.0, "end_hz": 620.0, "seconds": 0.25, "gain": 0.24, "wave": 2,
+		"attack_msec": 4.0, "decay_msec": 25.0, "sustain": 0.65, "release_msec": 70.0, "pulse_hz": 8.0,
+	},
+	&"threat": {
+		"intent": "a pressão subiu; pulso grave marca uma mudança confirmada do diretor",
+		"priority": 91, "hz": 110.0, "end_hz": 165.0, "seconds": 0.19, "gain": 0.20, "wave": 3,
+		"attack_msec": 6.0, "decay_msec": 25.0, "sustain": 0.45, "release_msec": 95.0,
+	},
+	&"overtime": {
+		"intent": "o tempo do setor acabou; três pulsos anunciam pressão crescente",
+		"priority": 93, "hz": 440.0, "end_hz": 660.0, "seconds": 0.50, "gain": 0.24, "wave": 3,
+		"attack_msec": 6.0, "decay_msec": 30.0, "sustain": 0.70, "release_msec": 130.0, "pulse_hz": 6.0,
+	},
+	&"boss_phase": {
+		"intent": "o Núcleo mudou de fase; ascensão grave distingue evolução de projétil",
+		"priority": 92, "hz": 82.0, "end_hz": 246.0, "seconds": 0.34, "gain": 0.28, "wave": 2,
+		"attack_msec": 5.0, "decay_msec": 50.0, "sustain": 0.50, "release_msec": 190.0,
+	},
+	&"boss_cornered": {
+		"intent": "o Núcleo encurralado entrou em fúria; o ronco curto antecede a reação",
+		"priority": 94, "hz": 70.0, "end_hz": 210.0, "seconds": 0.28, "gain": 0.30, "wave": 2,
+		"attack_msec": 3.0, "decay_msec": 40.0, "sustain": 0.50, "release_msec": 120.0,
+	},
+	&"extinguish": {
+		"intent": "território neutralizou um ator; pequena nota descendente confirma alívio",
+		"priority": 35, "hz": 620.0, "end_hz": 310.0, "seconds": 0.09, "gain": 0.13, "wave": 0,
+		"attack_msec": 3.0, "decay_msec": 12.0, "sustain": 0.25, "release_msec": 55.0,
+	},
+	&"calm": {
+		"intent": "a captura grande comprou respiro; tom arredondado confirma queda de pressão",
+		"priority": 36, "hz": 440.0, "end_hz": 330.0, "seconds": 0.22, "gain": 0.15, "wave": 0,
+		"attack_msec": 12.0, "decay_msec": 45.0, "sustain": 0.45, "release_msec": 120.0,
+	},
+	&"beacon": {
+		"intent": "uma baliza foi cercada; sino agudo diferencia objetivo da captura de área",
+		"priority": 55, "hz": 660.0, "end_hz": 990.0, "seconds": 0.18, "gain": 0.24, "wave": 0,
+		"attack_msec": 2.0, "decay_msec": 25.0, "sustain": 0.30, "release_msec": 120.0,
+	},
+	&"velocity": {
+		"intent": "Velocidade iniciou; varredura brilhante sobe uma oitava e meia",
+		"priority": 60, "hz": 440.0, "end_hz": 1320.0, "seconds": 0.20, "gain": 0.22, "wave": 3,
+		"attack_msec": 4.0, "decay_msec": 25.0, "sustain": 0.45, "release_msec": 100.0,
+	},
+	&"stasis": {
+		"intent": "Estase iniciou; tom cristalino desce e sustenta a suspensão do Núcleo",
+		"priority": 60, "hz": 760.0, "end_hz": 380.0, "seconds": 0.35, "gain": 0.23, "wave": 0,
+		"attack_msec": 10.0, "decay_msec": 55.0, "sustain": 0.55, "release_msec": 180.0,
+	},
+	&"shield_freeze": {
+		"intent": "Âncora iniciou; intervalo luminoso anuncia reserva de escudo protegida",
+		"priority": 60, "hz": 523.0, "end_hz": 659.0, "seconds": 0.32, "gain": 0.23, "wave": 3,
+		"attack_msec": 7.0, "decay_msec": 40.0, "sustain": 0.55, "release_msec": 160.0,
+	},
+	&"purge": {
+		"intent": "Expurgo neutralizou as ameaças menores; impacto grave com cauda limpa",
+		"priority": 62, "hz": 150.0, "end_hz": 42.0, "seconds": 0.30, "gain": 0.31, "wave": 3,
+		"attack_msec": 2.0, "decay_msec": 38.0, "sustain": 0.28, "release_msec": 180.0,
+	},
+	&"item_end": {
+		"intent": "um efeito temporário acabou; aviso descendente discreto devolve atenção ao campo",
+		"priority": 91, "hz": 880.0, "end_hz": 440.0, "seconds": 0.12, "gain": 0.15, "wave": 3,
+		"attack_msec": 5.0, "decay_msec": 15.0, "sustain": 0.35, "release_msec": 65.0,
+	},
+	&"sealed": {
+		"intent": "o Núcleo foi selado; resolução grave distingue a vitória especial",
+		"priority": 82, "hz": 196.0, "end_hz": 784.0, "seconds": 0.50, "gain": 0.32, "wave": 3,
+		"attack_msec": 5.0, "decay_msec": 70.0, "sustain": 0.50, "release_msec": 260.0,
 	},
 }
 
@@ -86,13 +186,13 @@ static func duration_msec(cue_name: StringName) -> int:
 
 static func cue(cue_name: StringName) -> AudioStreamWAV:
 	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
-	return _tone(
-		float(recipe["hz"]),
-		float(recipe["end_hz"]),
-		float(recipe["seconds"]),
-		float(recipe["gain"]),
-		int(recipe["wave"]),
-	)
+	return _tone(recipe)
+
+
+## Envelope público permite medir ataque e cauda sem abrir o dispositivo de áudio.
+static func envelope_at(cue_name: StringName, elapsed_seconds: float) -> float:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return _envelope(recipe, elapsed_seconds)
 
 
 ## Loop chiptune/ambient de 8 beats. Cada setor muda escala, tempo e voicing.
@@ -144,13 +244,12 @@ static func music_for_round(round_index: int) -> AudioStreamWAV:
 	return stream
 
 
-static func _tone(
-	start_hz: float,
-	end_hz: float,
-	seconds: float,
-	gain: float,
-	wave: int,
-) -> AudioStreamWAV:
+static func _tone(recipe: Dictionary) -> AudioStreamWAV:
+	var start_hz := float(recipe["hz"])
+	var end_hz := float(recipe["end_hz"])
+	var seconds := float(recipe["seconds"])
+	var gain := float(recipe["gain"])
+	var wave := int(recipe["wave"])
 	var frame_count := maxi(1, int(round(seconds * MIX_RATE)))
 	var bytes := PackedByteArray()
 	bytes.resize(frame_count * 2)
@@ -164,7 +263,9 @@ static func _tone(
 			raw = 1.0 if raw >= 0.0 else -1.0
 		elif wave == 2:
 			raw = 2.0 * phase - 1.0
-		var envelope := _attack_release(progress)
+		elif wave == 3:
+			raw = 4.0 * absf(phase - 0.5) - 1.0
+		var envelope := _envelope(recipe, progress * seconds)
 		var harmonic := sin(TAU * phase * 2.0) * 0.18
 		_write_s16(bytes, frame, (raw + harmonic) * gain * envelope)
 	var stream := AudioStreamWAV.new()
@@ -175,10 +276,22 @@ static func _tone(
 	return stream
 
 
-static func _attack_release(progress: float) -> float:
-	var attack := smoothstep(0.0, 0.08, progress)
-	var release := 1.0 - smoothstep(0.55, 1.0, progress)
-	return attack * release
+static func _envelope(recipe: Dictionary, elapsed: float) -> float:
+	var seconds := float(recipe["seconds"])
+	if elapsed <= 0.0 or elapsed >= seconds:
+		return 0.0
+	var attack := float(recipe["attack_msec"]) / 1000.0
+	var decay := float(recipe["decay_msec"]) / 1000.0
+	var release := float(recipe["release_msec"]) / 1000.0
+	var sustain := float(recipe["sustain"])
+	var level := smoothstep(0.0, attack, elapsed)
+	if elapsed > attack:
+		level = lerpf(1.0, sustain, smoothstep(attack, attack + decay, elapsed))
+	level *= 1.0 - smoothstep(seconds - release, seconds, elapsed)
+	var pulse_hz := float(recipe.get("pulse_hz", 0.0))
+	if pulse_hz > 0.0:
+		level *= 0.40 + 0.60 * pow(0.5 + 0.5 * cos(TAU * elapsed * pulse_hz), 2.0)
+	return level
 
 
 static func _loop_seam_envelope(frame: int, frame_count: int) -> float:

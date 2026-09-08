@@ -1,11 +1,15 @@
 [gd_resource type="Resource" script_class="BossBehaviorProfile" format=3]
 
-[ext_resource type="Script" path="res://game/rules/boss_behavior_profile.gd" id="1_gwe4c"]
+[ext_resource type="Script" path="res://game/rules/boss_behavior_profile.gd" id="1_tuoau"]
 
 [resource]
-script = ExtResource("1_gwe4c")
+script = ExtResource("1_tuoau")
 pattern = 2
 sweep_turn_steps = 3
 pulse_period_ticks = 240
 pulse_duration_ticks = 48
 pulse_speed_permille = 1250
+phase_thresholds_permille = PackedInt32Array(300, 550)
+phase_speed_permille = PackedInt32Array(1000, 1100, 1200)
+phase_turn_ticks = PackedInt32Array(30, 27, 24)
+phase_pattern = PackedInt32Array(-1, -1, -1)

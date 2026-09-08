@@ -1,9 +1,9 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** `tests/run_tests.gd` reexecutado (134 testes, 11.489 asserções, 0 falhas) e
-> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Os
-> testes Python do parser Metal HUD e o run de shipping não foram reexecutados.
+> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
+> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
+**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
+
 
 Última validação automatizada: **2026-09-03**, Godot
 **4.7.2-stable.mono.official** em macOS. Run de shipping:

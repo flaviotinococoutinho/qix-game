@@ -43,20 +43,114 @@ def _hud_log(
     return "\n".join(lines) + "\n"
 
 
-class MetalHudParserTests(unittest.TestCase):
-    def test_valid_log_discards_warmup_and_builds_passing_report(self) -> None:
-        intervals = [2527005586.86] + [16.0 + (index % 4) * 0.2 for index in range(40)]
-        gpu_times = [0.0] + [0.35 + (index % 5) * 0.05 for index in range(40)]
+def _startup_hud_log(
+    pairs: list[tuple[float, float]],
+    *,
+    frame_number: int = 35,
+    startup_time: str = "06:32:23.765",
+    batch_time: str = "06:32:25.311",
+    batch_pid: int = 90679,
+) -> str:
+    payload = ",".join(str(value) for pair in pairs for value in pair)
+    return (
+        f"2026-09-07 {startup_time} QIX GAME[90679:732139] "
+        "[libMTLHud] Metric com.apple.hud-stat.frame-interval already exist\n"
+        f"2026-09-07 {batch_time} QIX GAME[{batch_pid}:732435] "
+        f"metal-HUD: {frame_number},62.75,255.83,{payload}\n"
+    )
 
-        report = parse_metal_hud.build_report(_hud_log(intervals, gpu_times))
+
+class MetalHudParserTests(unittest.TestCase):
+    def test_subday_initial_clock_pair_requires_complete_startup_evidence(self) -> None:
+        # Forma observada: frame 35, 69 pares em dois buffers e dois marcadores
+        # idênticos. As 8,66 horas do valor não cabem nos 1,546 segundos de startup.
+        pairs = [(31176111.89, 0.0)] * 2 + [(16.667, 0.5)] * 67
+        log = _startup_hud_log(pairs)
+
+        report = parse_metal_hud.build_report(log)
+
+        self.assertTrue(report["passed"])
+        self.assertEqual(67, report["parsing"]["valid_pairs"])
+        self.assertEqual(2, report["parsing"]["discarded_reasons"]["initial_clock_marker"])
+        self.assertEqual(16.667, report["frame_interval_ms"]["max"])
+        self.assertEqual(0, report["observed_stall_pairs_over_150ms"])
+
+    def test_subday_large_interval_without_startup_proof_is_never_discarded(self) -> None:
+        for interval in [151.0, 325.0, 3000.0, 90000.0, 31176111.89, 2527005586.86]:
+            with self.subTest(interval=interval):
+                report = parse_metal_hud.build_report(
+                    _hud_log([interval] * 2 + [16.667] * 38, [0.0] * 2 + [0.5] * 38)
+                )
+                self.assertEqual(40, report["parsing"]["valid_pairs"])
+                self.assertEqual(interval, report["frame_interval_ms"]["max"])
+                self.assertEqual(2, report["observed_stall_pairs_over_150ms"])
+                self.assertFalse(report["passed"])
+
+    def test_ambiguous_startup_evidence_preserves_large_interval_and_fails(self) -> None:
+        pairs = [(31176111.89, 0.0)] * 2 + [(16.667, 0.5)] * 67
+        cases = {
+            "missing-startup": _startup_hud_log(pairs).split("\n", 1)[1],
+            "future-startup": _startup_hud_log(pairs, startup_time="06:32:26.000"),
+            "different-process": _startup_hud_log(pairs, batch_pid=1234),
+            "partial-first-batch": _startup_hud_log(pairs, frame_number=1000),
+            "possible-real-nine-hour-stall": _startup_hud_log(
+                pairs, startup_time="00:00:00.000", batch_time="09:00:00.000"
+            ),
+        }
+        for reason, log in cases.items():
+            with self.subTest(reason=reason):
+                report = parse_metal_hud.build_report(log)
+                self.assertEqual(69, report["parsing"]["valid_pairs"])
+                self.assertEqual(0, report["parsing"]["discarded_pairs"])
+                self.assertEqual(31176111.89, report["frame_interval_ms"]["max"])
+                self.assertFalse(report["passed"])
+
+    def test_initial_real_stalls_and_nonzero_gpu_never_receive_clock_exception(self) -> None:
+        for interval, gpu_time in [(151.0, 0.0), (325.0, 0.0), (3000.0, 0.0),
+                                   (90000.0, 0.0), (31176111.89, 0.5)]:
+            with self.subTest(interval=interval, gpu_time=gpu_time):
+                pairs = [(interval, gpu_time)] * 2 + [(16.667, 0.5)] * 67
+                report = parse_metal_hud.build_report(_startup_hud_log(pairs))
+                self.assertEqual(0, report["parsing"]["discarded_pairs"])
+                self.assertEqual(interval, report["frame_interval_ms"]["max"])
+                self.assertFalse(report["passed"])
+
+    def test_out_of_order_timestamped_batches_fail_integrity_even_with_fast_samples(self) -> None:
+        pairs = [(31176111.89, 0.0)] * 2 + [(16.667, 0.5)] * 67
+        log = _startup_hud_log(pairs) + (
+            "2026-09-07 06:32:24.000 QIX GAME[90679:732435] "
+            "metal-HUD: 65,62.75,255.83,16.667,0.5\n"
+        )
+        report = parse_metal_hud.build_report(log)
+        self.assertFalse(report["checks"]["no_malformed_hud_lines"])
+        self.assertFalse(report["passed"])
+
+    def test_large_zero_gpu_interval_after_first_pair_is_a_real_stall(self) -> None:
+        for interval in [151.0, 3000.0, 31176111.89, 2527005586.86]:
+            with self.subTest(interval=interval):
+                report = parse_metal_hud.build_report(
+                    _hud_log([16.667] * 39 + [interval], [0.5] * 39 + [0.0])
+                )
+                self.assertEqual(40, report["parsing"]["valid_pairs"])
+                self.assertEqual(0, report["parsing"]["discarded_pairs"])
+                self.assertEqual(interval, report["frame_interval_ms"]["max"])
+                self.assertFalse(report["passed"])
+
+    def test_valid_log_discards_clock_prefix_and_builds_passing_report(self) -> None:
+        intervals = [2527005586.86] * 2 + [16.0 + (index % 4) * 0.2 for index in range(40)]
+        gpu_times = [0.0] * 2 + [0.35 + (index % 5) * 0.05 for index in range(40)]
+
+        report = parse_metal_hud.build_report(
+            _startup_hud_log(list(zip(intervals, gpu_times)), frame_number=21)
+        )
 
         self.assertEqual("qix.shipping.metal-hud.v1", report["schema"])
         self.assertTrue(report["passed"])
         self.assertEqual("passed", report["outcome"])
         self.assertEqual(40, report["parsing"]["valid_pairs"])
-        self.assertEqual(1, report["parsing"]["discarded_pairs"])
+        self.assertEqual(2, report["parsing"]["discarded_pairs"])
         self.assertEqual(
-            1,
+            2,
             report["parsing"]["discarded_reasons"]["initial_clock_marker"],
         )
         self.assertEqual(40, report["frame_interval_ms"]["sample_count"])

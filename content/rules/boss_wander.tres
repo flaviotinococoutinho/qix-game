@@ -4,3 +4,7 @@
 
 [resource]
 script = ExtResource("1_0fyxc")
+phase_thresholds_permille = PackedInt32Array(300, 550)
+phase_speed_permille = PackedInt32Array(1000, 1100, 1200)
+phase_turn_ticks = PackedInt32Array(45, 40, 36)
+phase_pattern = PackedInt32Array(-1, -1, 1)

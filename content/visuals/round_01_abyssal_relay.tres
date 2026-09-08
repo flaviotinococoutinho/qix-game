@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="RoundVisualDefinition" format=3]
 
-[ext_resource type="Texture2D" path="res://assets/backgrounds/abyssal_relay.png" id="1_ilecy"]
-[ext_resource type="Script" path="res://game/rules/round_visual_definition.gd" id="2_kmxje"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/abyssal_relay.png" id="1_6ow3u"]
+[ext_resource type="Script" path="res://game/rules/round_visual_definition.gd" id="2_r826x"]
 
 [resource]
-script = ExtResource("2_kmxje")
+script = ExtResource("2_r826x")
 display_name = "ABYSSAL RELAY"
-subtitle = "Cartografe o sinal perdido sob a corrente escura."
-background = ExtResource("1_ilecy")
+subtitle = "O relé ainda transmite. Estabilize 80% antes que o escudo apague."
+background = ExtResource("1_6ow3u")
 free_color = Color(0.019607844, 0.07450981, 0.11372549, 1)
 boundary_color = Color(0.32941177, 0.9607843, 0.8784314, 1)
 trail_color = Color(1, 0.8352941, 0.41568628, 1)

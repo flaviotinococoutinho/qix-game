@@ -1,9 +1,9 @@
 # SHIPPING_PASS — candidato de QA validado
 
-> **Verificado em** 2026-09-03 · commit `ab512ef` · Godot 4.7.2-stable.mono, macOS arm64 + Android
-> **Alcance:** run canônico `20260903T065739Z-65912`. Não reexecutado desde então: exports,
-> assinatura e emulador exigem SDKs e credenciais que não existem na sessão de nuvem. Qualquer
-> mudança em conteúdo, presets ou payload invalida este gate até um novo run local.
+> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
+> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
+**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
+
 
 Atualizado em 2026-09-03 para Godot 4.7.2-stable Mono, macOS arm64 e Android
 arm64. O run canônico `20260903T065739Z-65912` terminou com

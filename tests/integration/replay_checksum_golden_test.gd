@@ -23,7 +23,11 @@ extends TestCase
 const CAMPAIGN_PATH := "res://content/campaigns/main_campaign.tres"
 
 ## Contrato declarado. Mudar qualquer um destes invalida replays gravados.
-const GOLDEN_RULES_VERSION := 2
+## 4 em 2026-09-07: lifecycle, justiça, balizas, efeitos e bônus (ADR-0012).
+## Valores medidos por tools/dev/print_golden_checksums.gd após o bump deliberado.
+## Histórico: 2 → 3 em 2026-09-05 (ADR-0010/0011: elenco menor, diretor de ameaça, fases do
+## Núcleo, fallback de direção). Replays gravados sob a versão 2 deixaram de valer.
+const GOLDEN_RULES_VERSION := 4
 const GOLDEN_SCHEMA_VERSION := 1
 
 ## Um por rodada de produção: seed, hash de (regras ⊕ geometria ⊕ perfil de boss) e uma rota
@@ -35,38 +39,38 @@ const GOLDEN_ROUNDS := [
 	{
 		"id": &"abyssal_relay",
 		"seed": 1482031771,
-		"config_hash": "a044393ee6d0f7ae98612db663499032a9d5c8fb17a7621f5c26326804d00f9c",
+		"config_hash": "14dd171dfb689135b6d2e30191f7a9f0156e61be1919fce87d10a3a2516d852c",
 		"route": [[MoveIntent.Dir.LEFT, false, 36], [MoveIntent.Dir.DOWN, true, 141]],
 		"ticks": 177,
 		"permille": 179,
-		"score": 2_490,
-		"initial_checksum": "9a44499781ea0ee82e80a16d3eedc8fc496469ebebcff5ef92ae5e58195659f0",
-		"final_checksum": "fe898e008ce1e332ebe0a369f1bb1474e37cbd1ee35c15d403548e80f202fa3c",
-		"replay_checksum": "ae29339010984eeaf036b13e1fcda74384b9306322ede94b6aa5561cdfb1011f",
+		"score": 3490,
+		"initial_checksum": "de10ab08cc65b3b8590aeb02e20a4f122f6c6c45716c347cbbe00acdb6a3018b",
+		"final_checksum": "8eced70a2512a08ae8f5e63cc94c0ec1a44488ef49e7fe482faadfb47d47a455",
+		"replay_checksum": "e34b9c1bded742abff6a6c8d44783da2eb0758f8f1591e147bbce6b1f2eca2c5",
 	},
 	{
 		"id": &"aurora_foundry",
 		"seed": 189234077,
-		"config_hash": "5f5c07f5dc27ef640a06932591f8ec261aebd7ff6e9dd7a44a5e9f8e4de91408",
+		"config_hash": "ed2512d123940b985bfca5200af7d6a9ead8547b972bdd915154b3aea47b5958",
 		"route": [[MoveIntent.Dir.LEFT, false, 6], [MoveIntent.Dir.DOWN, true, 141]],
 		"ticks": 147,
 		"permille": 556,
-		"score": 6_260,
-		"initial_checksum": "966d89cec54f430d36f3245877ea66f700873fd8c21de3a143972bc6db111318",
-		"final_checksum": "dd2f14e61145db3983a00c6b09bf0476cf1536b7d6d7a4514b5b05dde4a52062",
-		"replay_checksum": "522836d24572a76fe29a43a4862b230df9a03549a1b260c367b149f886bec847",
+		"score": 9260,
+		"initial_checksum": "44c84c2395f82cdbcca8737ed67fadef59c0fb8e13571db2cc981b843aa2c40c",
+		"final_checksum": "88a68736a37b443c45f5ffa8080349fab96dfe30e2546f543e495bc45cf21105",
+		"replay_checksum": "6c24cdda0da6a1fc1c4ca8fd41b2b2e0d3cf569b66ecba4582025f40c29de561",
 	},
 	{
 		"id": &"verdant_singularity",
 		"seed": 933117401,
-		"config_hash": "bf7e3ac9db8bc272d099fc3a23ca1158ee760ee9f0f82199cfd0196c2984d67d",
+		"config_hash": "cd3c57cb8131f7b7f69c0440981d045f318297b0b8f30b608d06275c97dc4b1f",
 		"route": [[MoveIntent.Dir.LEFT, false, 16], [MoveIntent.Dir.DOWN, true, 141]],
 		"ticks": 157,
 		"permille": 358,
-		"score": 4_280,
-		"initial_checksum": "01d19dd6fbe60e36eda915eee11d1bb6961c661317a91e3ca4f4202786c2181b",
-		"final_checksum": "315e69edf92ca226178d31c04797a2e97a56898e7e0582cd172fb8984fdb3c5b",
-		"replay_checksum": "f009a455ed6fdb7d86bafc956d9d8296587e00f7d77e7ed94267b7927cc097e8",
+		"score": 7280,
+		"initial_checksum": "6f0e1adc533399166c7438677f8077a193060b384746cc0ad0df8fcfd5ec241d",
+		"final_checksum": "a509cccc924207e68377b2e4135ecfeb7da06fd9703de642a3af01481af7250c",
+		"replay_checksum": "d4a97d27e05f1a6e124095ed7ab6dee18db9aa5584be0cd098f596496dc84ae3",
 	},
 ]
 

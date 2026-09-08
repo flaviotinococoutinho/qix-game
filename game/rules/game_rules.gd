@@ -1,16 +1,24 @@
 class_name GameRules
 extends Resource
 ## Configuração autorada e imutável em runtime. Toda regra numérica do domínio vive aqui;
-## a proveniência está em reference_root/docs/06-gameplay.md ou marcada como DESIGN_DECISION.
+## a proveniência está em reference/volfied/06-gameplay.md ou marcada como DESIGN_DECISION.
 
 ## Incrementar sempre que uma regra mude de forma que altere checksums de replay.
-const RULES_VERSION := 2
+## 3: elenco menor, diretor de ameaça, fases do Núcleo, fallback de direção (ADR-0010/0011).
+## 4: ciclos de vida, balizas, itens temporizados, selamento e escada de bônus.
+const RULES_VERSION := 4
 const BossBehaviorProfileScript = preload("res://game/rules/boss_behavior_profile.gd")
+const ThreatProfileScript = preload("res://game/rules/threat_profile.gd")
+const ItemProfileScript = preload("res://game/rules/item_profile.gd")
+const BonusLadderScript = preload("res://game/simulation/scoring/bonus_ladder.gd")
 
 enum PercentMode {
 	EXACT,       ## permille = owned * 1000 / interior  (DESIGN_DECISION do remake)
 	VOLFIED_63,  ## 63 px = 0,1 %, resto acumulado, +0,6 % no 6.º fill, satura em 999 (§5.7/§6.1)
 }
+
+## Razão de fim de rodada (§12.5), gravada em `GameSimulation.round_end_reason`.
+enum RoundEndReason { NONE, TARGET, SINGLE_FILL, SEALED }
 
 @export var lives_start: int = 3                 ## §8.1 (valor padrão; DIP no original)
 @export var target_permille: int = 800           ## §6.4: 80,0 %
@@ -36,6 +44,10 @@ enum PercentMode {
 @export var boss_speed_fp: int = 96              ## ponto fixo 8.8 por subpasso (0,375 px)
 @export var boss_turn_every_ticks: int = 45
 @export var boss_behavior: Resource = BossBehaviorProfileScript.new()
+## Diretor de ameaça e atores menores. `ThreatProfile.inert()` reproduz o jogo de uma só ameaça.
+@export var threat: Resource = ThreatProfileScript.new()
+@export var items: Resource = ItemProfileScript.new()
+@export var bonus_ladder: Resource = BonusLadderScript.new()
 
 
 func validation_errors() -> PackedStringArray:
@@ -66,16 +78,32 @@ func validation_errors() -> PackedStringArray:
 		errors.append("boss_turn_every_ticks precisa estar entre 0 e 3600")
 	if boss_behavior == null:
 		errors.append("boss_behavior ausente")
-	elif not boss_behavior.has_method("validation_errors") \
-		or not boss_behavior.has_method("canonical_bytes"):
+	elif not boss_behavior is BossBehaviorProfile or not boss_behavior.has_method("validation_errors") \
+		or not boss_behavior.has_method("canonical_bytes") \
+		or not boss_behavior.has_method("peak_speed_permille"):
 		errors.append("boss_behavior precisa ser BossBehaviorProfile")
 	else:
 		for error in boss_behavior.validation_errors():
 			errors.append("boss_behavior: " + error)
 		@warning_ignore("integer_division")
-		var peak_speed_fp: int = boss_speed_fp * boss_behavior.pulse_speed_permille / 1000
+		var peak_speed_fp: int = boss_speed_fp * boss_behavior.peak_speed_permille() / 1000
 		if peak_speed_fp > 256:
-			errors.append("boss_behavior pode exceder uma célula por subpasso")
+			errors.append("boss_behavior pode exceder uma célula por subpasso (pico %d)" % peak_speed_fp)
+	if threat == null:
+		errors.append("threat ausente")
+	elif not threat is ThreatProfile or not threat.has_method("validation_errors") or not threat.has_method("canonical_bytes"):
+		errors.append("threat precisa ser ThreatProfile")
+	else:
+		for error in threat.validation_errors():
+			errors.append("threat: " + error)
+	for name in ["items", "bonus_ladder"]:
+		var profile: Resource = get(name)
+		var correct_type := (profile is ItemProfile) if name == "items" else (profile is BonusLadder)
+		if not correct_type or profile == null or not profile.has_method("validation_errors") or not profile.has_method("canonical_bytes"):
+			errors.append("%s precisa ser um perfil autorável válido" % name)
+		else:
+			for error in profile.validation_errors():
+				errors.append("%s: %s" % [name, error])
 	return errors
 
 
@@ -89,6 +117,7 @@ func canonical_bytes() -> PackedByteArray:
 		1 if lethal_contact_wins else 0, death_ticks,
 		boss_substeps, boss_speed_fp, boss_turn_every_ticks,
 		1 if boss_behavior != null else 0,
+		1 if threat != null else 0, 1 if items != null else 0, 1 if bonus_ladder != null else 0,
 	]
 	var out := PackedByteArray()
 	out.resize(vals.size() * 4)
@@ -96,4 +125,10 @@ func canonical_bytes() -> PackedByteArray:
 		out.encode_s32(k * 4, vals[k])
 	if boss_behavior != null and boss_behavior.has_method("canonical_bytes"):
 		out.append_array(boss_behavior.canonical_bytes())
+	if threat != null and threat.has_method("canonical_bytes"):
+		out.append_array(threat.canonical_bytes())
+	if items != null and items.has_method("canonical_bytes"):
+		out.append_array(items.canonical_bytes())
+	if bonus_ladder != null and bonus_ladder.has_method("canonical_bytes"):
+		out.append_array(bonus_ladder.canonical_bytes())
 	return out

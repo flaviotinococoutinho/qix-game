@@ -12,9 +12,9 @@ config_version=5
 
 config/name="QIX GAME"
 config/description="Vertical slice: territory game inspired by Qix/Volfied. Working title."
-config/icon="res://assets/icons/qix_game_icon.png"
 run/main_scene="res://app/bootstrap.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://assets/icons/qix_game_icon.png"
 
 [autoload]
 
@@ -27,7 +27,7 @@ window/size/viewport_width=240
 window/size/viewport_height=320
 window/size/window_width_override=720
 window/size/window_height_override=960
-window/stretch/mode="viewport"
+window/stretch/mode="canvas_items"
 window/stretch/scale_mode="integer"
 window/handheld/orientation=1
 
@@ -83,6 +83,10 @@ pause={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":6,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
+
+[input_devices]
+
+buffering/agile_event_flushing=true
 
 [physics]
 

@@ -9,6 +9,21 @@
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
 memória que atravessa execuções. Sem ele, a run nº 7 desfaz a nº 3 sem saber que ela existiu.
 
+## Entrega local autorizada — 2026-09-07
+
+O usuário solicitou evolução ampla do jogo e uso do MCP Blender; o escopo desta execução
+supera o loop rotineiro de um item. Trabalho sobre `feat/lumen-threat-roster`, base `a1afb90`,
+preservando o WIP prévio; nenhum PR da fila foi mesclado. Os números de setembro/04 acima
+permanecem históricos. Contrato atual: [Atlas Vivo](ATLAS_VIVO.md) e ADR-0012.
+
+- Entregues localmente: lifecycle comum/IDs/pools; ameaças justas; balizas, quatro itens e bônus;
+  campanha ativa/replay v4; modelos originais Blender; palco 2.5D; diagnóstico F3 e feedback.
+- Medido: 260 testes / 13.598 asserções / zero falhas, mais 20 verificações no renderer real.
+- Próximo trabalho de produto: playtest humano dos três setores, expansão de encontros e
+  armas/dano ao chefe, otimização de picos de captura e QA do novo palco em hardware alvo.
+- Não retomar ajustes dos goldens v3 nem usar a rota M2 isolada como prova de desafio.
+  Reconciliar mudanças e a fila antes de futuras integrações; não sobrescrever este WIP.
+
 ## Protocolo (obrigatório)
 
 1. **Leia este arquivo inteiro antes de decidir o que fazer.** Ele vem depois do `CLAUDE.md` e

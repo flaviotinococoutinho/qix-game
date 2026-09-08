@@ -1,12 +1,30 @@
-[gd_resource type="Resource" script_class="GameRules" format=3]
+[gd_resource type="Resource" script_class="GameRules" format=3 uid="uid://bf275a5j7hgw3"]
 
-[ext_resource type="Resource" path="res://content/rules/boss_sweep.tres" id="1_5r705"]
-[ext_resource type="Script" path="res://game/rules/game_rules.gd" id="2_bnd4i"]
+[ext_resource type="Script" uid="uid://efelkpnnv1h" path="res://game/simulation/scoring/bonus_ladder.gd" id="1_3ci0y"]
+[ext_resource type="Resource" path="res://content/rules/boss_sweep.tres" id="2_ut4wl"]
+[ext_resource type="Script" uid="uid://cc6pvhnr0pkee" path="res://game/rules/item_profile.gd" id="3_sm058"]
+[ext_resource type="Script" uid="uid://0jj8nj0omyqu" path="res://game/rules/game_rules.gd" id="4_mjr38"]
+[ext_resource type="Resource" path="res://content/rules/threat_collapse.tres" id="5_g6ivn"]
+
+[sub_resource type="Resource" id="Resource_o86op"]
+script = ExtResource("1_3ci0y")
+enabled = true
+thresholds_permille = PackedInt32Array(800, 810, 820, 830, 840, 850, 860, 870, 880, 890, 900, 910, 920, 930, 940, 950, 960, 970, 980, 990, 991, 992, 993, 994, 995, 996, 997, 998, 999)
+points = PackedInt32Array(1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2200, 2400, 2600, 2800, 3000, 3500, 4000, 5000, 10000, 11000, 12000, 13000, 14000, 15000, 20000, 25000, 30000, 50000)
+
+[sub_resource type="Resource" id="Resource_s1rnp"]
+script = ExtResource("3_sm058")
+enabled = true
+capture_cycle = PackedInt32Array(3, 1, 2, 3, 4, 1, 3, 2, 4, 1)
+effect_durations_ticks = PackedInt32Array(0, 360, 180, 360, 1)
 
 [resource]
-script = ExtResource("2_bnd4i")
+script = ExtResource("4_mjr38")
 completion_bonus = 2500
 shield_ticks = 1440
 boss_speed_fp = 128
 boss_turn_every_ticks = 30
-boss_behavior = ExtResource("1_5r705")
+boss_behavior = ExtResource("2_ut4wl")
+threat = ExtResource("5_g6ivn")
+items = SubResource("Resource_s1rnp")
+bonus_ladder = SubResource("Resource_o86op")

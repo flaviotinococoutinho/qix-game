@@ -27,8 +27,13 @@ const ROUND_SPECS := [
 		"shield_ticks": 60 * 30,
 		"boss_speed_fp": 96,
 		"boss_turn_ticks": 45,
+		"boss_phase_turn_ticks": [45, 40, 36],
+		"boss_phase_pattern": [-1, -1, BossBehaviorProfile.Pattern.PURSUIT],
+		"threat_slug": "threat_calibration",
+		"threat_pressure": 0,
+		"beacon_cells": [32, 64, 80, 188, 160, 84, 190, 228],
 		"display_name": "ABYSSAL RELAY",
-		"subtitle": "Cartografe o sinal perdido sob a corrente escura.",
+		"subtitle": "O relé ainda transmite. Estabilize 80% antes que o escudo apague.",
 		"background": "res://assets/backgrounds/abyssal_relay.png",
 		"free_color": Color("05131d"),
 		"boundary_color": Color("54f5e0"),
@@ -55,8 +60,13 @@ const ROUND_SPECS := [
 		"shield_ticks": 60 * 27,
 		"boss_speed_fp": 112,
 		"boss_turn_ticks": 36,
+		"boss_phase_turn_ticks": [36, 33, 30],
+		"boss_phase_pattern": [-1, -1, -1],
+		"threat_slug": "threat_pressure",
+		"threat_pressure": 1,
+		"beacon_cells": [28, 100, 72, 222, 148, 60, 194, 166],
 		"display_name": "AURORA FOUNDRY",
-		"subtitle": "Recupere a forja onde luz e metal ainda respiram.",
+		"subtitle": "A forja se defende: dardos vêm das bordas, vagalumes patrulham a linha.",
 		"background": "res://assets/backgrounds/aurora_foundry.png",
 		"free_color": Color("130d24"),
 		"boundary_color": Color("67e8ff"),
@@ -83,8 +93,13 @@ const ROUND_SPECS := [
 		"shield_ticks": 60 * 24,
 		"boss_speed_fp": 128,
 		"boss_turn_ticks": 30,
+		"boss_phase_turn_ticks": [30, 27, 24],
+		"boss_phase_pattern": [-1, -1, -1],
+		"threat_slug": "threat_collapse",
+		"threat_pressure": 3,
+		"beacon_cells": [32, 218, 76, 66, 152, 196, 194, 94],
 		"display_name": "VERDANT SINGULARITY",
-		"subtitle": "Feche o atlas vivo antes que o núcleo desperte.",
+		"subtitle": "O núcleo colapsa. Sele-o, ou saia com 80% e viva com isso.",
 		"background": "res://assets/backgrounds/verdant_singularity_v2.png",
 		"free_color": Color("071a16"),
 		"boundary_color": Color("71ffbf"),
@@ -153,7 +168,8 @@ func _initialize() -> void:
 
 func _build_round(spec: Dictionary) -> RoundContent:
 	var boss_behavior := _create_boss_behavior(spec)
-	var rules := _create_rules(spec, boss_behavior)
+	var threat := _create_threat(spec)
+	var rules := _create_rules(spec, boss_behavior, threat)
 	var definition := _create_round_definition(spec)
 	var visual := _create_visual(spec)
 	var content := RoundContent.new()
@@ -169,10 +185,12 @@ func _build_round(spec: Dictionary) -> RoundContent:
 
 	var rules_path := "res://content/rules/%s.tres" % spec.rules_slug
 	var boss_behavior_path := "res://content/rules/%s.tres" % spec.boss_profile_slug
+	var threat_path := "res://content/rules/%s.tres" % spec.threat_slug
 	var definition_path := "res://content/rounds/definitions/%s.tres" % spec.slug
 	var visual_path := "res://content/visuals/%s.tres" % spec.slug
 	var content_path := "res://content/rounds/%s.tres" % spec.slug
 	_transaction_entries.append({"resource": boss_behavior, "path": boss_behavior_path})
+	_transaction_entries.append({"resource": threat, "path": threat_path})
 	_transaction_entries.append({"resource": rules, "path": rules_path})
 	_transaction_entries.append({"resource": definition, "path": definition_path})
 	_transaction_entries.append({"resource": visual, "path": visual_path})
@@ -180,7 +198,7 @@ func _build_round(spec: Dictionary) -> RoundContent:
 	return content
 
 
-func _create_rules(spec: Dictionary, boss_behavior: BossBehaviorProfile) -> GameRules:
+func _create_rules(spec: Dictionary, boss_behavior: BossBehaviorProfile, threat: ThreatProfile) -> GameRules:
 	var rules := GameRules.new()
 	rules.lives_start = 3
 	rules.target_permille = 800
@@ -201,7 +219,20 @@ func _create_rules(spec: Dictionary, boss_behavior: BossBehaviorProfile) -> Game
 	rules.boss_speed_fp = spec.boss_speed_fp
 	rules.boss_turn_every_ticks = spec.boss_turn_ticks
 	rules.boss_behavior = boss_behavior
+	rules.threat = threat
+	rules.items = ItemProfile.new()
+	rules.items.enabled = true
+	rules.bonus_ladder = BonusLadder.new()
+	rules.bonus_ladder.enabled = true
 	return rules
+
+
+## Diretor de ameaça por setor: a escada é a mesma (§10), a pressão inicial cresce 0 → 1 → 3.
+func _create_threat(spec: Dictionary) -> ThreatProfile:
+	var threat := ThreatProfile.new()
+	threat.enabled = true
+	threat.pressure_bonus = spec.threat_pressure
+	return threat
 
 
 func _create_boss_behavior(spec: Dictionary) -> BossBehaviorProfile:
@@ -212,6 +243,8 @@ func _create_boss_behavior(spec: Dictionary) -> BossBehaviorProfile:
 	profile.pulse_period_ticks = spec.boss_pulse_period
 	profile.pulse_duration_ticks = spec.boss_pulse_duration
 	profile.pulse_speed_permille = spec.boss_pulse_speed_permille
+	profile.phase_turn_ticks = PackedInt32Array(spec.boss_phase_turn_ticks)
+	profile.phase_pattern = PackedInt32Array(spec.boss_phase_pattern)
 	return profile
 
 
@@ -223,6 +256,7 @@ func _create_round_definition(spec: Dictionary) -> RoundDefinition:
 	definition.boss_start = spec.boss_start
 	definition.boss_dir_index = spec.boss_dir
 	definition.boss_protects_territory = true
+	definition.beacon_cells = PackedInt32Array(spec.beacon_cells)
 	return definition
 
 

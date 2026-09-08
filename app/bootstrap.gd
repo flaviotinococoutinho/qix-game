@@ -1,12 +1,21 @@
 class_name QixBootstrap
 extends Node
 ## Composition root e host de tick fixo da campanha autorável.
+##
+## Latência de entrada (F1, spec §10): `Input.use_accumulated_input = false` para que cada
+## evento de tecla/toque chegue individualmente ao adaptador (acumular junta press e release do
+## mesmo tick num evento só e perde o toque curto), e `input_devices/buffering/agile_event_flushing`
+## no `project.godot` para a fila ser drenada antes de cada tick físico, não só por quadro.
+## `GameInputAdapter.begin_tick()` abre cada tick antes da amostra: é o relógio de ticks que
+## envelhece latch, buffer de curva e memória de release — nenhum `Time.*` participa.
 
 const FramePacingProbeNode := preload("res://tools/profile/frame_pacing_probe_node.gd")
 const FramebufferProbeNode := preload("res://tools/shipping/framebuffer_shader_probe_node.gd")
 
 @export var campaign: CampaignDefinition
 @export var show_touch_controls_on_desktop: bool = false
+@export var depth_stage_enabled: bool = true
+@export var audio_enabled: bool = true
 
 @onready var board_view: QixBoardView = $BoardView
 @onready var enemy_view: QixEnemyView = $EnemyView
@@ -22,6 +31,9 @@ var paused: bool = false
 var _input_adapter := GameInputAdapter.new()
 var _shipping_audio_smoke_requested_ticks: int = 0
 var _shipping_audio_smoke_completed_ticks: int = 0
+var depth_stage: QixDepthStage
+var minor_actor_view: QixMinorActorView
+var actor_trace: QixActorTraceOverlay
 
 var simulation: GameSimulation:
 	get:
@@ -35,18 +47,50 @@ var replay: ReplayLog:
 func _ready() -> void:
 	assert(campaign != null, "CampaignDefinition precisa estar ligada à cena")
 	assert(campaign.validation_errors().is_empty(), "CampaignDefinition inválida: %s" % str(campaign.validation_errors()))
+	Input.use_accumulated_input = false
 	var touch_active := OS.has_feature("mobile") or show_touch_controls_on_desktop
 	touch_controls.touch_enabled = touch_active
 	touch_controls.visible = touch_active
 	_input_adapter.attach_touch_controls(touch_controls)
 	if not Input.joy_connection_changed.is_connected(_on_joy_connection_changed):
 		Input.joy_connection_changed.connect(_on_joy_connection_changed)
+	minor_actor_view = QixMinorActorView.new()
+	minor_actor_view.name = "MinorActorView"
+	minor_actor_view.z_index = 12
+	add_child(minor_actor_view)
+	depth_stage = QixDepthStage.new()
+	depth_stage.name = "DepthStage"
+	add_child(depth_stage)
+	depth_stage.mount(self, [board_view, enemy_view, minor_actor_view, player_view, capture_vfx])
+	depth_stage.set_enabled(depth_stage_enabled)
+	shipping_feedback.set_feedback_enabled(audio_enabled, true)
+	actor_trace = QixActorTraceOverlay.new()
+	actor_trace.name = "ActorTrace"
+	actor_trace.z_index = 60
+	add_child(actor_trace)
 	_start_campaign()
 	_start_exported_shipping_audio_smoke()
 	_start_exported_shipping_probe()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode == KEY_F3:
+			actor_trace.visible = not actor_trace.visible
+			actor_trace.sync(session, _input_adapter)
+			return
+		if event.physical_keycode == KEY_F2:
+			depth_stage.set_enabled(not depth_stage.enabled)
+			_sync_views([])
+			return
+		if event.physical_keycode == KEY_F4:
+			depth_stage.reduced_motion = not depth_stage.reduced_motion
+			_sync_views([])
+			return
+		if event.physical_keycode == KEY_M:
+			audio_enabled = not audio_enabled
+			shipping_feedback.set_feedback_enabled(audio_enabled, true)
+			return
 	_input_adapter.handle_event(event)
 
 
@@ -62,6 +106,7 @@ func _on_joy_connection_changed(device: int, connected: bool) -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	_input_adapter.begin_tick()
 	_process_input_tick(
 		Input.is_action_just_pressed("pause"),
 		Input.is_action_just_pressed("ui_accept"),
@@ -119,11 +164,26 @@ func _sync_views(events: Array[GameEvent]) -> void:
 	var content := session.current_content()
 	board_view.sync(session.simulation, content.visual)
 	enemy_view.sync(session.simulation, content.visual)
+	minor_actor_view.sync(session.simulation, content.visual)
 	player_view.sync(session.simulation, content.visual)
 	capture_vfx.sync(session, events)
 	hud.sync(session, paused, events)
 	round_transition.sync(session, paused, events)
 	shipping_feedback.sync(session, events, paused)
+	var terminal_alpha := terminal_actor_alpha(session)
+	enemy_view.modulate.a = terminal_alpha
+	minor_actor_view.modulate.a = terminal_alpha
+	depth_stage.sync(session.simulation, content.visual, events, terminal_alpha)
+	actor_trace.sync(session, _input_adapter)
+
+
+static func terminal_actor_alpha(source: GameSession) -> float:
+	if source.phase == GameSession.Phase.CAMPAIGN_COMPLETE:
+		return 0.0
+	if source.phase == GameSession.Phase.ROUND_CLEAR:
+		var elapsed := source.transition_ticks_total - source.transition_ticks_left
+		return clampf(1.0 - float(elapsed)/24.0, 0.0, 1.0)
+	return 1.0
 
 
 func _start_exported_shipping_audio_smoke() -> void:

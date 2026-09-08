@@ -8,8 +8,8 @@
 [ext_resource type="Script" uid="uid://dqk520bu0ig2v" path="res://ui/game_hud.gd" id="5_1jq2w"]
 [ext_resource type="Script" uid="uid://hgjfuqwkehh7" path="res://game/vfx/capture_vfx.gd" id="7_1jq2w"]
 [ext_resource type="Script" uid="uid://c1s2onbtdjs6n" path="res://ui/round_transition_view.gd" id="8_50coe"]
-[ext_resource type="Script" path="res://app/shipping_feedback.gd" id="9_shipping"]
-[ext_resource type="Script" path="res://ui/touch/touch_controls.gd" id="10_touch"]
+[ext_resource type="Script" uid="uid://deopfr6dd0vvn" path="res://app/shipping_feedback.gd" id="9_shipping"]
+[ext_resource type="Script" uid="uid://cr1qr0paoq87f" path="res://ui/touch/touch_controls.gd" id="10_touch"]
 
 [node name="Bootstrap" type="Node" unique_id=562655044]
 script = ExtResource("1_7cvr3")
@@ -44,10 +44,10 @@ anchors_preset = 0
 mouse_filter = 2
 script = ExtResource("8_50coe")
 
-[node name="ShippingFeedback" type="Node" parent="."]
+[node name="ShippingFeedback" type="Node" parent="." unique_id=660753565]
 script = ExtResource("9_shipping")
 
-[node name="TouchControls" type="Control" parent="."]
+[node name="TouchControls" type="Control" parent="." unique_id=1694370036]
 visible = false
 z_index = 50
 layout_mode = 3

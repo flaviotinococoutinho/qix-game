@@ -21,7 +21,7 @@ func ensure_ready() -> void:
 func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) -> void:
 	ensure_ready()
 	audio.sync(session, events, paused)
-	haptics.sync(events)
+	haptics.sync(events, paused)
 
 
 func set_feedback_enabled(audio_enabled: bool, haptics_enabled: bool) -> void:

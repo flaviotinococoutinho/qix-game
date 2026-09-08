@@ -1,9 +1,9 @@
 # PROJECT_CONTRACT — QIX GAME (vertical slice)
 
-> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** engine, viewport, renderer e tick conferidos em `project.godot`; arquivos da
-> tabela de ownership conferidos por existência. Alvos, tamanhos de export e estado do
-> ferramental MCP seguem do run macOS de 2026-09-03 e não foram reexecutados.
+> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
+> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
+**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
+
 
 Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; título público ainda não definido.
 
@@ -14,10 +14,10 @@ Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; 
 | Executável | `/Applications/Godot_mono.app/Contents/MacOS/Godot` | `--version` → `4.7.2.stable.mono.official.ed1daf0bf` |
 | Versão | **4.7.2-stable** (build mono; o projeto não usa C#) | idem; bate com `engine_policy` do prompt |
 | Linguagem | **GDScript tipado** | ADR-0003 |
-| Mundo | 2D nativo | perfil padrão do prompt |
+| Mundo | simulação 2D; palco ortográfico 2.5D e proxies GLB | ADR-0012 |
 | Renderer | **GL Compatibility** | ADR-0002 |
 | Simulação | 60 ticks/s, tick fixo, inteiros | `physics/common/physics_ticks_per_second=60` persistido; `QixBootstrap._physics_process` chama um `GameSession.step` por tick não pausado |
-| Viewport lógico | 240×320 retrato, `stretch=viewport`, `scale_mode=integer`, `aspect=keep` | `project.godot` |
+| Viewport lógico | 240×320 retrato, `stretch=canvas_items`, `scale_mode=integer`, `aspect=keep` | `project.godot` |
 | Campo histórico | 225×283 incl. moldura; interior 223×281 = 62 663 células | `06-gameplay.md` §4.4 |
 
 ## Alvos
@@ -32,7 +32,7 @@ Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; 
 
 ## Raízes
 
-- `project_root`: `/Users/flaviocoutinho/development/qiqix/qix-game` (projeto novo; o `.git/` encontrado está incompleto e ainda não forma um repositório válido)
+- `project_root`: `/Users/flaviocoutinho/development/qiqix/qix-game` (Git válido; branch local `feat/lumen-threat-roster`, base `a1afb90` com alterações locais preservadas)
 - `reference_root`: `/Users/flaviocoutinho/development/qiqix` (`docs/00..08`, `docs/ACHADOS_ANOTACAO.md`, `reference/mame/`)
 - Não há `project.godot` nem `.git` em `reference_root`; nada ali é modificado por este projeto.
 

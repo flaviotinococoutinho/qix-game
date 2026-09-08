@@ -1,11 +1,11 @@
 # IMPLEMENTATION_STATUS
 
-> **Verificado em** 2026-09-04 · commit `74c173a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** o verde de M2/G2 foi reconfirmado pela suíte e pela rota de captura headless.
-> O âmbar de release/hardware **não** foi reavaliado: exports, aparelho físico e assinatura
-> exigem macOS e SDKs ausentes na nuvem.
+> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
+> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
+**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
 
-## Gate atual
+
+## Gate histórico de 2026-09-03
 
 **M2 / G2 — VERDE. Shipping candidate técnico — VERDE. Release/hardware — ÂMBAR**
 (2026-09-03).

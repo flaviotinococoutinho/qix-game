@@ -27,11 +27,12 @@ var _last_trail_msec := -TRAIL_THROTTLE_MSEC
 var _music_cache: Dictionary = {}
 var _cue_cache: Dictionary = {}
 var _paused := false
+var _pause_started_msec := 0
 
 
 func _ready() -> void:
 	ensure_ready()
-	if enabled and runtime_allows_playback() and _music.stream != null and not _music.playing:
+	if enabled and not _paused and runtime_allows_playback() and _music.stream != null and not _music.playing:
 		_music.play()
 
 
@@ -45,14 +46,19 @@ func shutdown() -> void:
 	if is_instance_valid(_music):
 		_music.stop()
 		_music.stream = null
+		_music.stream_paused = false
 	for voice in _voices:
 		if is_instance_valid(voice):
 			voice.stop()
 			voice.stream = null
+			voice.stream_paused = false
 	_music_cache.clear()
 	_cue_cache.clear()
 	_round_index = -1
 	_release_all_voices()
+	_paused = false
+	_pause_started_msec = 0
+	_last_trail_msec = -TRAIL_THROTTLE_MSEC
 
 
 func ensure_ready() -> void:
@@ -95,12 +101,10 @@ static func arguments_allow_playback(
 ## Interface única para o bootstrap após a simulação emitir eventos.
 func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) -> void:
 	ensure_ready()
+	set_paused(paused)
 	if session != null and session.round_index != _round_index:
 		play_round_music(session.round_index)
-	_paused = paused
-	if _music != null and _music.is_inside_tree():
-		_music.stream_paused = paused
-	if not enabled:
+	if not enabled or _paused:
 		return
 	for cue_name in cues_for_events(events):
 		play_cue(cue_name)
@@ -112,16 +116,16 @@ func play_round_music(round_index: int) -> void:
 	if not _music_cache.has(round_index):
 		_music_cache[round_index] = QixProceduralAudioLibrary.music_for_round(round_index)
 	_music.stream = _music_cache[round_index]
-	if enabled and runtime_allows_playback() and _music.is_inside_tree():
+	if enabled and not _paused and runtime_allows_playback() and _music.is_inside_tree():
 		_music.play()
 
 
 func play_cue(cue_name: StringName) -> void:
-	if not enabled:
+	if not enabled or _paused:
 		return
 	ensure_ready()
 	if cue_name == &"trail":
-		var now := Time.get_ticks_msec()
+		var now := _now_msec()
 		if now - _last_trail_msec < TRAIL_THROTTLE_MSEC:
 			return
 		_last_trail_msec = now
@@ -136,7 +140,7 @@ func play_cue(cue_name: StringName) -> void:
 	_voice_cursor = (index + 1) % _voices.size()
 	_voice_priorities[index] = priority
 	_voice_free_msec[index] = (
-		Time.get_ticks_msec() + QixProceduralAudioLibrary.duration_msec(cue_name)
+		_now_msec() + QixProceduralAudioLibrary.duration_msec(cue_name)
 	)
 	var voice := _voices[index]
 	voice.stream = _cue_cache[cue_name]
@@ -149,7 +153,7 @@ func play_cue(cue_name: StringName) -> void:
 ## Prioridade que cada voz ainda segura neste instante, ou `PRIORITY_IDLE` para as
 ## que já terminaram. É o snapshot que `select_voice` consome.
 func voice_priorities_now() -> PackedInt32Array:
-	var now := Time.get_ticks_msec()
+	var now := _pause_started_msec if _paused else _now_msec()
 	var snapshot := PackedInt32Array()
 	snapshot.resize(_voices.size())
 	for index in _voices.size():
@@ -158,6 +162,41 @@ func voice_priorities_now() -> PackedInt32Array:
 			_voice_priorities[index] if busy else QixProceduralAudioLibrary.PRIORITY_IDLE
 		)
 	return snapshot
+
+
+## Pausa mantém a posição de música/SFX e congela seus prazos no mixer. Eventos recebidos
+## durante pausa são descartados: retomar nunca despeja uma fila antiga de alertas.
+func set_paused(value: bool) -> void:
+	if value != _paused:
+		var now := _now_msec()
+		if value:
+			_pause_started_msec = now
+		else:
+			var held_msec := maxi(0, now - _pause_started_msec)
+			for index in _voice_free_msec.size():
+				if _voice_free_msec[index] > _pause_started_msec:
+					_voice_free_msec[index] += held_msec
+			_last_trail_msec += held_msec
+		_paused = value
+	if is_instance_valid(_music):
+		_set_player_paused(_music, value)
+	for voice in _voices:
+		_set_player_paused(voice, value)
+	# Música carregada durante a pausa começa apenas quando o controle retorna.
+	if not value and enabled and runtime_allows_playback() and is_instance_valid(_music) \
+			and _music.stream != null and _music.is_inside_tree() and not _music.playing:
+		_music.play()
+
+
+## Fronteiras do driver de apresentação. No Godot, stream_paused consulta os playbacks
+## existentes e retorna false sem nenhum; o estado solicitado pertence a este diretor.
+## As seams permitem verificar comandos e passagem de tempo sem abrir áudio em headless.
+func _set_player_paused(player: AudioStreamPlayer, value: bool) -> void:
+	player.stream_paused = value
+
+
+func _now_msec() -> int:
+	return Time.get_ticks_msec()
 
 
 ## Escolhe a voz que vai tocar `incoming_priority`, ou `-1` se o pedido deve ser
@@ -208,7 +247,7 @@ func set_enabled(value: bool) -> void:
 		for voice in _voices:
 			voice.stop()
 		_release_all_voices()
-	elif runtime_allows_playback() and _music != null and _music.stream != null and _music.is_inside_tree():
+	elif not _paused and runtime_allows_playback() and _music != null and _music.stream != null and _music.is_inside_tree():
 		_music.play()
 
 
@@ -217,6 +256,7 @@ func presentation_state() -> Dictionary:
 		"round_index": _round_index,
 		"music_loaded": _music != null and _music.stream != null,
 		"music_paused": _paused,
+		"sfx_paused": _paused,
 		"voice_count": _voices.size(),
 		"cached_music": _music_cache.size(),
 		"cached_cues": _cue_cache.size(),
@@ -241,10 +281,29 @@ func _release_all_voices() -> void:
 static func cues_for_events(events: Array[GameEvent]) -> Array[StringName]:
 	var cues: Array[StringName] = []
 	for event in events:
-		var cue_name := cue_for_kind(event.kind)
+		var cue_name := cue_for_event(event)
 		if cue_name != &"" and not cues.has(cue_name):
 			cues.append(cue_name)
 	return cues
+
+
+static func cue_for_event(event: GameEvent) -> StringName:
+	if event.kind == GameEvent.Kind.THREAT_LEVEL_CHANGED:
+		if int(event.data.get("index", 0)) <= int(event.data.get("previous", 0)):
+			return &""  # recuo da pressão já é comunicado por CALM_STARTED
+	if event.kind == GameEvent.Kind.ITEM_STARTED:
+		match int(event.data.get("item", ItemProfile.Kind.NONE)):
+			ItemProfile.Kind.VELOCITY: return &"velocity"
+			ItemProfile.Kind.STASIS: return &"stasis"
+			ItemProfile.Kind.SHIELD_FREEZE: return &"shield_freeze"
+			ItemProfile.Kind.PURGE: return &"purge"
+		return &""
+	if event.kind == GameEvent.Kind.ITEM_ENDED:
+		var item := int(event.data.get("item", ItemProfile.Kind.NONE))
+		# Expurgo é imediato: seu contador técnico de um tick não é perda de proteção.
+		if item <= ItemProfile.Kind.NONE or item >= ItemProfile.Kind.PURGE:
+			return &""
+	return cue_for_kind(event.kind)
 
 
 static func cue_for_kind(kind: int) -> StringName:
@@ -269,6 +328,36 @@ static func cue_for_kind(kind: int) -> StringName:
 			return &"game_over"
 		GameEvent.Kind.CAMPAIGN_COMPLETE:
 			return &"campaign_complete"
+		GameEvent.Kind.WALKER_SPAWNED:
+			return &"walker_spawn"
+		GameEvent.Kind.DART_ARMED:
+			return &"dart_arm"
+		GameEvent.Kind.DART_FIRED:
+			return &"dart_fire"
+		GameEvent.Kind.TRAIL_CUT:
+			return &"trail_cut"
+		GameEvent.Kind.EMBER_IGNITED, GameEvent.Kind.PLAYER_STALLING:
+			return &"ember"
+		GameEvent.Kind.THREAT_LEVEL_CHANGED:
+			return &"threat"
+		GameEvent.Kind.OVERTIME_STARTED:
+			return &"overtime"
+		GameEvent.Kind.BOSS_PHASE_CHANGED:
+			return &"boss_phase"
+		GameEvent.Kind.BOSS_CORNERED:
+			return &"boss_cornered"
+		GameEvent.Kind.WALKER_EXTINGUISHED, GameEvent.Kind.DART_ABSORBED, GameEvent.Kind.EMBER_EXTINGUISHED:
+			return &"extinguish"
+		GameEvent.Kind.CALM_STARTED:
+			return &"calm"
+		GameEvent.Kind.BEACON_CAPTURED:
+			return &"beacon"
+		GameEvent.Kind.ITEM_STARTED:
+			return &"velocity"  # default do catálogo; cue_for_event despacha pelo ID
+		GameEvent.Kind.ITEM_ENDED:
+			return &"item_end"
+		GameEvent.Kind.BOSS_SEALED:
+			return &"sealed"
 	return &""
 
 
@@ -277,11 +366,13 @@ func _ensure_players() -> void:
 		_music = AudioStreamPlayer.new()
 		_music.name = "Music"
 		_music.bus = BUS_MUSIC
+		_music.max_polyphony = 1
 		add_child(_music)
 	while _voices.size() < SFX_VOICES:
 		var voice := AudioStreamPlayer.new()
 		voice.name = "Sfx%02d" % _voices.size()
 		voice.bus = BUS_SFX
+		voice.max_polyphony = 1
 		add_child(voice)
 		_voices.append(voice)
 	if _voice_priorities.size() != _voices.size():

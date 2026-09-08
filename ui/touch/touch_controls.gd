@@ -2,11 +2,34 @@ class_name QixTouchControls
 extends Control
 ## Overlay vetorial multi-touch: stick cardinal, ação/confirmar e pausa.
 ## Não chama a simulação; expõe apenas estado para GameInputAdapter.
+##
+## Decisões de sensação do stick (F1 — entrada e habilidade, spec §10):
+##
+## - **Stick flutuante.** O dedo raramente cai exatamente no anel desenhado. Quando o toque
+##   inicial cai na zona esquerda mas **fora** do anel, o centro do stick passa a ser o ponto
+##   do toque; ao soltar, volta ao centro padrão. Quando o toque cai **dentro** do anel, o
+##   centro continua o desenhado: tocar a parte de cima do anel já é UP, como num d-pad —
+##   isso preserva o toque curto e o contrato antigo dos testes de convergência de devices.
+## - **Histerese de setor.** Entra numa cardinal a ≥ STICK_ENGAGE_RADIUS do centro e só volta a
+##   NONE abaixo de STICK_RELEASE_RADIUS; troca de cardinal só quando o vetor passa
+##   STICK_SECTOR_HYSTERESIS_DEG além da diagonal. Sem isso um polegar parado sobre a diagonal
+##   oscila entre duas direções a cada quadro e a trilha vira serrilhado.
+## - **Flick.** Um toque mais curto que um tick (press, arrasto e release entre duas amostras)
+##   ainda produz direção: a última direção não observada por `direction()` fica guardada e
+##   `consume_flick_direction()` a entrega uma vez ao adaptador, que a trata como um toque de
+##   tecla latched.
 
 const FALLBACK_SIZE := Vector2(240.0, 320.0)
 const STICK_CENTER_FROM_BOTTOM := Vector2(52.0, 54.0)
 const STICK_RADIUS := 42.0
-const STICK_DEAD_ZONE := 11.0
+## Distância do centro a partir da qual uma cardinal entra (era o dead zone fixo).
+const STICK_ENGAGE_RADIUS := 11.0
+## Distância abaixo da qual a cardinal ativa volta a NONE.
+const STICK_RELEASE_RADIUS := 7.0
+## Graus além da diagonal (45°) necessários para trocar de cardinal com uma ativa.
+const STICK_SECTOR_HYSTERESIS_DEG := 10.0
+## cos(45° + histerese): o vetor fica na cardinal atual enquanto dot(v, eixo) ≥ |v| · este valor.
+const STICK_SECTOR_KEEP_COS := cos(deg_to_rad(45.0 + STICK_SECTOR_HYSTERESIS_DEG))
 const ACTION_CENTER_FROM_BOTTOM := Vector2(48.0, 54.0)
 const ACTION_RADIUS := 39.0
 
@@ -19,9 +42,12 @@ const ACTION_RADIUS := 39.0
 
 var _roles: Dictionary = {}
 var _stick_touch: int = -1
+var _stick_origin := Vector2.ZERO
 var _stick_position := Vector2.ZERO
 var _draw_touches: Dictionary = {}
 var _direction: int = MoveIntent.Dir.NONE
+var _direction_observed: bool = true
+var _flick_direction: int = MoveIntent.Dir.NONE
 var _confirm_queued: bool = false
 var _pause_queued: bool = false
 
@@ -56,8 +82,18 @@ func handle_event(event: InputEvent) -> bool:
 	return false
 
 
+## Direção mantida pelo stick. Chamar aqui marca a direção atual como observada: um release
+## que vier depois já não gera flick, porque o adaptador já a viu.
 func direction() -> int:
+	_direction_observed = true
 	return _direction
+
+
+## Entrega uma única vez a direção de um flick (stick solto antes de qualquer `direction()`).
+func consume_flick_direction() -> int:
+	var result := _flick_direction
+	_flick_direction = MoveIntent.Dir.NONE
+	return result
 
 
 func is_drawing() -> bool:
@@ -80,8 +116,11 @@ func clear_state() -> void:
 	_roles.clear()
 	_draw_touches.clear()
 	_stick_touch = -1
-	_stick_position = _stick_center()
+	_stick_origin = _default_stick_center()
+	_stick_position = _default_stick_center()
 	_direction = MoveIntent.Dir.NONE
+	_direction_observed = true
+	_flick_direction = MoveIntent.Dir.NONE
 	_confirm_queued = false
 	_pause_queued = false
 	queue_redraw()
@@ -92,6 +131,8 @@ func presentation_state() -> Dictionary:
 		"direction": _direction,
 		"drawing": is_drawing(),
 		"stick_touch": _stick_touch,
+		"stick_center": _stick_center(),
+		"flick_pending": _flick_direction,
 		"active_touches": _roles.size(),
 	}
 
@@ -111,8 +152,13 @@ func _press(index: int, position: Vector2) -> bool:
 	if position.x <= _layout_size().x * 0.55 and position.y >= _layout_size().y * 0.48:
 		if _stick_touch < 0:
 			_stick_touch = index
-			_stick_position = position
 			_roles[index] = 1
+			var home := _default_stick_center()
+			_stick_origin = home if position.distance_to(home) <= STICK_RADIUS else position
+			_stick_position = position
+			_flick_direction = MoveIntent.Dir.NONE
+			_direction = MoveIntent.Dir.NONE
+			_direction_observed = true
 			_update_direction()
 			queue_redraw()
 			return true
@@ -125,23 +171,59 @@ func _release(index: int) -> bool:
 	var role := int(_roles[index])
 	_roles.erase(index)
 	if role == 1 and _stick_touch == index:
+		if _direction != MoveIntent.Dir.NONE and not _direction_observed:
+			_flick_direction = _direction
 		_stick_touch = -1
-		_stick_position = _stick_center()
+		_stick_origin = _default_stick_center()
+		_stick_position = _default_stick_center()
 		_direction = MoveIntent.Dir.NONE
+		_direction_observed = true
 	elif role == 2:
 		_draw_touches.erase(index)
 	queue_redraw()
 	return true
 
 
+## Histerese em duas camadas: magnitude (entrar/sair) e setor (trocar de cardinal).
 func _update_direction() -> void:
 	var delta := _stick_position - _stick_center()
-	if delta.length() < STICK_DEAD_ZONE:
+	var distance := delta.length()
+	var previous := _direction
+	if previous == MoveIntent.Dir.NONE:
+		if distance >= STICK_ENGAGE_RADIUS:
+			_direction = _nearest_cardinal(delta)
+	elif distance < STICK_RELEASE_RADIUS:
 		_direction = MoveIntent.Dir.NONE
-	elif absf(delta.x) > absf(delta.y):
-		_direction = MoveIntent.Dir.RIGHT if delta.x > 0.0 else MoveIntent.Dir.LEFT
-	else:
-		_direction = MoveIntent.Dir.DOWN if delta.y > 0.0 else MoveIntent.Dir.UP
+	elif not _within_sector(delta, distance, previous):
+		_direction = _nearest_cardinal(delta)
+	if _direction != previous and _direction != MoveIntent.Dir.NONE:
+		_direction_observed = false
+
+
+static func _nearest_cardinal(delta: Vector2) -> int:
+	if absf(delta.x) > absf(delta.y):
+		return MoveIntent.Dir.RIGHT if delta.x > 0.0 else MoveIntent.Dir.LEFT
+	return MoveIntent.Dir.DOWN if delta.y > 0.0 else MoveIntent.Dir.UP
+
+
+## O vetor continua dentro do setor alargado da cardinal `dir` (45° + histerese)?
+static func _within_sector(delta: Vector2, distance: float, dir: int) -> bool:
+	if distance <= 0.0:
+		return false
+	return delta.dot(_axis_of(dir)) >= distance * STICK_SECTOR_KEEP_COS
+
+
+static func _axis_of(dir: int) -> Vector2:
+	match dir:
+		MoveIntent.Dir.UP:
+			return Vector2.UP
+		MoveIntent.Dir.RIGHT:
+			return Vector2.RIGHT
+		MoveIntent.Dir.DOWN:
+			return Vector2.DOWN
+		MoveIntent.Dir.LEFT:
+			return Vector2.LEFT
+	return Vector2.ZERO
 
 
 func _layout_size() -> Vector2:
@@ -150,7 +232,14 @@ func _layout_size() -> Vector2:
 	return FALLBACK_SIZE
 
 
+## Centro efetivo do stick: o ponto do toque enquanto ele flutua, o padrão no resto do tempo.
 func _stick_center() -> Vector2:
+	if _stick_touch >= 0:
+		return _stick_origin
+	return _default_stick_center()
+
+
+func _default_stick_center() -> Vector2:
 	var layout := _layout_size()
 	return Vector2(STICK_CENTER_FROM_BOTTOM.x, layout.y - STICK_CENTER_FROM_BOTTOM.y)
 
@@ -171,12 +260,13 @@ func _draw() -> void:
 	var cyan := Color(0.38, 0.97, 0.82, 0.24)
 	var hot := Color(1.0, 0.52, 0.66, 0.28)
 	var line := Color(0.78, 1.0, 0.96, 0.62)
-	draw_circle(_stick_center(), STICK_RADIUS, cyan)
-	draw_arc(_stick_center(), STICK_RADIUS, 0.0, TAU, 48, line, 1.25, true)
-	var knob := _stick_position if _stick_touch >= 0 else _stick_center()
-	var delta := knob - _stick_center()
+	var center := _stick_center()
+	draw_circle(center, STICK_RADIUS, cyan)
+	draw_arc(center, STICK_RADIUS, 0.0, TAU, 48, line, 1.25, true)
+	var knob := _stick_position if _stick_touch >= 0 else center
+	var delta := knob - center
 	if delta.length() > STICK_RADIUS - 8.0:
-		knob = _stick_center() + delta.normalized() * (STICK_RADIUS - 8.0)
+		knob = center + delta.normalized() * (STICK_RADIUS - 8.0)
 	draw_circle(knob, 13.0, Color(0.75, 1.0, 0.95, 0.42))
 	draw_circle(_action_center(), ACTION_RADIUS, hot)
 	draw_arc(_action_center(), ACTION_RADIUS, 0.0, TAU, 48, line, 1.5, true)

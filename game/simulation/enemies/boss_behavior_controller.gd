@@ -21,21 +21,42 @@ static func next_direction(
 	target_cell: Vector2i,
 	rng: DeterministicRng,
 ) -> int:
-	var current := current_direction_index & 15
 	if profile == null:
 		return rng.next_below(16)
-	match profile.pattern:
+	return next_direction_for_pattern(
+		profile.pattern,
+		profile.sweep_turn_steps,
+		profile.pursuit_jitter_steps,
+		current_direction_index,
+		origin_cell,
+		target_cell,
+		rng,
+	)
+
+
+## Mesma decisão com o padrão explícito — é o que as fases do Núcleo usam para trocar de
+## padrão sem trocar de perfil.
+static func next_direction_for_pattern(
+	pattern: int,
+	sweep_turn_steps: int,
+	pursuit_jitter_steps: int,
+	current_direction_index: int,
+	origin_cell: Vector2i,
+	target_cell: Vector2i,
+	rng: DeterministicRng,
+) -> int:
+	var current := current_direction_index & 15
+	match pattern:
 		BossBehaviorProfileScript.Pattern.PURSUIT:
 			var delta := target_cell - origin_cell
 			if delta == Vector2i.ZERO:
 				return current
 			var aimed := nearest_direction_index(delta)
-			var jitter: int = profile.pursuit_jitter_steps
-			if jitter > 0:
-				aimed += rng.next_below(jitter * 2 + 1) - jitter
+			if pursuit_jitter_steps > 0:
+				aimed += rng.next_below(pursuit_jitter_steps * 2 + 1) - pursuit_jitter_steps
 			return aimed & 15
 		BossBehaviorProfileScript.Pattern.SWEEP:
-			return (current + profile.sweep_turn_steps) & 15
+			return (current + sweep_turn_steps) & 15
 		_:
 			return rng.next_below(16)
 

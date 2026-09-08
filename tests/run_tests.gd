@@ -29,12 +29,26 @@ func _initialize() -> void:
 		for f in files:
 			if not f.ends_with("_test.gd"):
 				continue
+			# Dependências podem falhar no parser e ainda deixar o script externo instanciável.
+			# Capturar só inst.call(test) dava exit 0 apesar de SCRIPT ERROR durante descoberta.
+			_script_error_capture.begin_capture()
 			var script: GDScript = load(dir + "/" + f)
+			var load_errors: PackedStringArray = _script_error_capture.end_capture()
+			if not load_errors.is_empty():
+				printerr("ERRO ao compilar %s:\n%s" % [f, "\n".join(load_errors)])
+				failures += 1
+				continue
 			if script == null or not script.can_instantiate():
 				printerr("ERRO: não carregou " + f)
 				failures += 1
 				continue
+			_script_error_capture.begin_capture()
 			var inst = script.new()
+			var init_errors: PackedStringArray = _script_error_capture.end_capture()
+			if not init_errors.is_empty():
+				printerr("ERRO ao instanciar %s:\n%s" % [f, "\n".join(init_errors)])
+				failures += 1
+				continue
 			if not (inst is TestCase):
 				printerr("ERRO: %s não estende TestCase" % f)
 				failures += 1

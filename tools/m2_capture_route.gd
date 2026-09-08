@@ -1,6 +1,7 @@
 extends RefCounted
 ## Rota determinística de aceitação do G2 no campo real 225×283.
-## O boss é imobilizado somente na cópia de QA para isolar captura/revelação/transição.
+## O boss é imobilizado e ameaça/itens/escada ficam inertes somente na cópia de QA para
+## isolar captura, revelação e transição. A campanha com todos os sistemas tem outra rota.
 
 const EXPECTED_PROGRESSION := [179, 358, 493, 780, 825]
 
@@ -76,12 +77,16 @@ static func _qa_campaign(source: CampaignDefinition) -> CampaignDefinition:
 		var content := RoundContent.new()
 		content.round_id = source_content.round_id
 		content.rules = source_content.rules.duplicate(true) as GameRules
+		# Diretor inerte: a rota M2 isola captura, revelação e transição do elenco menor.
+		content.rules.threat = ThreatProfile.inert()
+		(content.rules.items as ItemProfile).enabled = false
+		(content.rules.bonus_ladder as BonusLadder).enabled = false
 		content.round_definition = source_content.round_definition.duplicate(true) as RoundDefinition
 		content.seed_value = source_content.seed_value
 		content.visual = source_content.visual
 		rounds.append(content)
 	campaign.rounds = rounds
-	# A geometria, regra de anchor, score e percentual continuam sendo os de produção.
+	# Geometria e regra de anchor/percentual de produção; bônus fixo é o controle da fixture.
 	campaign.rounds[0].rules.boss_substeps = 0
 	return campaign
 

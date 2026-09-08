@@ -19,6 +19,8 @@ const MONITOR_LAST := &"Qix Board/refresh_usec"
 const MONITOR_P95 := &"Qix Board/refresh_p95_usec"
 const MONITOR_UPLOADS := &"Qix Board/refresh_count"
 
+@export var draw_outer_background: bool = true
+
 var _mask_image: Image
 var _mask_texture: ImageTexture
 var _reveal_sprite: Sprite2D
@@ -273,6 +275,8 @@ func _add_monitor_if_available(monitor_name: StringName, callable: Callable) -> 
 
 func _draw() -> void:
 	# O fundo externo fica neste CanvasItem; o shader afeta somente o Sprite2D filho.
+	if not draw_outer_background:
+		return
 	draw_rect(
 		Rect2(Vector2.ZERO, Vector2(CoordinateSpace.VIEWPORT)),
 		BACKGROUND_COLOR,
