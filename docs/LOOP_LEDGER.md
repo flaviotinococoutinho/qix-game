@@ -185,6 +185,13 @@ para o inventário da **árvore final**, não somar números copiados das descri
   seções e chaves de tabela sem contradição. *Pronto:* guardas e inspeção da integração verdes.
 - [ ] **Procedência da licença raiz (#73).** Preservar o aviso de `IMPLEMENTATION_STATUS`:
   não substituir titularidade ou licença sem decisão do mantenedor e verificação de direitos.
+- [ ] **Contagem de outro ambiente parece atual fora da matriz (#69).** `IMPLEMENTATION_STATUS.md`
+  e `SHIPPING_PASS.md` citam **134 testes, 11.489 asserções** do run de macOS de 2026-09-03. O
+  número é verdadeiro **por ser histórico**, e por isso a guarda de inventário do #69 não o
+  alcança: forçá-lo a bater com a árvore de hoje falsificaria evidência que a nuvem não reproduz.
+  O risco é de leitura — nada **na linha** avisa que aquilo é outro ambiente e outra data.
+  *Pronto:* toda contagem de suíte em `docs/` diz, na própria linha, de que ambiente e data veio,
+  ou é derivada da árvore.
 
 ### P3 — experiência e estética
 
