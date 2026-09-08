@@ -29,12 +29,13 @@ comentário é normativo — mudou a ordem, mudou o comentário no mesmo commit.
 
 1. **O domínio não conhece o mundo real.** Nada em `game/simulation/`, `game/rules/` ou
    `game/session/` lê relógio, `Input`, `Tween`, física ou `delta`. Só inteiros e ponto fixo 8.8.
-   A pasta é o critério usual, não o único: `game/enemies/boss_behavior_controller.gd` é domínio
-   consultado dentro do tick e obedece a esta regra apesar de morar na apresentação — quem o guarda
-   é `tests/unit/domain_purity_test.gd`, que o varre pelo nome, e não a guarda do invariante 6, que
-   o isenta justamente por isso. As duas listas são confrontadas por
-   `test_no_file_falls_between_the_two_purity_guards`: uma isenção que não escolha um dos dois lados
-   fica vermelha.
+   A pasta é o critério usual, não o único: arquivos de domínio fora dessas pastas devem
+   constar em `DOMAIN_FILES` de `tests/unit/domain_purity_test.gd`, com justificativa.
+   `test_no_file_falls_between_the_two_purity_guards` confronta essa lista com as isenções
+   da guarda do invariante 6: cada isenção precisa pertencer ao domínio guardado ou ter
+   motivo em `UNGUARDED_BY_DESIGN`. Entradas órfãs e redundantes com `DOMAIN_DIRS` também
+   são recusadas. Na integração Atlas (#92), `boss_behavior_controller.gd` passou para
+   `game/simulation/enemies/`, ficando coberto pela pasta.
 2. **`GameSimulation.step(intent)` avança exatamente um tick**, 60/s, na ordem documentada.
 3. **`BoardState` é a única autoridade sobre território.** `PackedByteArray`,
    estados `FREE/BOUNDARY/TRAIL/CLAIMED`. Ninguém mais escreve células.

@@ -1,0 +1,64 @@
+{
+  "schema_version": 2,
+  "status": "passed",
+  "checks": [
+    {
+      "log": "import.log",
+      "exit_code": 0,
+      "engine_errors": 0
+    },
+    {
+      "log": "suite.log",
+      "exit_code": 0,
+      "engine_errors": 0
+    },
+    {
+      "log": "m2.log",
+      "exit_code": 0,
+      "engine_errors": 0
+    },
+    {
+      "log": "hud-geometry.log",
+      "exit_code": 0,
+      "engine_errors": 0
+    }
+  ],
+  "native_editor_qa": false,
+  "tested_head": true,
+  "source_before": {
+    "head_commit": "4b5c5b7b22be94c8b36780cb1fab40168ba30113",
+    "head_tree": "528244e11304dfed4a15d977c4ad014dd2828d87",
+    "dirty": false,
+    "worktree_sha256": "bb40675366ac183c1c4ec3f585ea7e9224d12a50eab4c769eb852370fbbf4619",
+    "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_paths": 869,
+    "untracked_paths": 0,
+    "scope": "tracked-and-untracked-not-ignored-files-v1"
+  },
+  "engine_verification": {
+    "version": "4.7.2.stable.official.ed1daf0bf",
+    "variant": "standard"
+  },
+  "engine": "4.7.2.stable.official.ed1daf0bf",
+  "optional_editor_extension_isolated": true,
+  "suite": {
+    "json": "suite.json",
+    "sha256": "c36367e7e699e755585f4229cfc171620da1e43e6d733d8fa6bb46953acb1e20",
+    "total": 404,
+    "assertions": 19009,
+    "failures": 0,
+    "discovery_errors": 0,
+    "filter": ""
+  },
+  "source_after": {
+    "head_commit": "4b5c5b7b22be94c8b36780cb1fab40168ba30113",
+    "head_tree": "528244e11304dfed4a15d977c4ad014dd2828d87",
+    "dirty": false,
+    "worktree_sha256": "bb40675366ac183c1c4ec3f585ea7e9224d12a50eab4c769eb852370fbbf4619",
+    "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_paths": 869,
+    "untracked_paths": 0,
+    "scope": "tracked-and-untracked-not-ignored-files-v1"
+  },
+  "source_unchanged": true
+}

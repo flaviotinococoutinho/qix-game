@@ -1,0 +1,252 @@
+{
+  "integration": {
+    "headRefOid": "9d02d6fcea6a70791a906720e7defbb46860b00b",
+    "mergeCommit": {
+      "oid": "3f2d96e25f42b8833e53099cce55619f25ec59c5"
+    },
+    "mergedAt": "2026-09-08T05:33:34Z",
+    "state": "MERGED",
+    "url": "https://github.com/flaviotinococoutinho/qix-game/pull/92"
+  },
+  "prs": [
+    {
+      "headRefOid": "f402010b7eff0da4afbbfb7b83ffbe4100499795",
+      "mergedAt": "2026-09-08T05:33:37Z",
+      "number": 59,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/59"
+    },
+    {
+      "headRefOid": "3d853faf65d4576bc9fd3ef18b2076458a3eaaca",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 60,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/60"
+    },
+    {
+      "headRefOid": "10000f582eea577ea6ca1e42a3e78de3473424a4",
+      "mergedAt": "2026-09-08T05:33:37Z",
+      "number": 61,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/61"
+    },
+    {
+      "headRefOid": "cb4d44f64c8b0ca59f465aa82aed1409e29f8551",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 62,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/62"
+    },
+    {
+      "headRefOid": "c8a8ed69e6314a261b9ccc970419b4f01b88bbc3",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 63,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/63"
+    },
+    {
+      "headRefOid": "4275a3804a89af630e9ada4ed9661777ca6a892e",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 64,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/64"
+    },
+    {
+      "headRefOid": "acc3635ba18318525accf0e682a72c452fd1fa11",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 65,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/65"
+    },
+    {
+      "headRefOid": "bbaa8d2de779648fc82285212b0db7a8a5b893d5",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 66,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/66"
+    },
+    {
+      "headRefOid": "22d0b453b5048d4dc7f392d9945df8198fad407e",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 67,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/67"
+    },
+    {
+      "headRefOid": "04f9394577437c18158103d238908d4fddbb5a90",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 68,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/68"
+    },
+    {
+      "headRefOid": "78f7ff10e1554036c541ed751233f52458872d53",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 69,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/69"
+    },
+    {
+      "headRefOid": "72d6dc33709835140403103903a656c3ddf0430d",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 70,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/70"
+    },
+    {
+      "headRefOid": "2852767dab6afae6ed6b70f8df44a53051e97aab",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 71,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/71"
+    },
+    {
+      "headRefOid": "477cfd5080f7d4656ec228553afc96881a1d8171",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 72,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/72"
+    },
+    {
+      "headRefOid": "8637f32944ee1e794f05872b3beeb8c67ee93942",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 73,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/73"
+    },
+    {
+      "headRefOid": "559f73b78ad95666916800af02af5685ad4b7009",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 74,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/74"
+    },
+    {
+      "headRefOid": "0034b2f94dee0235819925f60ded33f66395c4cd",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 75,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/75"
+    },
+    {
+      "headRefOid": "7b7f65ce5764026a03d703b0f1c261a1b36dcf7a",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 76,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/76"
+    },
+    {
+      "headRefOid": "ed6d527427386996bf809d27f7b12296971313c3",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 77,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/77"
+    },
+    {
+      "headRefOid": "3c9724f556856861b936ac43662b019945856eb6",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 78,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/78"
+    },
+    {
+      "headRefOid": "7b829946626d9e02e9c1ed14afd6965408c76241",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 79,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/79"
+    },
+    {
+      "headRefOid": "1f2bfcc3f6caa4d9c99d35ffc0991c2683bc4f2f",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 80,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/80"
+    },
+    {
+      "headRefOid": "cfb4ff56be6da749c53d256a65f27e6bee8a770a",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 81,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/81"
+    },
+    {
+      "headRefOid": "78066735a5613c5aeb401bfebd2b265d9a147023",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 82,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/82"
+    },
+    {
+      "headRefOid": "4aa65ed31af405de70c714b39e9066e4693e30ef",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 83,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/83"
+    },
+    {
+      "headRefOid": "98b55950cbf223794ce53ec429f8e6a0c9cb19f2",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 84,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/84"
+    },
+    {
+      "headRefOid": "f0cb3e8625abfcd2f0d7db066c4b8ab5d8215c4d",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 85,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/85"
+    },
+    {
+      "headRefOid": "c5abda5c837dbcc787e018af146ea4033f9ff369",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 86,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/86"
+    },
+    {
+      "headRefOid": "7c994041e8f0fd0829748a89900542cb5e2812ae",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 87,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/87"
+    },
+    {
+      "headRefOid": "1a141443b893402ed49d12ddcd665d99a9c534d3",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 88,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/88"
+    },
+    {
+      "headRefOid": "d4774b8179fe94a48c9f17dc911e56aad06bc0cc",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 89,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/89"
+    },
+    {
+      "headRefOid": "23ea0064234ff65c445d254a408ed6aab7386f5b",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 90,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/90"
+    },
+    {
+      "headRefOid": "25327ed694a60ee6dd36355a4164627886483ad9",
+      "mergedAt": "2026-09-08T05:33:36Z",
+      "number": 91,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/91"
+    },
+    {
+      "headRefOid": "9d02d6fcea6a70791a906720e7defbb46860b00b",
+      "mergedAt": "2026-09-08T05:33:34Z",
+      "number": 92,
+      "state": "MERGED",
+      "url": "https://github.com/flaviotinococoutinho/qix-game/pull/92"
+    }
+  ],
+  "open_prs": []
+}
