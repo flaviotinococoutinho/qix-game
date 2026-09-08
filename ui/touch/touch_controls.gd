@@ -5,11 +5,8 @@ extends Control
 ##
 ## Decisões de sensação do stick (F1 — entrada e habilidade, spec §10):
 ##
-## - **Stick flutuante.** O dedo raramente cai exatamente no anel desenhado. Quando o toque
-##   inicial cai na zona esquerda mas **fora** do anel, o centro do stick passa a ser o ponto
-##   do toque; ao soltar, volta ao centro padrão. Quando o toque cai **dentro** do anel, o
-##   centro continua o desenhado: tocar a parte de cima do anel já é UP, como num d-pad —
-##   isso preserva o toque curto e o contrato antigo dos testes de convergência de devices.
+## - **Stick flutuante.** Todo toque ancora onde o dedo pousa, inclusive dentro do anel.
+##   Pousar não inicia um passo; arrastar produz direção. O flick preserva gestos entre ticks.
 ## - **Histerese de setor.** Entra numa cardinal a ≥ STICK_ENGAGE_RADIUS do centro e só volta a
 ##   NONE abaixo de STICK_RELEASE_RADIUS; troca de cardinal só quando o vetor passa
 ##   STICK_SECTOR_HYSTERESIS_DEG além da diagonal. Sem isso um polegar parado sobre a diagonal
@@ -32,6 +29,15 @@ const STICK_SECTOR_HYSTERESIS_DEG := 10.0
 const STICK_SECTOR_KEEP_COS := cos(deg_to_rad(45.0 + STICK_SECTOR_HYSTERESIS_DEG))
 const ACTION_CENTER_FROM_BOTTOM := Vector2(48.0, 54.0)
 const ACTION_RADIUS := 39.0
+
+## A zona de ancoragem do stick é bem maior que o anel desenhado — um polegar em retrato não
+## acerta um alvo de 42 px. Por isso o anel **segue a âncora**: onde o dedo pousa vira o centro
+## (`_stick_origin`), e a direção nasce do deslocamento a partir dali, não da distância até um
+## centro fixo. Com centro fixo, a zona toda menos um disco de 11 px produzia direção no próprio
+## toque — o primeiro quadro de contato já era um passo que o jogador não pediu, e num jogo de
+## gramática Qix sair da moldura sem querer é uma trilha que você não escolheu abrir.
+const STICK_ZONE_RIGHT_RATIO := 0.55
+const STICK_ZONE_TOP_RATIO := 0.48
 
 @export var touch_enabled: bool = true:
 	set(value):
@@ -133,6 +139,7 @@ func presentation_state() -> Dictionary:
 		"stick_touch": _stick_touch,
 		"stick_center": _stick_center(),
 		"flick_pending": _flick_direction,
+		"stick_origin": _stick_center(),
 		"active_touches": _roles.size(),
 	}
 
@@ -149,13 +156,14 @@ func _press(index: int, position: Vector2) -> bool:
 		_confirm_queued = true
 		queue_redraw()
 		return true
-	if position.x <= _layout_size().x * 0.55 and position.y >= _layout_size().y * 0.48:
+	var layout := _layout_size()
+	if position.x <= layout.x * STICK_ZONE_RIGHT_RATIO and position.y >= layout.y * STICK_ZONE_TOP_RATIO:
 		if _stick_touch < 0:
 			_stick_touch = index
-			_roles[index] = 1
-			var home := _default_stick_center()
-			_stick_origin = home if position.distance_to(home) <= STICK_RADIUS else position
+			_stick_origin = position
 			_stick_position = position
+			_roles[index] = 1
+			# Deslocamento zero: pousar o dedo nunca é um passo. Só o arrasto pede direção.
 			_flick_direction = MoveIntent.Dir.NONE
 			_direction = MoveIntent.Dir.NONE
 			_direction_observed = true

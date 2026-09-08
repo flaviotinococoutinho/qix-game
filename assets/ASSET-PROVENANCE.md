@@ -35,12 +35,12 @@ manuais do `.blend` ao gerador ou preserve/exporte a revisão artística separad
 ## Probe do jogador — drone cartógrafo
 
 - Data: 2026-09-05.
-- Arquivo: `_gen/probe_player.png`; PNG RGBA, `32 × 32` pixels.
+- Arquivo: `_gen/probe_player.png` (removido); probe histórico, ausente da árvore integrada. PNG RGBA, `32 × 32` pixels.
 - Ferramenta: `image_gen.imagegen` integrado ao Codex; uma única geração. Modelo e seed não informados pela ferramenta.
 - Rastreabilidade: `exec-15dca976-777c-4632-bed7-3b7cc2063912`.
 - Fonte preservada no cache: `/Users/flaviocoutinho/.codex/generated_images/01a06fbc-bbfc-71c0-9a0a-aafd464403a1/exec-15dca976-777c-4632-bed7-3b7cc2063912.png`.
 - Tratamento: fonte de `1254 × 1254` reduzida para `32 × 32` por vizinho mais próximo via CoreGraphics, sem suavização e preservando alfa.
-- SHA-256: `8741690767f4ce61a45d6353154e118d42993fbd5729efcc2750f2b20f649088`.
+- SHA-256 histórico (removido): `8741690767f4ce61a45d6353154e118d42993fbd5729efcc2750f2b20f649088`.
 - Verificação: arquivo final reaberto; dimensões e canal alfa confirmados, com 800 pixels totalmente transparentes. Inspeção visual da fonte e do sprite final: sujeito único, vista superior, ciano e núcleo dourado, sem texto, marca-d'água ou sombra projetada. Probe sem integração ao runtime.
 - Proveniência: geração original OpenAI, sem material extraído de ROM; as observações de uso e revisão deste manifesto continuam aplicáveis.
 
@@ -135,3 +135,17 @@ Materials/textures: subtle crystalline and organic-map texture confined inside t
 Constraints: square raster artwork; original design; no text, no letters, no numbers, no typography, no logos, no trademarks, no signature, no watermark; no character or face; no HUD; no screenshot; no rounded-square frame; no circular badge; no bevelled app-icon mockup; no device mockup; no drop shadow outside the art; do not imitate any existing game or artist.
 Avoid: clutter, tiny filigree, thin low-contrast lines, photorealistic landscape, generic neon triangle, generic letter Q, gradients that wash out the silhouette.
 ```
+
+## Inventário dos modelos e fonte editável
+
+Hashes calculados dos arquivos da árvore integrada em 2026-09-08. A geometria e autoria são descritas acima; o manifesto JSON registra também componentes, tamanhos e triângulos.
+
+| Arquivo | SHA-256 |
+|---|---|
+| `assets/models/lumen/beacon.glb` | `07ec77896fa8d5fc3680287a821e16d6ee6ea2eead70422cc019d2ad0f6facff` |
+| `assets/models/lumen/core.glb` | `10fb359018180d85ac4535f44da8641ed33dfefcc259ad643cc832197416ec3f` |
+| `assets/models/lumen/dart.glb` | `cf830eccef27faf410d68c2019bb29889524ac61042a8dd0f5b28f982c92a60a` |
+| `assets/models/lumen/ember.glb` | `2767e81aaaeac72def60578c6b12643e2261b61c625a37e9b938b7bcac4cef6f` |
+| `assets/models/lumen/surveyor.glb` | `c1dd4df17b703238a34dafc2fd290e9baa874830780f70e38d4b2f648f7abe86` |
+| `assets/models/lumen/walker.glb` | `e05c045deddf88a081f209168ef61b5feb11ad2c1fe4518a26ea6340e315bd95` |
+| `tools/assets/source/lumen_actor_library.blend` | `f299c20d5b5edc811443cc9da8af78200679c4ea3bc796e35edf10247bf6a26e` |

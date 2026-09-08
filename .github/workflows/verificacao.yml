@@ -1,91 +1,77 @@
-# Portão de verificação headless.
-#
-# Existe porque, até 2026-09-04, nenhum PR deste repositório rodava verificação automática:
-# onze PRs foram verificados à mão, cada um contra `main` isoladamente, e mesmo assim a
-# regressão entre os PRs #8 e #11 sobreviveu a todas elas — ninguém rodou dois juntos.
-# Um portão que roda no *merge* do PR com a base é o que transforma "eu rodei aqui" em
-# evidência que o revisor não precisa reproduzir.
-#
-# O que este arquivo NÃO faz: export, QA de shipping e perfil de performance continuam
-# locais (precisam de SDKs, assinatura e GPU real). Ver docs/SHIPPING_PASS.md.
-
+# Headless verification is not exported-build, GPU, audio-device, or Android QA.
 name: Verificação
-
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
-
 permissions:
   contents: read
-
-# Um push novo na mesma branch cancela a execução anterior: fila curta informa mais.
 concurrency:
   group: verificacao-${{ github.ref }}
   cancel-in-progress: true
-
 env:
-  # Casado com docs/PROJECT_CONTRACT.md. Trocar aqui é trocar o alvo do projeto.
+  PYTHONDONTWRITEBYTECODE: "1"
   GODOT_VERSION: 4.7.2-stable
-
 jobs:
   suite-headless:
-    # `env` não é um contexto disponível em `jobs.<id>.name`, por isso a versão aparece
-    # literal aqui e como variável no resto do arquivo.
     name: Suíte headless (Godot 4.7.2-stable)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Cacheia o binário do Godot
         id: cache-godot
         uses: actions/cache@v4
         with:
           path: ~/godot-bin
           key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
-
       - name: Baixa o Godot headless
         if: steps.cache-godot.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           mkdir -p ~/godot-bin
-          curl -fsSL -o /tmp/godot.zip \
+          curl -fsSL --retry 3 -o /tmp/godot.zip \
             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           unzip -q -o /tmp/godot.zip -d ~/godot-bin
           chmod +x ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64
-
-      - name: Confirma a versão do Godot
+      - name: Regressões do próprio portão de CI
+        run: python3 -m unittest discover -s tools/ci -p 'test_*.py' -v
+      # A guarda em GDScript (`python_bytecode_not_versioned_test.gd`) prova que a *regra* existe
+      # no `.gitignore`; não consulta o índice do Git, porque um teste headless não o alcança e
+      # `.pyc` em disco é legítimo. Este passo é a outra metade: prova que o índice está limpo.
+      # Sem os dois, um arquivo já rastreado continua rastreado — o `.gitignore` não o expulsa.
+      - name: Bytecode de Python fora do índice
         run: |
           set -euo pipefail
-          echo "$HOME/godot-bin" >> "$GITHUB_PATH"
-          GODOT=~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64
-          VERSAO="$("$GODOT" --version | tail -n 1)"
-          echo "godot --version: $VERSAO"
-          # Falha alto e cedo: uma suíte verde na engine errada não prova nada sobre o alvo.
-          case "$VERSAO" in
-            4.7.2.stable.official*) ;;
-            *) echo "::error::esperava 4.7.2.stable.official, obtive '$VERSAO'"; exit 1 ;;
-          esac
-
-      - name: Importa os assets (obrigatório 1× por checkout)
-        # Sem --import não existe cache de `class_name` e tudo falha por razões que não são
-        # a mudança do PR. O erro de `libfennara...so` ausente é esperado na nuvem
-        # (addons/fennara/bin/ não é versionado) e não é sinal de nada.
+          rastreado="$(git ls-files | grep -E '(^|/)__pycache__/|\.py[cod]$' || true)"
+          if [ -n "${rastreado}" ]; then
+            echo "Bytecode de Python versionado:" >&2
+            echo "${rastreado}" >&2
+            echo "É binário derivado e o Git não o mescla. Use: git rm --cached <arquivo>" >&2
+            exit 1
+          fi
+          echo "índice limpo de bytecode de Python"
+      - name: Importação, suíte, rota M2 e geometria real do HUD
+        run: |
+          python3 tools/ci/headless_gate.py \
+            --godot "$HOME/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64" \
+            --logs "${RUNNER_TEMP}/qix-headless" \
+            --isolate-missing-editor-extension
+      # Só `unclaimed_surface.sh` era checado, e foi por isso que os dois relatórios de fila
+      # puderam divergir sem que nada reclamasse. O portão passa a cobrir a pasta inteira.
+      - name: Sintaxe do ferramental do loop
         run: |
           set -euo pipefail
-          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --import
-
-      - name: Suíte de testes
-        run: |
-          set -euo pipefail
-          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 \
-            --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd
-
-      - name: Rota de captura M2 (17,9 → 82,5%)
-        run: |
-          set -euo pipefail
-          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 \
-            --headless --path . --script res://tools/verify_m2_capture_route.gd
+          for script in tools/loop/*.sh; do
+            echo "bash -n ${script}"
+            bash -n "${script}"
+          done
+      - name: Evidências completas por commit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: headless-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qix-headless
+          if-no-files-found: warn
+          retention-days: 14

@@ -75,7 +75,7 @@ Para criar outro tipo de ator, defina estado/canonicalização, capacidade e reg
 acrescente eventos após os IDs existentes; implemente leitura em snapshot/view e o proxy de
 apresentação; cubra warmup, contato, captura, morte, reuso e replay. Aumentar capacidade de pools
 exige medir tick e leitura de tela. A malha, Tween ou uma simulação de física visual jamais pode
-decidir contato/captura. Ver ADR-0012.
+decidir contato/captura. Ver ADR-0014.
 
 ## Biblioteca Blender e reprodução
 

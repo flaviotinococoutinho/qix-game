@@ -34,6 +34,9 @@ enum RoundEndReason { NONE, TARGET, SINGLE_FILL, SEALED }
 @export var shield_pauses_during_trail: bool = true  ## perfil Volfied (§9)
 
 @export var substeps_normal: int = 2             ## §4.3: 2 chamadas/frame
+## VELOCITY ativa estes subpassos enquanto seu timer estiver vivo. O início de cada segmento
+## mantém a velocidade normal até `new_segment_slow_px`, preservando o controle de curvas.
+## Ambos entram em canonical_bytes: alterar duração espacial/velocidade muda o contrato de replay.
 @export var substeps_speedup: int = 4            ## §4.3: 4 com speed-up…
 @export var new_segment_slow_px: int = 8         ## …nunca nos primeiros 8 px de um segmento novo
 

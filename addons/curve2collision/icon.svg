@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <!-- 太さを持ったコリジョン帯 -->
-  <path d="M3 12.5C3.5 6.5 12.5 9.5 13 3.5" fill="none" stroke="#8da5f3" stroke-width="6.4" stroke-linecap="round" opacity="0.45"/>
-  <!-- 元の曲線(芯線) -->
-  <path d="M3 12.5C3.5 6.5 12.5 9.5 13 3.5" fill="none" stroke="#8da5f3" stroke-width="1.6" stroke-linecap="round"/>
-  <!-- 制御点 -->
-  <circle cx="3" cy="12.5" r="1.9" fill="#8da5f3"/>
-  <circle cx="13" cy="3.5" r="1.9" fill="#8da5f3"/>
-</svg>

@@ -128,16 +128,20 @@ func _process_input_tick(
 	input_map_pause_just_pressed: bool,
 	input_map_confirm_just_pressed: bool,
 ) -> void:
+	# Os dois latches são drenados no mesmo tick, sempre. Sair cedo pelo ramo da pausa
+	# sem drenar o confirmar deixava-o pendurado para o tick seguinte, onde ele valia
+	# por um pedido feito noutro ecrã: carregar em A e em START na mesma janela de
+	# frame no fim de jogo pausava e, um tick depois, reiniciava a campanha.
 	var pause_requested := _input_adapter.consume_pause(
 		input_map_pause_just_pressed,
+	)
+	var confirm_requested := _input_adapter.consume_confirm(
+		input_map_confirm_just_pressed,
 	)
 	if pause_requested:
 		paused = not paused
 		_sync_views([])
 		return
-	var confirm_requested := _input_adapter.consume_confirm(
-		input_map_confirm_just_pressed,
-	)
 	if session.phase == GameSession.Phase.GAME_OVER \
 		or session.phase == GameSession.Phase.CAMPAIGN_COMPLETE:
 		if confirm_requested:

@@ -28,8 +28,10 @@ func test_stick_floats_to_the_initial_touch_outside_the_ring() -> void:
 func test_touch_inside_the_ring_keeps_the_drawn_center_as_a_dpad() -> void:
 	var touch := _controls()
 	touch.handle_event(_touch(1, true, HOME + Vector2(0.0, -36.0)))
-	eq(touch.direction(), UP, "tocar a parte de cima do anel já é UP")
-	eq(touch.presentation_state()["stick_center"], HOME)
+	eq(touch.direction(), NONE, "pousar dentro do anel também não move o jogador")
+	eq(touch.presentation_state()["stick_center"], HOME + Vector2(0.0, -36.0))
+	touch.handle_event(_drag(1, HOME + Vector2(0.0, -60.0)))
+	eq(touch.direction(), UP, "o arrasto após pousar é que pede direção")
 	touch.free()
 
 

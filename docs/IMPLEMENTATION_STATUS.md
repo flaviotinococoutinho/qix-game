@@ -1,11 +1,11 @@
 # IMPLEMENTATION_STATUS
 
-> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
-> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
-**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
+> **Verificado em** 2026-09-07 · commit `ca745780` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** preparação integrada #57–#86 no #78. Acesso Git conferido; licença e seu aviso
+> preservados após a remoção do addon. Suíte e rota são registradas nas evidências por árvore.
+> Shipping de 2026-09-03 permanece histórico: nenhuma nova validação de assinatura, GPU ou aparelho.
 
-
-## Gate histórico de 2026-09-03
+## Gate atual
 
 **M2 / G2 — VERDE. Shipping candidate técnico — VERDE. Release/hardware — ÂMBAR**
 (2026-09-03).
@@ -64,8 +64,12 @@ continuam pendentes.
 
 ## Evidências atuais
 
-- Runner headless em Godot 4.7.2 Mono com áudio dummy: **134 testes, 11.489 asserções,
-  0 falhas** em 2026-09-03.
+- Runner headless com áudio dummy sobre `34634d0`, em Godot 4.7.2-stable (não-mono) Linux:
+  **262 testes, 12.719 asserções, 0 falhas** em 6.446 ms, medido em 2026-09-07.
+  Esta contagem **muda a cada teste acrescentado** e por isso envelhece sozinha: quem precisar
+  do número corrente roda `tests/run_tests.gd` e lê a última linha, em vez de confiar nesta.
+  O run de shipping de 2026-09-03 registrou 134 testes / 11.489 asserções para a suíte daquela
+  árvore; esse par pertence ao instantâneo em `docs/SHIPPING_PASS.md`, não ao estado atual.
 - O runner final `20260903T065739Z-65912` terminou `overall_exit=0` e estado `complete`.
   O bundle macOS arm64 ad-hoc tem 101.199.872 bytes; export, thinning, payload, smoke, frame
   pacing, Metal HUD, framebuffer, `codesign` e varredura de leaks passaram.
@@ -117,10 +121,12 @@ Detalhes, comandos e limites estão em `docs/SHIPPING_PASS.md`, `docs/TEST_MATRI
 - Produzir artefatos de distribuição: assinatura Developer ID, notarização e entitlements no
   macOS; keystore de release, AAB, Play Console e testes de loja no Android. Os pacotes atuais são
   QA ad-hoc.
-- `.git/` é apenas um esqueleto incompleto: não há `HEAD`, objetos ou refs válidos, portanto
-  não é possível produzir diff/commit ou revisar regeneração com segurança equivalente a Git.
-- A licença raiz é byte a byte igual à licença do addon `curve2collision`; a licença pretendida
-  para o jogo ainda precisa ser confirmada antes de publicar.
+- **Procedência da licença raiz pendente de decisão do mantenedor.** `LICENSE` (1.065 bytes,
+  SHA-256 `daf1b5152a044905…`) corresponde à licença MIT com `Copyright (c) 2026 seina369`
+  que acompanhava o addon `curve2collision` removido pela ADR-0010. A remoção do addon não
+  resolve a titularidade nem define a licença pretendida para o código original do jogo.
+  Preservar avisos de terceiros e esclarecer a licença antes de distribuição. Nenhuma alteração
+  de licença foi feita nesta preparação; isso exige decisão e verificação de direitos.
 - Termos comerciais vigentes das imagens geradas precisam ser confirmados; a proveniência
   técnica está registrada em `assets/ASSET-PROVENANCE.md`.
 - Há pouco espaço livre no volume. O runner exige 2 GiB para export e 3 GiB antes de iniciar o
@@ -134,3 +140,10 @@ Detalhes, comandos e limites estão em `docs/SHIPPING_PASS.md`, `docs/TEST_MATRI
 audição crítica, soak e playthrough humano com o chefe ativo, fechar licença, proveniência e
 repositório e então produzir artefatos assinados/notarizados, AAB e validação em loja. O runner
 local verde é pré-condição cumprida, não substituto desses gates.
+
+## Reconciliação Atlas Vivo e MCP — 2026-09-08
+
+Esta árvore incorpora o Atlas Vivo local: simulação determinística 2D, palco 2.5D com GLBs,
+lifecycle, diretor, balizas, itens e replay v4. Preserva também contraste, feedback e
+verificações remotas. Resultados anteriores neste documento descrevem suas árvores datadas;
+a validação corrente e a autoria estão em [Atlas Vivo](ATLAS_VIVO.md).

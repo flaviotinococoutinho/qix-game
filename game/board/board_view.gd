@@ -15,6 +15,15 @@ const DEFAULT_TRAIL_COLOR := Color("ffd166")
 const DEFAULT_TRAIL_HOT_COLOR := Color("fff4b0")
 const PROFILE_SAMPLE_CAPACITY := 240
 
+## Ritmo do pulso da trilha, em radianos por tick. A taxa acelera com a exposição; a *fase* que
+## ela produz é integrada aqui, não recalculada do tick cru (ver `_advance_phases`).
+const TRAIL_PULSE_BASE_RATE := 0.20
+const TRAIL_PULSE_EXPOSURE_GAIN := 0.55
+## Deslocamento da varredura, em linhas por tick. O período é 2.0 porque o shader avalia
+## `fract((cell.y + scan_phase) * 0.5)`.
+const SCAN_RATE := 0.08
+const SCAN_PERIOD := 2.0
+
 const MONITOR_LAST := &"Qix Board/refresh_usec"
 const MONITOR_P95 := &"Qix Board/refresh_p95_usec"
 const MONITOR_UPLOADS := &"Qix Board/refresh_count"
@@ -30,6 +39,9 @@ var _fallback_size := Vector2i.ZERO
 var _board_instance_id: int = 0
 var _board_version: int = -1
 var _last_trail_exposure: float = 0.0
+var _scan_phase: float = 0.0
+var _trail_pulse_phase: float = 0.0
+var _last_presentation_tick: int = -1
 
 var _refresh_count: int = 0
 var _skipped_count: int = 0
@@ -64,9 +76,11 @@ func _exit_tree() -> void:
 func sync(simulation: GameSimulation, visual: RoundVisualDefinition = null) -> void:
 	_ensure_presentation()
 	_apply_visual(visual, simulation.board.width, simulation.board.height)
-	_reveal_material.set_shader_parameter("presentation_tick", float(simulation.tick))
 	# Leitura de risco: a trilha confirmada esquenta e acelera conforme se afasta da moldura.
 	_last_trail_exposure = TrailExposure.of_simulation(simulation)
+	_advance_phases(simulation.tick, _last_trail_exposure)
+	_reveal_material.set_shader_parameter("scan_phase", _scan_phase)
+	_reveal_material.set_shader_parameter("trail_pulse_phase", _trail_pulse_phase)
 	_reveal_material.set_shader_parameter("trail_exposure", _last_trail_exposure)
 
 	var board_id := simulation.board.get_instance_id()
@@ -76,6 +90,33 @@ func sync(simulation: GameSimulation, visual: RoundVisualDefinition = null) -> v
 	_board_instance_id = board_id
 	_board_version = simulation.board.version
 	_refresh_mask(simulation.board)
+
+
+## Integra as fases visuais em vez de as recalcular a partir do tick cru.
+##
+## A forma antiga era `sin(tick * rate)` com `rate` dependente da exposição. Como a exposição muda
+## a cada tick enquanto se desenha, `rate` mudava junto e a fase saltava por `tick * Δrate` — medido
+## em ~6 rad por tick já aos 10 s de rodada, e ~368 rad no tick em que a trilha fecha e a exposição
+## cai de golpe. Um pulso que salta uma volta inteira por quadro não é um pulso: é ruído, e era
+## justamente o canal que deveria comunicar risco crescente.
+##
+## Integrando `rate` tick a tick, mudar a taxa muda a *velocidade* do pulso sem mexer na fase — que
+## é o que "acelerar" significa. O enrolamento em `TAU`/`SCAN_PERIOD` é invisível porque ambos são
+## períodos exatos das funções que os consomem, e mantém o valor pequeno o bastante para não corroer
+## a precisão de `float` no fragmento ao longo de uma rodada.
+##
+## Um tick que não avança (quadro sem passo de simulação) ou que anda para trás (rodada nova,
+## replay reiniciado) não move fase nenhuma: a apresentação continua de onde estava, sem corte.
+func _advance_phases(tick: int, exposure: float) -> void:
+	var elapsed := 0
+	if _last_presentation_tick >= 0 and tick > _last_presentation_tick:
+		elapsed = tick - _last_presentation_tick
+	_last_presentation_tick = tick
+	if elapsed == 0:
+		return
+	var rate := TRAIL_PULSE_BASE_RATE + TRAIL_PULSE_EXPOSURE_GAIN * clampf(exposure, 0.0, 1.0)
+	_trail_pulse_phase = fposmod(_trail_pulse_phase + rate * float(elapsed), TAU)
+	_scan_phase = fposmod(_scan_phase + SCAN_RATE * float(elapsed), SCAN_PERIOD)
 
 
 func _ensure_presentation() -> void:

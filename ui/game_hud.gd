@@ -84,8 +84,15 @@ var _beacons_captured: int = 0
 var _effect_ticks := PackedInt32Array()
 var _flash_message: String = ""
 var _flash_ticks: int = 0
+## Causa da última morte **observada**, ou `-1` enquanto nenhuma foi. Não é um flash com prazo
+## próprio: quem lhe dá duração é a fase DYING do domínio. Ver `_status_text`.
+var _death_reason: int = -1
 var _shown_permille: int = -1
 var _counter_delay: int = 0
+var _shown_score: int = -1
+var _climbing: bool = false
+var _climb_from_permille: int = 0
+var _climb_from_score: int = 0
 var _built: bool = false
 
 
@@ -170,11 +177,13 @@ func sync(source: Variant, paused: bool, events: Array[GameEvent]) -> void:
 	_apply_visual(visual)
 
 	_round_label.text = "R %d/%d" % [round_number, round_count]
-	_score_label.text = "S %06d" % simulation.score
 	var target := maxi(1, simulation.rules.target_permille)
 	@warning_ignore("integer_division")
 	var target_percent := target / 10
+	# A ordem importa: o contador de área abre a subida e fixa os âncoras que a pontuação segue.
 	_advance_shown_permille(simulation.permille)
+	_advance_shown_score(simulation.score, simulation.permille)
+	_score_label.text = "S %06d" % _shown_score
 	_percent_label.text = "%04.1f/%02d" % [_shown_permille / 10.0, target_percent]
 	_vitals_label.text = "L×%d  E%02d" % [simulation.lives, _shield_seconds(simulation)]
 	if simulation.items_enabled() and simulation.beacons.count > 0:
@@ -202,7 +211,14 @@ func _advance_shown_permille(target: int) -> void:
 	if _shown_permille < 0 or target <= _shown_permille:
 		_shown_permille = target
 		_counter_delay = 0
+		_climbing = false
 		return
+	if not _climbing:
+		# Começa aqui uma subida. Os âncoras congelam o par (área, pontuação) de onde os dois
+		# números partem, para que percorram o mesmo caminho e pousem no mesmo tick.
+		_climbing = true
+		_climb_from_permille = _shown_permille
+		_climb_from_score = _shown_score
 	if _counter_delay > 0:
 		_counter_delay -= 1
 		return
@@ -216,6 +232,31 @@ func _advance_shown_permille(target: int) -> void:
 	else:
 		_shown_permille += 1
 		_counter_delay = COUNTER_TENTH_DELAY
+
+
+## Encena a pontuação **pelo caminho da área**: a cada tick o número mostrado fecha a mesma fração
+## do seu intervalo que o contador de percentagem já fechou, e por isso os dois pousam no valor
+## confirmado no mesmo tick. É o comportamento de `hud_area_pct_step`
+## (`reference/volfied/06-gameplay.md §6.3`), onde cada degrau do contador *paga* pontos e é isso
+## que faz o número da banda superior pulsar junto com a área — traduzido para aqui, onde a
+## pontuação é do domínio e chega inteira num tick: o HUD não decide quantos pontos a conquista
+## vale, só escreve o valor já confirmado no mesmo ritmo em que pinta o mapa que o pagou.
+##
+## Fora de uma subida de área a pontuação assenta de imediato. O gotejo da trilha
+## (`rules.trail_score_points` a cada `trail_score_every_px`) é de poucos pontos e contínuo:
+## encená-lo seria ruído a competir com a única subida que significa alguma coisa.
+func _advance_shown_score(target_score: int, target_permille: int) -> void:
+	var span := target_permille - _climb_from_permille
+	if _shown_score < 0 or target_score <= _shown_score or not _climbing or span <= 0:
+		_shown_score = target_score
+		return
+	var closed := _shown_permille - _climb_from_permille
+	@warning_ignore("integer_division")
+	var staged := _climb_from_score + (target_score - _climb_from_score) * closed / span
+	# Uma segunda captura no meio da subida alarga o intervalo de área e faria a fração recuar.
+	# O contador de área nunca desce (ADR-0009) e a pontuação também não pode: um número a descer
+	# diria ao jogador que ele perdeu pontos que acabou de ganhar.
+	_shown_score = maxi(_shown_score, staged)
 
 
 func _simulation_from(source: Variant) -> GameSimulation:
@@ -237,12 +278,16 @@ func _capture_flash(events: Array[GameEvent]) -> void:
 				_flash_message = "CAPTURA +%d" % event.data.get("filled_delta", 0)
 				_flash_ticks = 75
 			GameEvent.Kind.PLAYER_DIED:
-				var reason: int = event.data.get("reason", GameSimulation.DeathReason.BOSS_CONTACT)
-				if reason == GameSimulation.DeathReason.SHIELD_EXPIRED:
-					_flash_message = "ESCUDO ESGOTADO · REENTRADA"
-				else:
-					_flash_message = "CONTATO! · REENTRADA"
-				_flash_ticks = 45
+				_death_reason = event.data.get("reason", GameSimulation.DeathReason.BOSS_CONTACT)
+				# A morte não entra na fila de flashes: ela tem fase própria no domínio e a linha
+				# de estado passa a ser dela até à reentrada. Zerar o prazo pendente impede que um
+				# "CAPTURA +n" ou um "ESCUDO CRÍTICO" anterior reapareça do outro lado da morte,
+				# anunciando um estado que o jogador já não tem.
+				_flash_ticks = 0
+				_flash_message = ""
+			GameEvent.Kind.PLAYER_RESPAWNED:
+				# A causa deixa de existir no mesmo tick em que o jogador recupera o controlo.
+				_death_reason = -1
 			GameEvent.Kind.SHIELD_CRITICAL:
 				_flash_message = "ESCUDO CRÍTICO"
 				_flash_ticks = 120
@@ -297,8 +342,20 @@ func _status_text(simulation: GameSimulation, session: GameSession, paused: bool
 		GameSimulation.Phase.GAME_OVER:
 			return "FIM DE JOGO · ENTER"
 		GameSimulation.Phase.DYING:
-			if _flash_ticks > 0:
-				return _flash_message
+			# A causa da morte dura exatamente a fase que o domínio abriu para ela
+			# (`rules.death_ticks`), não um prazo próprio do HUD. Antes eram 45 ticks fixos: com o
+			# `death_ticks` padrão (60) a causa sumia nos últimos 15 quadros da sequência, e com
+			# qualquer `death_ticks` abaixo de 45 ela sobrevivia à reentrada e cobria a linha do
+			# jogo vivo. Contato e escudo esgotado são erros diferentes e pedem correções
+			# diferentes: o nome do erro tem de durar o tempo em que o jogador está a olhar para
+			# ele, e acabar quando ele volta a ter o controlo.
+			# Defendido por `tests/unit/death_status_duration_test.gd`.
+			if _death_reason == GameSimulation.DeathReason.SHIELD_EXPIRED:
+				return "ESCUDO ESGOTADO · REENTRADA"
+			if _death_reason >= 0:
+				return "CONTATO! · REENTRADA"
+			# Ninguém observou o evento — a fase foi vista já a decorrer. O HUD não inventa uma
+			# causa que não lhe foi confirmada (invariante 6).
 			return "REENTRADA EM CURSO"
 	if _flash_ticks > 0:
 		return _flash_message
@@ -400,7 +457,13 @@ func _add_label(
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", HUD_COLOR)
 	add_child(label)
-	# Entrar na árvore resolve o tema; definir o retângulo depois evita os 23 px padrão.
+	# O retângulo é definido **depois** de entrar na árvore porque `size` é clampado para cima
+	# pelo mínimo do `Label`, e esse mínimo só vale o da fonte pedida com o tema já resolvido.
+	# Numa árvore que já processa — o caso do jogo — isso vale já no `add_child`, e a linha
+	# assenta em `TEXT_HEIGHT`. Construído antes do primeiro frame (só o runner de testes faz
+	# isso), o mínimo ainda é o do tema padrão, 23 px, e a altura pedida é ignorada; o `size`
+	# fica preso nos 23 px mesmo depois de o mínimo relaxar, porque Godot nunca re-encolhe.
+	# Medido em 2026-09-06 por `tools/verify_hud_row_geometry.gd`, que é quem defende isto.
 	label.position = node_position
 	label.size = node_size
 	return label

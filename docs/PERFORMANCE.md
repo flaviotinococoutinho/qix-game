@@ -1,42 +1,27 @@
 # Performance do board e probes de shipping
 
-> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
-> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
-**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
+> **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless (nuvem)
+> **Alcance:** este documento tem duas espécies de número, e só uma envelhece na nuvem.
+> **Geometria e payload** (board 225×283, 63.675 células, bytes por refresh, reuso de textura)
+> foram remedidos nesta data em Linux headless e conferem — `tests/unit/performance_doc_geometry_test.gd`
+> passou a recusá-los quando divergirem do domínio. **Tempo** (µs, ms, p95, GPU, frame pacing,
+> smoke de áudio, framebuffer) continua de 2026-09-03, commit `ab512ef`, Godot 4.7.2-stable.mono,
+> macOS/Apple M2, e **não** foi remedido: depende de hardware que a sessão de nuvem não tem.
 
-
-Medição atual do palco Atlas Vivo (2026-09-07), executável exportado no Apple M2:
-
-| Recorte | p95 | p99 | Máximo | Limite da evidência |
-|---|---:|---:|---:|---|
-| `GameSimulation.step`, 3.600 ticks | 102 µs | 123 µs | 34.004 µs | CPU, escudo ampliado na cópia de perfil; pico de captura continua relevante |
-| GL Compatibility, 600 frames | 18,497 ms | 19,691 ms | 71,472 ms | limite explícito de 60 FPS, percurso automático na borda |
-| Metal/mobile, 600 frames | 19,213 ms | 20,784 ms | 22,071 ms | renderer alternativo usado para medição externa de GPU |
-
-Logs e JSON em `build/modernization/`. O primeiro ensaio GL sem limite de FPS ficou
-sem cadência de apresentação; foi preservado como diagnóstico e não fundamenta os números
-acima. Nenhuma dessas amostras substitui soak nem mede o pior caso de todas as capturas.
-O Metal HUD complementar passou com 1.398 pares válidos: GPU p95 0,69 ms e máximo 1,82 ms;
-frame máximo 38,68 ms, zero stalls acima de 150 ms. O parser passou 16 testes Python após
-corrigir o reconhecimento do timestamp inicial, exigindo contexto temporal do mesmo processo
-em vez de descartar intervalos grandes em qualquer posição.
-
-O restante deste documento descreve a medição histórica anterior, explicitamente datada.
-
-Medição final local em 2026-09-03, Godot 4.7.2-stable Mono, macOS/Apple M2. O
+Os números de tempo abaixo vêm da medição local de 2026-09-03, Godot 4.7.2-stable Mono,
+macOS/Apple M2. O
 microbenchmark do board é headless; frame pacing e GPU vêm do bundle macOS arm64 exportado no
 run `20260903T065739Z-65912` (`runner_status=complete`, `runner_exit=0`,
 `overall_exit=0`).
 
 ## Perfil isolado do board
 
-Comando reproduzível:
+Comando reproduzível — o perfil do board **não** precisa de mono nem de macOS, e é a parte deste
+documento que qualquer sessão consegue refazer:
 
 ```bash
-cd /Users/flaviocoutinho/development/qiqix/qix-game
-/Applications/Godot_mono.app/Contents/MacOS/Godot \
-  --headless --path /Users/flaviocoutinho/development/qiqix/qix-game \
-  --script res://tools/profile_board_view.gd
+G=/Applications/Godot_mono.app/Contents/MacOS/Godot   # local; na nuvem, o build Linux headless
+$G --headless --path . --script res://tools/profile_board_view.gd
 ```
 
 Board real: 225×283 = 63.675 células.
@@ -52,6 +37,17 @@ a razão bruta do cronômetro: o caminho novo elimina 63.675 chamadas `Image.set
 GDScript, reduz em 4× o payload por atualização e reutiliza a textura em steady-state
 (`texture_create_count=0`). O board é enviado apenas quando sua identidade ou versão muda;
 sincronizações repetidas entram em `skipped_count`.
+
+**Remedição em 2026-09-07, Linux headless (nuvem), commit `34634d0`.** As colunas estruturais
+saíram idênticas — `225x283`, `63675` células, `63675` bytes/refresh no R8 contra `254700` no
+RGBA8 legado, `texture_create_count=0` em steady-state e `1` no cold start, `sample_capacity=240`.
+As colunas de tempo, não: a máquina da nuvem deu p95 de `1 µs` no R8 (igual) e `50.978 µs` no
+legado (contra `32.304 µs` no M2), cold start de `14 µs` (contra `7 µs`). É o esperado — outra
+CPU, outro relógio — e é a razão de a tabela acima continuar a ser a medição do M2 em vez de ser
+sobrescrita a cada sessão: **substituir estes valores por uma medição de outra máquina não
+responderia à mesma pergunta.** O que a remedição prova é que o *argumento* do R8 (4× menos
+payload, textura reutilizada) não depende da máquina, e é justamente essa parte que
+`tests/unit/performance_doc_geometry_test.gd` agora amarra ao domínio.
 
 ## Instrumentação em runtime
 
@@ -178,3 +174,10 @@ legada reproduz o algoritmo removido, mas não é um build histórico. O Metal H
 representam uma única máquina e uma execução curta. Antes de distribuição, repetir profiling,
 memória, térmica, framebuffer e piores casos nos aparelhos-alvo, executar soak prolongado e
 inspecionar o profiler nativo de cada plataforma.
+
+## Reconciliação Atlas Vivo e MCP — 2026-09-08
+
+Esta árvore incorpora o Atlas Vivo local: simulação determinística 2D, palco 2.5D com GLBs,
+lifecycle, diretor, balizas, itens e replay v4. Preserva também contraste, feedback e
+verificações remotas. Resultados anteriores neste documento descrevem suas árvores datadas;
+a validação corrente e a autoria estão em [Atlas Vivo](ATLAS_VIVO.md).

@@ -7,6 +7,10 @@ const BUS_MUSIC := &"Qix Music"
 const BUS_SFX := &"Qix SFX"
 const SFX_VOICES := 8
 const TRAIL_THROTTLE_MSEC := 36
+## O cue do limiar de exposição da trilha. Não está em `cue_for_kind` porque não é
+## um evento: é uma aresta lida sobre o snapshot já confirmado, e quem a reconhece
+## é o hub de feedback, que compara dois ticks. Ver `QixFeedbackHub.sync`.
+const EXPOSURE_CUE := &"exposure"
 
 @export_range(0.0, 1.0, 0.01) var master_volume := 0.90
 @export_range(0.0, 1.0, 0.01) var music_volume := 0.52
@@ -27,7 +31,19 @@ var _last_trail_msec := -TRAIL_THROTTLE_MSEC
 var _music_cache: Dictionary = {}
 var _cue_cache: Dictionary = {}
 var _paused := false
-var _pause_started_msec := 0
+## Instante real em que a pausa começou, ou `-1` enquanto o jogo corre. Enquanto
+## é válido, o relógio de mix fica congelado nele — ver `mix_now_msec`.
+var _pause_started_msec := -1
+## Quantas vozes receberam a ordem de suspensão na última pausa. Guardamos a ordem
+## dada em vez de reler `AudioStreamPlayer.stream_paused` pela mesma razão que já
+## vale para `_voice_priorities`: essa propriedade deriva dos playbacks vivos, e o
+## runtime headless nunca os inicia — relê-la devolveria `false` mesmo depois de a
+## pausa ter sido aplicada, e o caminho de mix ficaria por testar.
+var _paused_voices := 0
+## Se a música recebeu a ordem de suspensão na última pausa. Pela mesma razão de
+## `_paused_voices`: reler `AudioStreamPlayer.stream_paused` devolve `false` fora
+## da árvore mesmo depois do `set`, portanto a ordem dada só é observável aqui.
+var _paused_music := false
 
 
 func _ready() -> void:
@@ -56,8 +72,7 @@ func shutdown() -> void:
 	_cue_cache.clear()
 	_round_index = -1
 	_release_all_voices()
-	_paused = false
-	_pause_started_msec = 0
+	_release_pause()
 	_last_trail_msec = -TRAIL_THROTTLE_MSEC
 
 
@@ -99,15 +114,92 @@ static func arguments_allow_playback(
 
 
 ## Interface única para o bootstrap após a simulação emitir eventos.
-func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) -> void:
+##
+## `exposure_crossed` é a aresta de `TrailExposure.crossed_warning` para este tick, calculada
+## pelo hub. O default `false` preserva quem sincroniza só por eventos.
+func sync(
+	session: GameSession,
+	events: Array[GameEvent],
+	paused: bool = false,
+	exposure_crossed: bool = false,
+) -> void:
 	ensure_ready()
-	set_paused(paused)
 	if session != null and session.round_index != _round_index:
 		play_round_music(session.round_index)
+	apply_pause(paused, _now_msec())
 	if not enabled or _paused:
 		return
-	for cue_name in cues_for_events(events):
+	var cues := cues_for_events(events)
+	for cue_name in cues:
 		play_cue(cue_name)
+	# Depois dos cues de evento de propósito: eles reservam voz primeiro, e o aviso entra
+	# no que sobrar — nunca por cima da notícia do tick.
+	if exposure_crossed and exposure_cue_survives(cues):
+		play_cue(EXPOSURE_CUE)
+
+
+## O aviso de exposição só soa se nada mais alto tiver acontecido no mesmo tick.
+##
+## Ao contrário da háptica — um actuador, um pulso, e por isso uma disputa que `plan` já
+## resolve — o mix tem oito vozes: sem esta regra o aviso entraria numa voz livre por cima
+## da captura ou da morte. E o problema não é disputa de canal, é que o aviso **perde o
+## objeto**: se o laço fechou, a notícia é o território; se o jogador morreu, já não há
+## trilha para estar exposta. A regra e o número são os mesmos de
+## `QixHapticFeedback._exposure_pulse`, para que ouvir e sentir não discordem sobre qual foi
+## o acontecimento do tick.
+static func exposure_cue_survives(event_cues: Array[StringName]) -> bool:
+	var exposure_priority := QixProceduralAudioLibrary.priority_for(EXPOSURE_CUE)
+	for cue_name in event_cues:
+		if QixProceduralAudioLibrary.priority_for(cue_name) > exposure_priority:
+			return false
+	return true
+
+
+## Congela ou retoma **todo** o feedback sonoro: a música e as oito vozes de SFX.
+## Antes disto a pausa parava só a música, e o cue em voo continuava a tocar por
+## cima de um campo já congelado — `death` (0,42 s) e `game_over` (0,75 s) são
+## longos o bastante para isso ser audível sempre que se pausa ao morrer.
+##
+## Retomar não é só voltar a tocar. Os prazos em `_voice_free_msec` são absolutos
+## contra `Time.get_ticks_msec()`, que não pára na pausa: sem empurrá-los pelo
+## tempo pausado, uma pausa de poucos segundos declararia todas as vozes livres
+## enquanto elas ainda seguram áudio por tocar, e o primeiro `trail` depois de
+## retomar roubaria a voz do `death` — exatamente o corte que `select_voice`
+## existe para impedir. O mesmo vale para o estrangulamento de `trail`.
+func apply_pause(paused: bool, now_msec: int) -> void:
+	if paused and not _paused:
+		_pause_started_msec = now_msec
+	elif not paused and _paused:
+		var elapsed := maxi(now_msec - _pause_started_msec, 0)
+		_pause_started_msec = -1
+		for index in _voice_free_msec.size():
+			_voice_free_msec[index] += elapsed
+		_last_trail_msec += elapsed
+	_paused = paused
+	# Uma só guarda para a música e para as oito vozes: `is_instance_valid`, nunca
+	# `is_inside_tree`. `stream_paused` só percorre os playbacks vivos, portanto é
+	# inócuo fora da árvore, e assim a ordem dada é a mesma no runtime e no runner
+	# de teste — que corre inteiro dentro de `_initialize()`, antes de a árvore
+	# existir. Enquanto a música tinha guarda própria, um director ainda fora da
+	# árvore contava as oito vozes como suspensas e deixava a música sem ordem
+	# nenhuma; `presentation_state` afirmava uma pausa que a música não recebeu.
+	_paused_music = false
+	if is_instance_valid(_music):
+		_set_player_paused(_music, paused)
+		_paused_music = paused
+	var commanded := 0
+	for voice in _voices:
+		if is_instance_valid(voice):
+			_set_player_paused(voice, paused)
+			commanded += 1
+	_paused_voices = commanded if paused else 0
+
+
+## Instante que a mixagem considera "agora": o relógio real quando o jogo corre,
+## congelado no início da pausa enquanto ela dura. Puro e estático para que a
+## aritmética da pausa seja testável sem depender do relógio da máquina.
+static func mix_now_msec(real_now_msec: int, pause_started_msec: int) -> int:
+	return pause_started_msec if pause_started_msec >= 0 else real_now_msec
 
 
 func play_round_music(round_index: int) -> void:
@@ -124,8 +216,8 @@ func play_cue(cue_name: StringName) -> void:
 	if not enabled or _paused:
 		return
 	ensure_ready()
+	var now := mix_now_msec(_now_msec(), _pause_started_msec)
 	if cue_name == &"trail":
-		var now := _now_msec()
 		if now - _last_trail_msec < TRAIL_THROTTLE_MSEC:
 			return
 		_last_trail_msec = now
@@ -134,14 +226,12 @@ func play_cue(cue_name: StringName) -> void:
 	if not _cue_cache.has(cue_name):
 		_cue_cache[cue_name] = QixProceduralAudioLibrary.cue(cue_name)
 	var priority := QixProceduralAudioLibrary.priority_for(cue_name)
-	var index := select_voice(voice_priorities_now(), priority, _voice_cursor)
+	var index := select_voice(voice_priorities_at(now), priority, _voice_cursor)
 	if index < 0:
 		return  # todas as vozes seguram algo tão ou mais importante: não corta
 	_voice_cursor = (index + 1) % _voices.size()
 	_voice_priorities[index] = priority
-	_voice_free_msec[index] = (
-		_now_msec() + QixProceduralAudioLibrary.duration_msec(cue_name)
-	)
+	_voice_free_msec[index] = now + QixProceduralAudioLibrary.duration_msec(cue_name)
 	var voice := _voices[index]
 	voice.stream = _cue_cache[cue_name]
 	# Headless ainda constrói o cue para validar o pipeline e o cache; só não
@@ -153,7 +243,12 @@ func play_cue(cue_name: StringName) -> void:
 ## Prioridade que cada voz ainda segura neste instante, ou `PRIORITY_IDLE` para as
 ## que já terminaram. É o snapshot que `select_voice` consome.
 func voice_priorities_now() -> PackedInt32Array:
-	var now := _pause_started_msec if _paused else _now_msec()
+	return voice_priorities_at(mix_now_msec(_now_msec(), _pause_started_msec))
+
+
+## Igual a `voice_priorities_now`, mas com o instante injetado — é por aqui que o
+## teste exercita a aritmética da pausa sem depender do relógio da máquina.
+func voice_priorities_at(now: int) -> PackedInt32Array:
 	var snapshot := PackedInt32Array()
 	snapshot.resize(_voices.size())
 	for index in _voices.size():
@@ -167,30 +262,9 @@ func voice_priorities_now() -> PackedInt32Array:
 ## Pausa mantém a posição de música/SFX e congela seus prazos no mixer. Eventos recebidos
 ## durante pausa são descartados: retomar nunca despeja uma fila antiga de alertas.
 func set_paused(value: bool) -> void:
-	if value != _paused:
-		var now := _now_msec()
-		if value:
-			_pause_started_msec = now
-		else:
-			var held_msec := maxi(0, now - _pause_started_msec)
-			for index in _voice_free_msec.size():
-				if _voice_free_msec[index] > _pause_started_msec:
-					_voice_free_msec[index] += held_msec
-			_last_trail_msec += held_msec
-		_paused = value
-	if is_instance_valid(_music):
-		_set_player_paused(_music, value)
-	for voice in _voices:
-		_set_player_paused(voice, value)
-	# Música carregada durante a pausa começa apenas quando o controle retorna.
-	if not value and enabled and runtime_allows_playback() and is_instance_valid(_music) \
-			and _music.stream != null and _music.is_inside_tree() and not _music.playing:
-		_music.play()
+	apply_pause(value, _now_msec())
 
 
-## Fronteiras do driver de apresentação. No Godot, stream_paused consulta os playbacks
-## existentes e retorna false sem nenhum; o estado solicitado pertence a este diretor.
-## As seams permitem verificar comandos e passagem de tempo sem abrir áudio em headless.
 func _set_player_paused(player: AudioStreamPlayer, value: bool) -> void:
 	player.stream_paused = value
 
@@ -255,12 +329,19 @@ func presentation_state() -> Dictionary:
 	return {
 		"round_index": _round_index,
 		"music_loaded": _music != null and _music.stream != null,
-		"music_paused": _paused,
+		# `music_paused` é a ordem que a música recebeu, do mesmo modo que
+		# `paused_voices` é a que as vozes receberam. A *intenção* de pausa está em
+		# `mix_clock_frozen`; separá-las é o que torna visível uma música que ficou
+		# de fora da ordem — antes as duas eram o mesmo `_paused` e concordavam
+		# sempre, inclusive quando a música não tinha sido comandada.
+		"music_paused": _paused_music,
+		"mix_clock_frozen": _pause_started_msec >= 0,
 		"sfx_paused": _paused,
 		"voice_count": _voices.size(),
 		"cached_music": _music_cache.size(),
 		"cached_cues": _cue_cache.size(),
 		"busy_voices": _busy_voice_count(),
+		"paused_voices": _paused_voices,
 	}
 
 
@@ -276,6 +357,21 @@ func _release_all_voices() -> void:
 	_voice_priorities.fill(QixProceduralAudioLibrary.PRIORITY_IDLE)
 	_voice_free_msec.fill(0)
 	_voice_cursor = 0
+
+
+## Um director desligado não segura pausa nenhuma: sem streams, não há o que
+## suspender. Isto é `shutdown`, não `apply_pause(false, …)`, porque não há tempo
+## pausado a devolver a prazos de vozes que já foram soltas.
+##
+## Sem isto, desligar durante uma pausa deixava `_pause_started_msec` válido para
+## sempre, e `mix_now_msec` continuava a congelar o relógio de mix no instante da
+## pausa antiga — o primeiro cue depois de um recomeço datava do jogo anterior.
+func _release_pause() -> void:
+	_paused = false
+	_pause_started_msec = -1
+	_paused_voices = 0
+	_paused_music = false
+	_last_trail_msec = -TRAIL_THROTTLE_MSEC
 
 
 static func cues_for_events(events: Array[GameEvent]) -> Array[StringName]:

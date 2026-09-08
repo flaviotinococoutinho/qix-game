@@ -3,6 +3,19 @@ extends TestCase
 const PRESETS_PATH := "res://export_presets.cfg"
 const SHIPPING_ICON_PATH := "res://assets/icons/qix_game_icon.png"
 
+## Pastas de vendor que saíram do versionamento pela ADR-0010. O `exclude_filter` de cada uma
+## **fica** em `export_presets.cfg` mesmo sem a pasta em disco: um checkout que as rebaixe pela
+## AssetLib recria o diretório, e `.gitignore` protege o commit mas não o payload de export.
+const REMOVED_VENDOR_ADDONS := [
+	"GDDraw",
+	"curve2collision",
+	"curved_lines_2d",
+	"guide",
+	"phantom_camera",
+	"softbody2d",
+	"yard",
+]
+
 
 func test_shipping_brand_icon_is_a_square_project_asset() -> void:
 	var configured_icon := String(ProjectSettings.get_setting("application/config/icon", ""))
@@ -90,6 +103,20 @@ func test_shipping_probes_and_runner_are_exported_but_build_outputs_are_not() ->
 		ok(excluded.contains("addons/fennara/dist/**"), "%s remove distribuição Fennara" % section)
 		ok(excluded.contains("guide_examples/**"), "%s não leva exemplos de plugins" % section)
 		ok(excluded.contains("samples/**"), "%s não leva amostras de desenvolvimento" % section)
+		ok(
+			excluded.contains("antipixel_state_machine/**"),
+			"%s não leva a máquina de estados de vendor" % section,
+		)
+		# Pastas já removidas do versionamento (ADR-0010). O filtro fica porque um checkout que
+		# rebaixe os addons pela AssetLib as recria em disco, e `.gitignore` não cobre o payload
+		# de export. Era uma asserção escrita à mão por remoção, e as sete remoções abertas ao
+		# mesmo tempo conflitavam todas nesta linha; a lista torna a adição de uma remoção uma
+		# linha nova em vez de uma reescrita do bloco.
+		for removed_addon in REMOVED_VENDOR_ADDONS:
+			ok(
+				excluded.contains("addons/%s/**" % removed_addon),
+				"%s tem de manter o filtro de addons/%s, removido pela ADR-0010" % [section, removed_addon],
+			)
 		ok(
 			not excluded.contains("addons/fennara/runtime/**"),
 			"%s preserva o autoload e dependências Fennara" % section,

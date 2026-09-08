@@ -94,12 +94,19 @@ func test_the_percentage_is_the_only_promoted_field() -> void:
 
 
 func test_text_rows_stay_inside_their_bar() -> void:
-	# Só o eixo X é medido no runtime: a altura de um `Label` é presa ao mínimo dele, e o
-	# runner corre antes de a árvore processar um frame, quando esse mínimo ainda foi
-	# calculado com o tamanho de fonte do tema em vez do override. Depois do primeiro frame
-	# a altura assenta em TEXT_HEIGHT — medido numa sonda descartável que instanciou o HUD
-	# com a árvore já a processar: Percent size=(86,14), min=(1,13), fonte 13 px de altura.
-	# Aqui, portanto, o contrato vertical são as constantes declaradas.
+	# Só o eixo X é medido no runtime, e a razão não é a que este comentário afirmava antes.
+	# A altura de um `Label` é presa ao mínimo dele; o runner corre dentro de `_initialize()`,
+	# antes de a árvore processar um frame, e nessa janela o mínimo vale 23 px — o do tema
+	# padrão, não o do override. Medido em 2026-09-06: `update_minimum_size()`, um
+	# `custom_minimum_size` explícito e um `Theme` com `default_font_size` **não** resolvem
+	# (os dois últimos eram as saídas que o backlog propunha); só um frame processado resolve,
+	# e mesmo aí o `size` já atribuído continua nos 23 px, porque Godot clampa para cima e
+	# nunca re-encolhe. Na via do jogo — HUD a entrar numa árvore que já processa — o mínimo
+	# já é o certo no `add_child` e a linha assenta em TEXT_HEIGHT.
+	#
+	# O contrato vertical é, portanto, verificado fora daqui, por
+	# `tools/verify_hud_row_geometry.gd`, que monta o HUD durante um frame e mede o retângulo
+	# real. O que sobra para este teste são as constantes declaradas e a altura da fonte.
 	var hud := _hud()
 	var rows := [
 		[QixGameHud.TOP_TEXT_Y, 0.0, QixGameHud.TOP_BAR_HEIGHT, TOP_BAND],
@@ -126,6 +133,23 @@ func test_text_rows_stay_inside_their_bar() -> void:
 				height <= QixGameHud.TEXT_HEIGHT,
 				"%s: fonte de %.1f px de altura numa linha de %.1f" % [
 					node_name, height, QixGameHud.TEXT_HEIGHT])
+	hud.free()
+
+
+func test_the_horizontal_measurements_are_the_designed_ones_and_not_a_floor() -> void:
+	# Todos os outros testes deste arquivo leem `size.x` e acreditam nele. Isso só é legítimo
+	# enquanto o mínimo horizontal do `Label` couber na largura pedida: se algum dia alguém
+	# puser `custom_minimum_size.x`, ou der texto ao rótulo antes da medição, `size.x` passa a
+	# ser o piso do `Label` e não a largura autorada — e as margens, goteiras e alinhamentos
+	# acima passariam a medir a coisa errada, todos verdes. O eixo Y já cai nesse buraco
+	# (mínimo de 23 px no runner); esta guarda é para o X não cair em silêncio.
+	var hud := _hud()
+	for node_name: String in TOP_BAND + BOTTOM_BAND:
+		var label := hud.get_node(node_name) as Label
+		ok(
+			label.get_combined_minimum_size().x <= label.size.x,
+			"%s: mínimo horizontal de %.1f px numa largura pedida de %.1f — a medição do eixo X deixou de ser a autorada" % [
+				node_name, label.get_combined_minimum_size().x, label.size.x])
 	hud.free()
 
 

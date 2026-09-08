@@ -1,34 +1,29 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
-> **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
-**Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
-
-
-Última validação automatizada: **2026-09-03**, Godot
-**4.7.2-stable.mono.official** em macOS. Run de shipping:
-`20260903T065739Z-65912`, `runner_status=complete`, `runner_exit=0`, `overall_exit=0`.
+> **Verificado em** 2026-09-08 · commit `6d23de4` · Godot 4.7.2-stable Mono, macOS headless
+> **Alcance:** primeira execução da reconciliação Atlas + #78; correções em andamento, ainda sem merge no GitHub.
+> **Resultado:** 393 testes, 18769 asserções, 8 falhas. O inventário abaixo é conferido pelo runner.
+> Exportação, assinatura, Android físico e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
 
 ```bash
-cd /Users/flaviocoutinho/development/qiqix/qix-game
-/Applications/Godot_mono.app/Contents/MacOS/Godot \
-  --headless --audio-driver Dummy \
-  --path /Users/flaviocoutinho/development/qiqix/qix-game \
-  --script res://tests/run_tests.gd
+python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado atual: **138 testes, 11.547 asserções, 0 falhas e nenhum warning do jogo** —
-medido em **2026-09-04**, Godot **4.7.2-stable.official** (build Linux headless, não-mono), em
-sandbox de nuvem. Os números de shipping acima continuam sendo os do run de macOS de 2026-09-03:
-export e QA de assinatura não rodam na nuvem, então essa evidência **não** foi refeita.
-Resultado atual: **134 testes, 11.489 asserções, 0 falhas e nenhum warning do jogo**.
-Reexecução em 2026-09-04 no build Linux headless `4.7.2.stable.official` (sessão de nuvem, sem
-editor e sem `libfennara`): **140 testes, 11.552 asserções, 0 falhas** — os seis testes novos são
-os de exposição da trilha.
-Além da suíte Godot, os testes Python do parser Metal HUD passaram **10/10**. O subconjunto
-direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
+Primeira execução da integração (será substituída pela medição final): **393 testes, 18769 asserções, 8 falhas** — árvore preparada sobre
+`ca745780`; resultados de outras branches não são intercambiáveis.
+
+**Inventário da suíte (derivado, não digitado):** 73 arquivos de teste · 393 casos `test_*`.
+
+A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
+de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
+Os logs retêm diagnósticos e o código de saída. A extensão nativa opcional ausente é isolada
+explicitamente pelo gate; seus scripts runtime permanecem. Isso não é QA da extensão nativa.
+
+As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09-03**,
+`20260903T065739Z-65912`; não foram substituídas por testes headless. A tabela de cobertura
+é descritiva, e o inventário autoritativo continua sendo a descoberta de testes desta árvore.
 
 ## Cobertura automatizada
 
@@ -44,18 +39,18 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | replay | reprodução determinística, checksum, round-trip binário e rejeição atômica de versão/seed/regras/geometria/estado inicial incompatíveis |
 | checksum dourado | valores literais fixados para `RULES_VERSION`, `SCHEMA_VERSION`, seed e `config_hash` das três rodadas de produção, e para o checksum inicial/final/serializado de uma rota de 177 ticks com o chefe ativo — falha quando o contrato de replay se move, verde quando só a apresentação muda (invariantes 7 e 8) |
 | entrada | teclado/InputMap, direção única/sobreposição, D-pad, stick com histerese, A/X/Start, estado independente por gamepad, deduplicação InputMap×raw de A/Start, multitouch, disconnect/reset e equivalência canônica gamepad×touch |
-| feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum; intenção e prioridade declaradas por cue, escada de prioridade do som igual à da háptica, e alocação de voz que recusa cortar um cue mais importante |
+| feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum; intenção e prioridade declaradas por cue, escada de prioridade do som igual à da háptica, e alocação de voz que recusa cortar um cue mais importante; o limiar de exposição soa **e** se sente com a mesma prioridade (35), o aviso é recusado quando algo mais alto acontece no mesmo tick, e a aresta é lida sem ser consumida — checksum imóvel ao longo de oito `sync` |
 | boss | validação dos perfis WANDER/PURSUIT/SWEEP, octantes inteiros, jitter determinístico, reflexão, pulso de velocidade, limites seguros, hash de regras e replay incompatível rejeitado antes da mutação |
 | conteúdo | três rodadas ordenadas, IDs/seeds únicos, referências externas separadas, fundos 225×283 aprovados, alvo 80%, curva crescente e três perfis externos de boss |
 | geração transacional | shadow staging, lock exclusivo por projeto via loopback, WAL v3 ancorado ao SHA do manifest, hashes/tamanhos de payload/backup, state machine integral, targets terminais, rollback/cache e recovery após interrupção/processo morto |
-| apresentação | HUD de campanha, progresso até alvo, intro/clear/game over/campanha/pausa, VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
+| apresentação | HUD de campanha, progresso até alvo, contador de percentagem encenado em degraus (escada de denominações, teto e piso de duração, regressão instantânea), intro/clear/game over/campanha/pausa, continuidade de score/vidas entre setores (carry-in na intro, ganho do setor no clear, setores estabilizados nas fases terminais, prompt herdando o acento do próximo setor), VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
 | contraste cromático | luminância WCAG contra referências conhecidas, matrizes de dicromacia colapsando o eixo correto, swatches iguais às modulações do shader, catraca de regressão por par e dívida documentada coerente com a paleta autorada |
-| apresentação | HUD de campanha, progresso até alvo, contador de percentagem encenado em degraus (escada de denominações, teto e piso de duração, regressão instantânea), intro/clear/game over/campanha/pausa, VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
-| apresentação | HUD de campanha, progresso até alvo, intro/clear/game over/campanha/pausa, continuidade de score/vidas entre setores (carry-in na intro, ganho do setor no clear, setores estabilizados nas fases terminais, prompt herdando o acento do próximo setor), VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
 | shipping | ícone quadrado, presets sem segredo, filtros, dispatch pela cena principal, smoke de áudio com marker/watchdog, seleção segura do serial, frame pacing e contratos de framebuffer/Metal HUD |
 | integração | existência, carga, campanha/feedback/touch ligados, camadas obrigatórias da cena principal, permissão Android de vibração e 60 Hz persistidos no projeto |
 | captura de erros | o runner de testes falha por erro de script ocorrido depois de uma asserção, e limpa a janela entre testes |
+| inventário desta matriz | a contagem de arquivos e de casos `test_*` é derivada pela mesma varredura de diretório do runner e conferida contra a linha declarada aqui; toda afirmação `N testes, M asserções, K falhas` do documento precisa repetir os mesmos números. Fora do alcance de propósito: a contagem de asserções (só existe depois de executar) e os demais `docs/*.md`, cujos números de outro ambiente são registro histórico |
 | invariantes 1 e 4 | varredura estática de `game/simulation`, `game/rules` e `game/session` por símbolo do mundo real (acaso global, relógio, `Input`, `Tween`, física, `await`, `_process`); o próprio scanner é validado contra amostras positivas e negativas, de modo que ele não pode passar sem olhar |
+| invariante 10 | SHA-256 de todo arquivo de mídia de `assets`, `game`, `ui`, `app`, `content`, `tools`, `tests` e `reference` conferido contra `assets/ASSET-PROVENANCE.md`; hash declarado sem arquivo correspondente é recusado como órfão salvo em linha `(removido)`; arquivo marcado `(removido)` não pode reaparecer; a checagem é exercitada contra bytes de controle não declarados e o padrão da tabela é validado numa linha sintética, para que uma reformatação não a transforme em laço vazio |
 
 ## Verificação de engine, gameplay e conteúdo
 
@@ -74,8 +69,8 @@ direcionado da transação de conteúdo passou **22 testes e 353 asserções**.
 | perfil isolado do board | R8 p50/p95 1/1 µs em 240 amostras; legado sintético 31.160/32.304 µs; speedup p95 32.304× e 4× menos bytes por refresh |
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
-| log final da suíte | 138 testes, 11.547 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 (o parser não foi reexecutado na nuvem) |
-| log final da suíte | 138 testes, 11.515 asserções, 0 falhas, sem warning do jogo; parser Metal HUD 10/10 |
+| guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
+| log final da suíte | 393 testes, 18769 asserções, 8 falhas, sem warning do jogo sobre a árvore que integra #56–#77 em `34634d0`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo
@@ -131,3 +126,9 @@ validação estrutural da cena, runtime real e runner headless independente dos 
 Com o editor já aberto, uma segunda instância/import também pode disputar a porta do daemon
 Fennara e emitir `AddrInUse`; isso é um conflito de tooling, não uma falha do runtime do jogo.
 As verificações de import/editor devem ser executadas sequencialmente.
+
+## Reconciliação Atlas Vivo e MCP — 2026-09-08
+
+A campanha local v4, o palco 2.5D e as melhorias remotas estão em validação conjunta.
+A contagem corrente será atualizada após executar a árvore reconciliada; os resultados
+datados no corpo registram os respectivos estados históricos. Ver [Atlas Vivo](ATLAS_VIVO.md).

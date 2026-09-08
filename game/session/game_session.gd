@@ -17,6 +17,23 @@ var transition_ticks_left: int = 0
 var transition_ticks_total: int = 0
 var simulation: GameSimulation
 var replay: ReplayLog
+## Tentativas de rodada **já encerradas**, na ordem em que encerraram. O contrato, porque não é
+## óbvio de fora e já custou uma asserção errada:
+##
+##  - Quem arquiva é `step`, e só na transição `PLAYING` → `ROUND_WON` ou `PLAYING` → `GAME_OVER`
+##    da simulação. Escrever `phase` de fora — pôr a sessão em `ROUND_CLEAR` num teste, por
+##    exemplo — **não** arquiva nada: a fase é consequência do arquivamento, não a sua causa.
+##  - Uma entrada por rodada, e quem garante isso é a máquina de fases: arquivar tira a sessão de
+##    `PLAYING` no mesmo tick, e só `PLAYING` arquiva. `_current_archived` é cinto sobre suspensório
+##    — hoje **nenhum caminho o alcança** (trocá-lo por `if false:` não derruba um teste sequer,
+##    medido em 2026-09-06). Mantido porque as duas chamadas de `_archive_current_round` são
+##    mutuamente exclusivas por construção, e isso é fácil de quebrar sem perceber.
+##  - Vitória e derrota arquivam igual; `RoundRunRecord.completed` é o que as distingue.
+##  - `restart_campaign()` esvazia a lista.
+##
+## Daí a regra que a apresentação depende: `records.size()` conta tentativas **encerradas**, não
+## rodadas visitadas. Durante `ROUND_INTRO` e `PLAYING` da rodada N (1-based), vale
+## `records.size() == N - 1`.
 var records: Array[RoundRunRecord] = []
 var _current_archived: bool = false
 
@@ -38,6 +55,14 @@ func current_round_number() -> int:
 
 func is_gameplay_active() -> bool:
 	return phase == Phase.PLAYING
+
+
+## Quantos ticks da transição corrente já correram. O domínio conta ticks; transformar isso na
+## fração de uma barra é trabalho de quem desenha a barra — ver
+## `QixRoundTransitionView.transition_progress`. Invariante 1 do `CLAUDE.md`: aqui só entram
+## inteiros e ponto fixo 8.8, e `tests/unit/domain_purity_test.gd` recusa o contrário.
+func transition_elapsed_ticks() -> int:
+	return maxi(transition_ticks_total - transition_ticks_left, 0)
 
 
 ## Avança exatamente um tick da sessão. Intents só entram no replay durante PLAYING.

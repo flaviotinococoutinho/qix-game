@@ -47,6 +47,8 @@ var tick: int = 0
 var phase: int = Phase.PLAYING
 var lives: int
 var death_ticks_left: int = 0
+## Flag explícita de aceleração preservada no estado/checksum. A campanha ativa a aceleração
+## pelo timer autoritativo de VELOCITY; `_player_substeps()` consulta ambos sem duplicar timers.
 var speedup_active: bool = false
 var round_end_reason: int = GameRules.RoundEndReason.NONE
 var deaths_this_round: int = 0

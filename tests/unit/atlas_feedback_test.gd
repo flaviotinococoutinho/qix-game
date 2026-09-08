@@ -108,7 +108,7 @@ func test_danger_outweighs_rewards_but_never_death_in_both_feedback_channels() -
 	eq(pulse.priority, QixProceduralAudioLibrary.priority_for(&"trail_cut"))
 	events.append(GameEvent.make(GameEvent.Kind.PLAYER_DIED))
 	eq(haptics.plan(events).kind, &"death")
-	eq(haptics.plan(events, true), {}, "pausa não produz vibração")
+	eq(haptics.plan(events, false, true), {}, "pausa não produz vibração")
 
 
 func test_eight_voice_budget_keeps_death_when_new_threats_and_rewards_arrive() -> void:

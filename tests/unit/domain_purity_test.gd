@@ -2,7 +2,8 @@ extends TestCase
 ## Guarda mecânica dos invariantes 1 e 4 do `CLAUDE.md`.
 ##
 ## Invariante 1: nada em `game/simulation/`, `game/rules/` ou `game/session/` lê relógio, `Input`,
-## `Tween`, física ou `delta` de quadro. Invariante 4: `DeterministicRng` é o único acaso.
+## `Tween`, física ou `delta` de quadro — **e o domínio calcula só com inteiros e ponto fixo 8.8**.
+## Invariante 4: `DeterministicRng` é o único acaso.
 ##
 ## Um invariante que só existe em prosa é uma intenção, não uma regra: ele não resiste ao dia em
 ## que alguém precisar de "só um `Time.get_ticks_msec()` para depurar". Este teste é o custo de
@@ -18,6 +19,21 @@ const DOMAIN_DIRS: Array[String] = [
 	"res://game/rules",
 	"res://game/session",
 ]
+
+## Exceções de domínio fora de `DOMAIN_DIRS`, sempre com justificativa. A taxonomia Atlas
+## moveu BossBehaviorController para `game/simulation/enemies`, portanto não há exceção ativa.
+## A guarda cruzada abaixo impede reintroduzir um arquivo fora das duas varreduras.
+const DOMAIN_FILES: Dictionary = {}
+
+## O guarda da apresentação e este cobrem conjuntos disjuntos, e a fronteira entre eles é onde um
+## arquivo some. Estes são os arquivos isentos lá que **não** entram aqui — cada um por um motivo
+## que não é "é domínio". Qualquer isenção nova que não caia num dos dois lados fica vermelha.
+const UNGUARDED_BY_DESIGN: Dictionary = {
+	"res://app/bootstrap.gd":
+	"composition root: dirige o loop e lê o mundo real de propósito, então não é domínio nem apresentação",
+}
+
+const PRESENTATION_GUARD := "res://tests/unit/presentation_purity_test.gd"
 
 ## Cada regra é `[regex, invariante, por que é proibida]`. As regexes correm sobre a linha já
 ## limpa de comentários e literais de texto — ver `_strip_comments_and_strings`.
@@ -54,12 +70,26 @@ const RULES: Array = [
 	["\\bmove_and_collide\\b", 1, "colisão é da engine; o domínio resolve em células"],
 	["\\bPhysicsServer2D\\b", 1, "colisão é da engine; o domínio resolve em células"],
 	["\\bawait\\b", 1, "espera assíncrona torna a ordem do tick indeterminada"],
-	# Invariante 1, segunda metade — só inteiros e ponto fixo 8.8.
-	["\\bfloat\\b", 1, "o domínio só fala em inteiros e ponto fixo 8.8; float é apresentação"],
-	["\\bclampf\\s*\\(", 1, "aritmética de float é apresentação"],
-	["\\blerpf\\s*\\(", 1, "aritmética de float é apresentação"],
-	["\\bVector2\\s*\\(", 1, "Vector2 é float; o domínio usa Vector2i"],
-	["\\bsnappedf\\s*\\(", 1, "aritmética de float é apresentação"],
+	# Invariante 1, segunda metade — "só inteiros e ponto fixo 8.8".
+	#
+	# A aritmética da simulação usa inteiros/ponto fixo para manter o contrato de replay entre
+	# plataformas. Frações de barra, alfas e escalas são calculados na apresentação.
+	# `transition_elapsed_ticks()` expõe somente ticks; a view transforma-os em progresso.
+	# Os Resources visuais sob game/rules têm uma guarda própria em
+	# `rules_presentation_exception_test.gd`; não afrouxar as regras dos Resources de domínio.
+	["\\bfloat\\b", 1, "o domínio calcula em inteiro e ponto fixo 8.8, não em float"],
+	["[0-9]+\\.[0-9]", 1, "literal decimal no domínio; use inteiro ou 8.8 (<< 8)"],
+	["\\b(clampf|lerpf|snappedf|absf|maxf|minf|roundf|floorf|ceilf|signf|fposmod)\\s*\\(", 1,
+		"variante float de uma função que tem par inteiro (clampi, maxi, roundi…)"],
+	["\\b(lerp|sqrt|pow|exp|log|sin|cos|tan|atan|atan2|fmod|deg_to_rad|rad_to_deg)\\s*\\(", 1,
+		"matemática de ponto flutuante não pertence ao domínio"],
+	["\\b(is_equal_approx|is_zero_approx)\\s*\\(", 1,
+		"comparação aproximada só existe porque há float; inteiro compara com =="],
+	["\\b(PI|TAU|INF|NAN)\\b", 1, "constante de ponto flutuante no domínio"],
+	["\\b(Vector2|Vector3|Vector4|Rect2|Transform2D|Basis|Quaternion)\\b", 1,
+		"tipo de componentes reais; o domínio usa a variante inteira (Vector2i, Rect2i)"],
+	["\\b(PackedFloat32Array|PackedFloat64Array|PackedVector2Array|PackedVector3Array)\\b", 1,
+		"buffer de reais; o território é PackedByteArray (invariante 3)"],
 ]
 
 ## Trechos que a varredura **tem** de acusar. Sem eles, um erro no scanner viraria um teste que
@@ -73,9 +103,16 @@ const POSITIVE_SAMPLES: Array[String] = [
 	"create_tween().tween_property(self, \"position\", alvo, 0.2)",
 	"directions.shuffle()",
 	"await get_tree().process_frame",
+	# Invariante 1, segunda metade.
 	"func transition_progress() -> float:",
-	"\treturn clampf(1.0 - float(a) / float(b), 0.0, 1.0)",
-	"\tvar target := Vector2(px, py)",
+	"\treturn clampf(1.0 - float(left) / float(total), 0.0, 1.0)",
+	"\tvar meio := 0.5",
+	"\tvar d := sqrt(dx * dx + dy * dy)",
+	"\tvar passo := lerp(a, b, t)",
+	"\tif is_equal_approx(a, b):",
+	"\tvar giro := TAU / 8",
+	"\tvar alvo := Vector2(px, py)",
+	"\tvar buffer := PackedFloat32Array()",
 ]
 
 ## Trechos legítimos que a varredura **não** pode acusar: `delta` inteiro de pontuação, os nomes
@@ -88,8 +125,18 @@ const NEGATIVE_SAMPLES: Array[String] = [
 	"\tvar msg := \"não use Input.is_action_pressed aqui\"  # Tween também não",
 	"\treturn next_u32() % n",
 	"\tvar rand_slot := 3  # 'rand' sem parêntese não é chamada",
-	"\tvar cell := Vector2i(x_fp >> 8, y_fp >> 8)",
-	"\t@export var speed_fp: int = 96  ## ponto fixo 8.8, nunca float",
+	# Invariante 1, segunda metade: as variantes inteiras e o 8.8 são exatamente o que se quer ver.
+	"\tvar alvo := Vector2i(px, py)",
+	"\tconst VIEWPORT := Vector2i(240, 320)",
+	"\tvar caixa := Rect2i(0, 0, w, h)",
+	"\tvar gained := maxi(0, score - carry)",
+	"\tvar px := clampi(px + dx, 0, width - 1)",
+	"\tbx_fp += boss_speed_fp   # ponto fixo 8.8: um pixel são 256",
+	"\treturn Vector2i(bx_fp >> 8, by_fp >> 8)",
+	"\t@export var boss_speed_fp: int = 96",
+	"\t## §4.4: a moldura vai de 19,15 a 301,239 e 0.5 px não existe aqui",
+	"\tvar rotulo := \"%04.1f%% REVELADO\"",
+	"\tvar PI_STEPS := 4  # 'PI' colado a outra palavra não é a constante",
 ]
 
 
@@ -108,7 +155,17 @@ func test_domain_has_no_real_world_symbols() -> void:
 			scanned += 1
 			for violation in _violations(text):
 				fail("%s%s" % [path.trim_prefix("res://"), violation])
-	ok(scanned >= 9, "esperava pelo menos 9 arquivos de domínio, varri %d" % scanned)
+	for path in DOMAIN_FILES:
+		var text := FileAccess.get_file_as_string(path)
+		ok(text != "", "não foi possível ler %s" % path)
+		ok(
+			not text.contains("\"\"\""),
+			"%s usa string de três aspas; o scanner não modela esse caso" % path,
+		)
+		scanned += 1
+		for violation in _violations(text):
+			fail("%s%s" % [path.trim_prefix("res://"), violation])
+	ok(scanned >= 10, "esperava pelo menos 10 arquivos de domínio, varri %d" % scanned)
 
 
 func test_scanner_catches_planted_violations() -> void:
@@ -136,6 +193,54 @@ func test_deterministic_rng_is_the_only_source_of_chance() -> void:
 		text.contains("func next_u32"),
 		"DeterministicRng perdeu next_u32; a guarda de acaso está apontando para o arquivo errado",
 	)
+
+
+## Cada isenção explícita da apresentação pertence ao domínio guardado (`DOMAIN_FILES`) ou
+## tem motivo para ficar fora das duas (`UNGUARDED_BY_DESIGN`). O controller do chefe já mora
+## em `DOMAIN_DIRS`: uma isenção residual no caminho antigo será acusada aqui.
+func test_no_file_falls_between_the_two_purity_guards() -> void:
+	for path in DOMAIN_FILES:
+		ok(FileAccess.file_exists(path), "entrada órfã: %s não existe mais" % path)
+		var reason: String = DOMAIN_FILES[path]
+		ok(reason.length() >= 20, "%s listado sem motivo escrito" % path)
+		for dir in DOMAIN_DIRS:
+			ok(
+				not path.begins_with(dir + "/"),
+				"%s já está em %s; a entrada avulsa é redundante" % [path, dir],
+			)
+
+	var guard := load(PRESENTATION_GUARD)
+	ok(guard != null, "não foi possível carregar %s" % PRESENTATION_GUARD)
+	var constants: Dictionary = guard.get_script_constant_map()
+	ok(
+		constants.has("EXEMPT_FILES"),
+		"a guarda da apresentação perdeu EXEMPT_FILES; esta verificação de costura está cega",
+	)
+	var exempt: Dictionary = constants.get("EXEMPT_FILES", {})
+
+	for path in DOMAIN_FILES:
+		ok(
+			exempt.has(path),
+			"%s é domínio mas a guarda da apresentação já não o isenta: ou volta a isentar, ou sai desta lista" % path,
+		)
+
+	for path in UNGUARDED_BY_DESIGN:
+		ok(FileAccess.file_exists(path), "entrada órfã: %s não existe mais" % path)
+		var reason: String = UNGUARDED_BY_DESIGN[path]
+		ok(reason.length() >= 20, "%s isento das duas guardas sem motivo escrito" % path)
+		ok(
+			not DOMAIN_FILES.has(path),
+			"%s não pode ser domínio guardado e isento por design ao mesmo tempo" % path,
+		)
+
+	for path in exempt:
+		ok(
+			DOMAIN_FILES.has(path) or UNGUARDED_BY_DESIGN.has(path),
+			(
+				"%s está isento da guarda da apresentação e fora do alcance da de domínio. "
+				+ "Declare-o em DOMAIN_FILES (se é domínio) ou em UNGUARDED_BY_DESIGN (com o motivo)."
+			) % path,
+		)
 
 
 ## Devolve uma descrição por violação, no formato `:linha: regex — porquê (invariante N)`.

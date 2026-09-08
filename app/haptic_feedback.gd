@@ -5,11 +5,21 @@ extends RefCounted
 @export var enabled := true
 @export_range(0.0, 1.0, 0.05) var intensity := 1.0
 
+## Exposição da trilha no tick anterior — o único estado desta classe.
+##
+## Existe porque atravessar `TrailExposure.WARNING_RATIO` é uma aresta, e uma aresta só se
+## reconhece comparando dois ticks. É memória da apresentação sobre snapshots já confirmados,
+## não estado de jogo: nada aqui volta para a simulação (invariante 6).
+var _previous_exposure := 0.0
 
-func plan(events: Array[GameEvent], paused: bool = false) -> Dictionary:
+
+## `exposure_crossed` vem de `TrailExposure.crossed_warning`; quem chama `plan` direto e só
+## se importa com eventos não precisa passá-lo. A aresta entra como candidata igual às
+## outras: se a morte do jogador cai no mesmo tick, é a morte que se sente.
+func plan(events: Array[GameEvent], exposure_crossed: bool = false, paused: bool = false) -> Dictionary:
 	if not enabled or paused:
 		return {}
-	var best: Dictionary = {}
+	var best: Dictionary = _exposure_pulse() if exposure_crossed else {}
 	for event in events:
 		var candidate := _pulse_for_event(event)
 		if candidate.is_empty():
@@ -24,12 +34,32 @@ func plan(events: Array[GameEvent], paused: bool = false) -> Dictionary:
 	return best
 
 
-func sync(events: Array[GameEvent], paused: bool = false) -> Dictionary:
+## Leitura pura: diz se `exposure` atravessaria o limiar contra a memória deste tick, **sem
+## a avançar**.
+##
+## Existe para que a aresta continue a ter um dono só. O canal sonoro do mesmo limiar precisa
+## da mesma resposta, e se cada canal guardasse a sua cópia de `_previous_exposure` bastaria
+## um `sync` desemparelhado — um canal desligado, um tick de arranque — para o jogador sentir
+## e não ouvir. O hub pergunta aqui antes de chamar `sync`, que é quem avança a memória.
+func would_cross_warning(exposure: float) -> bool:
+	return TrailExposure.crossed_warning(_previous_exposure, exposure)
+
+
+## `exposure` é a leitura de `TrailExposure` para o tick que acabou de ser confirmado. O
+## default `0.0` preserva o comportamento de quem sincroniza só por eventos.
+##
+## Pausa interrompe vibração e conserva a memória da exposição; eventos não ficam em fila.
+func sync(events: Array[GameEvent], exposure: float = 0.0, paused: bool = false) -> Dictionary:
 	if paused:
 		for joypad_id in Input.get_connected_joypads():
 			Input.stop_joy_vibration(joypad_id)
 		return {}
-	var pulse := plan(events, paused)
+	var crossed := TrailExposure.crossed_warning(_previous_exposure, exposure)
+	# Fora do `if enabled` de propósito: com háptica desligada a leitura continua a andar,
+	# senão religar num traço já longo dispararia uma aresta que o jogador atravessou faz
+	# tempo.
+	_previous_exposure = exposure
+	var pulse := plan(events, crossed, paused)
 	if pulse.is_empty():
 		return pulse
 	for joypad_id in Input.get_connected_joypads():
@@ -41,6 +71,24 @@ func sync(events: Array[GameEvent], paused: bool = false) -> Dictionary:
 		)
 	Input.vibrate_handheld(int(pulse["duration_ms"]), float(pulse["amplitude"]))
 	return pulse
+
+
+## O toque do instante em que a trilha deixa de ser um compromisso e vira uma aposta.
+##
+## O canal visual desse limiar já existe — o pulso da trilha acelera e clareia, e o HUD
+## nomeia o estado. Só que no tick em que isso acontece o olho do jogador está no chefe e nas
+## duas células à frente do cursor, não na trilha atrás dele. A háptica é o único canal que
+## não disputa a atenção do olhar: ela chega mesmo quando ninguém está olhando para ela.
+##
+## Deliberadamente **fraco e curto** — 70 ms, mais suave que o `shield`, que é o relógio de
+## uma ameaça imposta. Aqui a exposição foi escolhida pelo jogador: o jogo confirma a aposta,
+## não repreende. Em *Lumen Cartography* é o papel que estica sob o traço longo, não um alarme.
+##
+## Prioridade 35: acima do `respawn` (30), abaixo do `capture` (40). Se o laço fecha no mesmo
+## tick em que o limiar é cruzado, a notícia é o território conquistado — o aviso perdeu o
+## objeto. E o limiar nunca disputa com a morte, que zera a trilha de qualquer maneira.
+func _exposure_pulse() -> Dictionary:
+	return _pulse(&"exposure", 35, 0.30, 0.10, 70, 0.28)
 
 
 func _pulse_for_event(event: GameEvent) -> Dictionary:

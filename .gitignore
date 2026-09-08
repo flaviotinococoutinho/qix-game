@@ -19,8 +19,19 @@ build/
 .claude/.cc-writes/
 .claude/settings.local.json
 
-# ── Documentação de terceiros redistribuída ──────────────────────────────────
-# PDF do vendor do antipixel_state_machine: consultar na origem, não versionar.
+# ── Biblioteca de terceiros sem consumidor ───────────────────────────────────
+# Máquina de estados da Antipixel (3 cenas, 7 scripts, 132 KB). Removida do
+# versionamento: nada em game/, ui/, app/, tools/, tests/ ou content/ a
+# referenciava, nenhum dos seus 12 uid:// era citado de fora, e ela nunca foi
+# instalada onde os próprios arquivos dela se esperam — as cenas e os @icon
+# apontam para res://addons/antipixel_state_machine/, caminho que não existe.
+# Custava cinco class_name genéricos no namespace global do projeto (State,
+# StateMachine, StateComponent, NodeState, PackedSceneState), e o domínio deste
+# jogo não pode consumi-la de todo modo: é `extends Node`, e o invariante 1
+# proíbe Node/Tween/física em game/simulation/. Consultar na origem.
+# Ver docs/PROJECT_CONTRACT.md § Raízes.
+antipixel_state_machine/
+# PDF do vendor, que acompanhava a pasta: consultar na origem, não versionar.
 State Machine Antipixel Godot Documentation.pdf
 
 # ── Demos de addons de terceiros ─────────────────────────────────────────────
@@ -33,6 +44,44 @@ State Machine Antipixel Godot Documentation.pdf
 guide_examples/
 samples/
 
+# ── Addons removidos pela ADR-0010 ───────────────────────────────────────────
+# Uma pasta que estava como `a-remover` em addons/README.md e saiu do
+# versionamento. Ignorar impede que um checkout que a rebaixe pela AssetLib a
+# recommite por acidente — mas NÃO a esconde: ela reaparecendo em disco,
+# addons_manifest_test.gd fica vermelho por pasta sem linha no manifesto, que é
+# exatamente a barreira que a ADR-0010 quis. Quem decidir mantê-la escreve a
+# linha com o estado novo e faz `git add -f`.
+#
+# As sete saíram uma por PR (#60, #62, #63, #64, #66, #72, #73) e foram integradas juntas.
+# Só duas delas traziam a própria linha aqui; as outras cinco confiavam no `.gitignore`
+# de quem entrasse antes — proteção que dependia da ordem de merge. Ficam as sete.
+# A evidência de posse de cada uma está na tabela de addons/README.md.
+addons/GDDraw/
+addons/curve2collision/
+addons/curved_lines_2d/
+addons/guide/
+addons/phantom_camera/
+addons/softbody2d/
+addons/yard/
+
+# ── Bytecode do portão de CI ─────────────────────────────────────────────────
+# `python3 -m unittest discover -s tools/ci` é o primeiro passo de
+# .github/workflows/verificacao.yml, e quem o roda localmente para reproduzir o
+# portão ganha __pycache__/ com os .pyc de headless_gate. São derivados do
+# .py ao lado, nunca fonte da verdade.
+# ── Bytecode de Python ───────────────────────────────────────────────────────
+# O portão de CI é Python (`tools/ci/`) e o próprio workflow corre
+# `python3 -m unittest discover -s tools/ci`. Quem reproduz o CI localmente —
+# que é o que este projeto pede antes de qualquer "passa" — gera o cache no
+# mesmo comando. É artefato reproduzível, como `.godot/`, não fonte da verdade.
+
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
+
+# Bytecode do Python: `tools/ci/` tem testes que o portão roda, e rodá-los localmente
+# deixa `__pycache__/` na árvore. Binário gerado não se versiona.
+
+# Bytecode derivado de Python, em qualquer profundidade.
+__pycache__/
+*.py[cod]

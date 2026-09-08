@@ -1,33 +1,46 @@
 class_name QixEnemyView
 extends Node2D
-## Núcleo prismático com fases legíveis por silhueta. Nenhum desenho participa da colisão.
+## Núcleo: losango 2D contrastante e sinais táticos compartilhados com o modelo 3D.
+## A cruz indica as cinco células letais; ciclo de vida e fases observam somente o domínio.
 
 @export var show_body: bool = true
 
 const DEFAULT_BODY := Color("ff4d6d")
 const DEFAULT_CORE := Color("ffd166")
 const DEFAULT_ACCENT := Color("6ca8b5")
+## Mesmo padrão de `RoundVisualDefinition.free_color`: a tinta é o chão não reclamado da paleta.
+const DEFAULT_INK := Color("071923")
 const BossBehaviorControllerScript = preload("res://game/simulation/enemies/boss_behavior_controller.gd")
 const BossBehaviorProfileScript = preload("res://game/rules/boss_behavior_profile.gd")
+
+## Raio do losango preenchido com `threat_color`.
+const BODY_RADIUS := 4.0
+## Raio do contorno de tinta. A diferença para `BODY_RADIUS` é a espessura do anel — 1 px, a
+## menor marca que o campo 240×320 consegue sustentar. Ver ADR-0011.
+const RIM_RADIUS := 5.0
 
 var _body := DEFAULT_BODY
 var _core := DEFAULT_CORE
 var _accent := DEFAULT_ACCENT
+var _ink := DEFAULT_INK
 var _phase_step: int = 0
 var _behavior_pattern: int = 0
 var _surging: bool = false
 var _cornered: bool = false
-var _facing := Vector2.RIGHT
 var _boss_phase: int = 0
 var _lifecycle: int = ActorLifecycle.State.ACTIVE
 var _stasis: bool = false
 var _lifecycle_ticks: int = 0
+var _facing := Vector2.RIGHT
+var _diamond := diamond(BODY_RADIUS)
+var _rim := diamond(RIM_RADIUS)
 
 
 func sync(simulation: GameSimulation, visual: RoundVisualDefinition = null) -> void:
 	_body = visual.threat_color if visual != null else DEFAULT_BODY
 	_core = visual.trail_hot_color if visual != null else DEFAULT_CORE
 	_accent = visual.accent_color if visual != null else DEFAULT_ACCENT
+	_ink = visual.free_color if visual != null else DEFAULT_INK
 	_lifecycle = simulation.boss.lifecycle()
 	_lifecycle_ticks = simulation.boss.despawn_ticks_left
 	visible = _lifecycle != ActorLifecycle.State.DESPAWNED
@@ -45,8 +58,44 @@ func sync(simulation: GameSimulation, visual: RoundVisualDefinition = null) -> v
 	queue_redraw()
 
 
+## Losango de raio `radius`, no sentido horário a partir do topo. Pura: o teste de silhueta usa a
+## mesma função que `_draw`, então a geometria medida é a geometria desenhada.
+static func diamond(radius: float) -> PackedVector2Array:
+	return PackedVector2Array([
+		Vector2(0.0, -radius),
+		Vector2(radius, 0.0),
+		Vector2(0.0, radius),
+		Vector2(-radius, 0.0),
+	])
+
+
 func presentation_colors() -> Dictionary:
-	return {"body": _body, "core": _core, "accent": _accent}
+	return {"body": _body, "core": _core, "accent": _accent, "ink": _ink}
+
+
+## Ponto em que um raio na direção `direction` cruza o losango de raio `radius`.
+##
+## O anel é um losango, não um círculo: a distância do centro à sua borda vale `radius` sobre os
+## eixos e `radius/√2` nas diagonais. Multiplicar uma direção normalizada por `RIM_RADIUS`, como
+## se o anel fosse circular, acerta só nas quatro direções axiais — e o chefe anda em dezasseis
+## (`BossBehaviorController.DIRECTION_X`). Nas outras doze a marca nascia até 1,46 px fora do
+## contorno, mais do que a espessura de 1 px do próprio anel: deixava de ser a proa da silhueta e
+## virava um ponto solto ao lado dela, no rumo em que o jogador mais precisa de ler a ameaça.
+##
+## Pura e estática: o teste de âncora usa a mesma função que `_draw`, então a geometria medida é
+## a geometria desenhada — o mesmo contrato de `diamond()`.
+static func rim_point(direction: Vector2, radius: float) -> Vector2:
+	var span := absf(direction.x) + absf(direction.y)
+	if span <= 0.0:
+		return Vector2.ZERO
+	return direction * (radius / span)
+
+
+## Geometria da silhueta, para quem precisa provar que o anel de tinta envolve o corpo sem que
+## nada da apresentação precise renderizar um frame. `mark_origin` é onde a proa de PURSUIT e a
+## haste de SWEEP encostam no anel para o rumo observado no último `sync`.
+func silhouette_geometry() -> Dictionary:
+	return {"body": _diamond, "rim": _rim, "mark_origin": rim_point(_facing, RIM_RADIUS)}
 
 
 func presentation_state() -> Dictionary:
@@ -58,100 +107,76 @@ func presentation_state() -> Dictionary:
 
 
 func _draw() -> void:
+	if _lifecycle == ActorLifecycle.State.DESPAWNED:
+		return
 	var pulse := 0.5 + 0.5 * sin(float(_phase_step) * TAU / 30.0)
-	var reach := 7.0 + float(_boss_phase)
-	var body := _body if not _stasis else _accent
 	if _lifecycle == ActorLifecycle.State.DYING:
 		for index in 8:
 			var direction := Vector2.from_angle(float(index) * TAU / 8.0)
 			draw_line(direction * 4.0, direction * (8.0 + pulse * 2.0), _core, 0.8, true)
 		return
-	if not show_body:
-		_draw_tactical_only(reach)
-		return
-	draw_set_transform(Vector2(1.8, 4.2), 0.0, Vector2(1.0, 0.46))
-	draw_circle(Vector2.ZERO, reach + 1.0, Color(0.0, 0.005, 0.02, 0.7), true, -1.0, true)
-	draw_set_transform(Vector2.ZERO)
-	var aura := body
-	aura.a = 0.08 + pulse * 0.04
-	draw_circle(Vector2.ZERO, reach + 3.0, aura, true, -1.0, true)
-	# Desenho orbital aberto comunica volume sem fingir uma área letal circular.
-	var orbit_color := _accent
-	orbit_color.a = 0.45
-	draw_set_transform(Vector2(0.0, 1.0), -0.3, Vector2(1.0, 0.48))
-	draw_arc(Vector2.ZERO, reach + 2.0, 0.15, PI - 0.2, 20, orbit_color, 0.65, true)
-	draw_arc(Vector2.ZERO, reach + 2.0, PI + 0.15, TAU - 0.2, 20, orbit_color, 0.65, true)
-	draw_set_transform(Vector2.ZERO)
-	# Cada fase adiciona um par de lâminas, além de mudar o padrão autorado.
-	var blade_count := 4 + _boss_phase * 2
-	for index in blade_count:
-		var angle := float(index) * TAU / float(blade_count) - PI * 0.25
-		var direction := Vector2.from_angle(angle)
-		var tangent := direction.orthogonal()
-		var tip := direction * (reach + (1.0 if _surging else 0.0))
-		var blade := PackedVector2Array([
-			direction * 3.0 - tangent, tip - tangent * 0.5,
-			tip + direction * 1.0, direction * 3.8 + tangent * 1.5,
-		])
-		draw_colored_polygon(blade, body.darkened(0.3))
-		draw_polyline(_closed(blade), Color("020913"), 1.0, true)
-		draw_line(direction * 3.7, tip, body.lightened(0.15), 0.6, true)
-	var hull := PackedVector2Array([
-		Vector2(0.0, -5.0), Vector2(4.5, -1.0), Vector2(3.1, 3.0),
-		Vector2(0.0, 5.0), Vector2(-3.1, 3.0), Vector2(-4.5, -1.0),
-	])
-	draw_colored_polygon(hull, body.darkened(0.55))
-	draw_polyline(_closed(hull), Color("020913"), 1.5, true)
-	draw_colored_polygon(PackedVector2Array([
-		Vector2(0.0, -5.0), Vector2(4.5, -1.0), Vector2(0.0, 1.8), Vector2(-4.5, -1.0),
-	]), body)
-	draw_colored_polygon(PackedVector2Array([
-		Vector2(-4.5, -1.0), Vector2(0.0, 1.8), Vector2(0.0, 5.0), Vector2(-3.1, 3.0),
-	]), body.darkened(0.25))
-	draw_line(Vector2(-3.6, -1.3), Vector2(0.0, -4.4), body.lightened(0.7), 0.7, true)
-	draw_circle(Vector2.ZERO, 2.4, Color("030913"), true, -1.0, true)
-	draw_circle(Vector2.ZERO, 1.6, _core, true, -1.0, true)
-	# A cruz de cinco células é o footprint real do Núcleo, iluminada no centro.
+	# Footprint real usado por GameSimulation.boss_contact_cells(), também no palco 3D.
 	for offset: Vector2 in [Vector2.ZERO, Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT]:
-		draw_rect(Rect2(offset - Vector2(0.3, 0.3), Vector2(0.6, 0.6)), Color.WHITE)
+		draw_rect(Rect2(offset, Vector2.ONE), Color(_core, 0.3))
+	if show_body:
+		_draw_body()
+	_draw_tactical(pulse)
+
+
+func _draw_body() -> void:
+	var aura := _accent
+	aura.a = 0.42 if _surging else (0.2 if _phase_step % 16 < 8 else 0.35)
+	var aura_reach := 8.0 if _surging else 6.0
+	draw_polyline(PackedVector2Array([
+		Vector2(0.0, -aura_reach), Vector2(aura_reach, 0.0), Vector2(0.0, aura_reach),
+		Vector2(-aura_reach, 0.0), Vector2(0.0, -aura_reach),
+	]), aura, 1.0)
+	# Tendrils alternados mantêm energia sem Tween/relógio e seguem o tick observado. Vêm antes do
+	# anel de tinta: assim eles emergem de trás da silhueta em vez de furá-la em quatro pontos.
+	var reach := 10.0 if _surging else (8.0 if _phase_step % 16 < 8 else 7.0)
+	draw_line(Vector2(-BODY_RADIUS, 0.0), Vector2(-reach, -2.0), _body)
+	draw_line(Vector2(BODY_RADIUS, 0.0), Vector2(reach, 2.0), _body)
+	draw_line(Vector2(0.0, -BODY_RADIUS), Vector2(2.0, -reach), _body)
+	draw_line(Vector2(0.0, BODY_RADIUS), Vector2(-2.0, reach), _body)
+
+	# Anel de tinta: o único canal da ameaça que não depende de matiz. `threat_color` fica a
+	# 1,27:1 de `BOUNDARY` e a 1,82:1 de `TRAIL` na pior dicromacia, então o corpo sozinho não
+	# separa a ameaça do chão em que ela anda. A tinta é o `free_color` da rodada — o mais escuro
+	# da paleta — e mede ≥ 8,9:1 contra a borda e ≥ 11,2:1 contra a trilha. Ver ADR-0011.
+	draw_colored_polygon(_rim, _ink)
+	draw_colored_polygon(_diamond, _body)
+	draw_polyline(PackedVector2Array([
+		Vector2(0.0, -BODY_RADIUS), Vector2(BODY_RADIUS, 0.0), Vector2(0.0, BODY_RADIUS),
+		Vector2(-BODY_RADIUS, 0.0), Vector2(0.0, -BODY_RADIUS),
+	]), _core, 1.0)
+	draw_rect(Rect2(-1.0, -1.0, 3.0, 3.0), _core)
+	draw_rect(Rect2(0.0, 0.0, 1.0, 1.0), Color.WHITE)
+
+
+func _draw_tactical(pulse: float) -> void:
+	var aura := Color(_accent, 0.42 if _surging else 0.25)
+	# A silhueta comunica o contrato de movimento antes que ele ameace a trilha. As marcas nascem
+	# na borda do anel, não na do corpo, para não abrir o contorno na direção do movimento — e a
+	# borda do anel é `rim_point`, não `RIM_RADIUS`, porque o anel é losango (ver a função).
+	var mark_origin := rim_point(_facing, RIM_RADIUS)
 	match _behavior_pattern:
 		BossBehaviorProfileScript.Pattern.PURSUIT:
-			var tangent := _facing.orthogonal()
-			var nose := _facing * (reach + 4.0)
-			draw_polyline(PackedVector2Array([
-				nose - _facing * 2.0 - tangent * 1.3, nose,
-				nose - _facing * 2.0 + tangent * 1.3,
-			]), _core, 0.85, true)
+			var nose := _facing * (11.0 if _surging else 9.0)
+			draw_line(mark_origin, nose, _core, 1.0)
+			draw_circle(nose, 1.5, _core, false, 1.0)
 		BossBehaviorProfileScript.Pattern.SWEEP:
-			draw_arc(Vector2.ZERO, reach + 3.0, _facing.angle() - 0.75, _facing.angle() + 0.75, 12, _core, 0.75, true)
+			draw_arc(Vector2.ZERO, 7.0, 0.0, TAU, 16, aura, 1.0)
+			draw_line(mark_origin, _facing * 9.0, _core, 1.0)
+		_:
+			pass
+
+	# Cada fase acrescenta um par de marcas sem deslocar a silhueta ou a âncora de rumo.
+	for index in (_boss_phase + 1) * 2:
+		var angle := -PI * 0.5 + float(index) * TAU / float((_boss_phase + 1) * 2)
+		var direction := Vector2.from_angle(angle)
+		draw_line(direction * 6.5, direction * 7.5, _accent, 0.7, true)
 	if _cornered:
-		# Fúria só aparece enquanto o contador autoritativo está ativo.
-		var warning := _core
-		warning.a = 0.5 + pulse * 0.5
-		draw_arc(Vector2.ZERO, reach + 4.5, 0.0, TAU, 40, warning, 0.8, true)
+		# Fúria aparece apenas enquanto o contador autoritativo está ativo.
+		draw_arc(Vector2.ZERO, 11.5, 0.0, TAU, 40, Color(_core, 0.5 + pulse * 0.5), 0.8, true)
 	if _stasis:
-		draw_arc(Vector2.ZERO, reach + 2.0, 0.0, TAU, 32, _accent, 1.0, true)
-
-
-func _closed(points: PackedVector2Array) -> PackedVector2Array:
-	var result := points.duplicate()
-	result.append(points[0])
-	return result
-
-
-func _draw_tactical_only(reach: float) -> void:
-	for offset: Vector2 in [Vector2.ZERO, Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT]:
-		draw_rect(Rect2(offset - Vector2(0.3, 0.3), Vector2(0.6, 0.6)), _core)
-	if _behavior_pattern == BossBehaviorProfileScript.Pattern.PURSUIT:
-		var tangent := _facing.orthogonal()
-		var nose := _facing * (reach + 4.0)
-		draw_polyline(PackedVector2Array([
-			nose - _facing * 2.0 - tangent * 1.3, nose,
-			nose - _facing * 2.0 + tangent * 1.3,
-		]), _core, 0.85, true)
-	elif _behavior_pattern == BossBehaviorProfileScript.Pattern.SWEEP:
-		draw_arc(Vector2.ZERO, reach + 3.0, _facing.angle() - 0.75, _facing.angle() + 0.75, 12, _core, 0.75, true)
-	if _cornered:
-		draw_arc(Vector2.ZERO, reach + 4.5, 0.0, TAU, 40, _core, 0.8, true)
-	if _stasis:
-		draw_arc(Vector2.ZERO, reach + 2.0, 0.0, TAU, 32, _accent, 1.0, true)
+		draw_arc(Vector2.ZERO, 9.0, 0.0, TAU, 32, _accent, 1.0, true)

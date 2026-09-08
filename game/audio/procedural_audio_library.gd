@@ -17,64 +17,108 @@ const MUSIC_BEATS := 8
 ## consequência.
 const PRIORITY_IDLE := -1
 
+## Forma do envelope, autorada ao lado de `intent`. Até aqui os dez cues dividiam um
+## único envelope proporcional à duração (attack = 8% do cue), e a consequência era
+## audível: `death` só chegava a amplitude cheia ~34 ms depois de começar e
+## `game_over` ~60 ms. **Um impacto com fade-in não é um impacto** — ele chega como
+## um "uuf" em vez de um golpe, e chega tarde demais para pertencer ao tick que o
+## causou. Agora attack e release são **milissegundos absolutos**: um cue longo pode
+## ter cauda longa sem por isso demorar a começar.
+##
+## `onset` diz de que tipo é a subida, e é o que o teste verifica:
+##   `&"impact"`   — a coisa aconteceu **agora**. Sobe dentro de
+##                   `IMPACT_ATTACK_CEILING_MS` e o pico do PCM cai no começo do cue.
+##   `&"announce"` — a coisa **vai** acontecer, ou acabou de mudar de estado. Sobe com
+##                   folga; um anúncio que estala soa como erro.
+## Cada cauda usa ADSR autorado por significado; os impactos mantêm início rápido
+## mesmo quando decay, sustain e pulsação diferenciam atores e recompensas.
+const IMPACT_ATTACK_CEILING_MS := 8.0
+
 const CUE_RECIPES := {
 	&"trail": {
 		"intent": "pontua que a trilha começou; é o cue mais frequente e o mais barato de perder",
 		"priority": 10,
+		"onset": &"impact",
 		"hz": 740.0, "end_hz": 920.0, "seconds": 0.055, "gain": 0.19, "wave": 1,
 		"attack_msec": 2.0, "decay_msec": 12.0, "sustain": 0.35, "release_msec": 25.0,
 	},
 	&"round_start": {
 		"intent": "abre a rodada; anuncia, não reage",
 		"priority": 20,
+		"onset": &"announce",
 		"hz": 262.0, "end_hz": 523.0, "seconds": 0.34, "gain": 0.28, "wave": 0,
-		"attack_msec": 14.0, "decay_msec": 60.0, "sustain": 0.65, "release_msec": 130.0,
+		"attack_msec": 28.0, "decay_msec": 60.0, "sustain": 0.65, "release_msec": 130.0,
 	},
 	&"respawn": {
 		"intent": "devolve o controle ao jogador depois da morte",
 		"priority": 30,
+		"onset": &"announce",
 		"hz": 330.0, "end_hz": 660.0, "seconds": 0.24, "gain": 0.26, "wave": 0,
-		"attack_msec": 10.0, "decay_msec": 45.0, "sustain": 0.55, "release_msec": 100.0,
+		"attack_msec": 20.0, "decay_msec": 45.0, "sustain": 0.55, "release_msec": 100.0,
+	},
+	## O único cue que **não** nasce de um `GameEvent`: nasce de uma aresta lida sobre
+	## o snapshot confirmado (`TrailExposure.crossed_warning`). Por isso não aparece em
+	## `QixAudioDirector.cue_for_kind` — ver `QixAudioDirector.EXPOSURE_CUE`.
+	##
+	## Um terço maior a subir, em seno macio: abre para cima e não resolve. É o papel a
+	## esticar sob o traço longo, não um alarme — a exposição foi escolhida pelo jogador,
+	## e o jogo confirma a aposta em vez de a repreender. O ganho fica abaixo do `capture`
+	## (0,30) e o anúncio sobe com folga, para nunca competir com o transiente de um
+	## acontecimento de facto. A prioridade 35 é a mesma do pulso háptico do mesmo limiar
+	## (`QixHapticFeedback._exposure_pulse`): ouvir e sentir descrevem o mesmo instante.
+	&"exposure": {
+		"intent": "a trilha deixou de ser um compromisso e virou uma aposta",
+		"priority": 35,
+		"onset": &"announce",
+		"hz": 466.16, "end_hz": 622.25, "seconds": 0.20, "gain": 0.22, "wave": 0,
+		"attack_msec": 26.0, "decay_msec": 35.0, "sustain": 0.65, "release_msec": 90.0,
 	},
 	&"capture": {
 		"intent": "confirma território conquistado; a recompensa do laço",
 		"priority": 40,
+		"onset": &"impact",
 		"hz": 392.0, "end_hz": 784.0, "seconds": 0.22, "gain": 0.30, "wave": 0,
 		"attack_msec": 4.0, "decay_msec": 35.0, "sustain": 0.48, "release_msec": 130.0,
 	},
 	&"reject": {
 		"intent": "diz que o laço não fechou — erro de leitura, não punição",
 		"priority": 45,
+		"onset": &"impact",
 		"hz": 180.0, "end_hz": 110.0, "seconds": 0.16, "gain": 0.25, "wave": 2,
 		"attack_msec": 3.0, "decay_msec": 22.0, "sustain": 0.30, "release_msec": 85.0,
 	},
 	&"shield": {
 		"intent": "avisa que o escudo entrou no fim; é um relógio, não um impacto",
 		"priority": 92,
+		"onset": &"impact",
 		"hz": 880.0, "end_hz": 880.0, "seconds": 0.12, "gain": 0.22, "wave": 1,
 		"attack_msec": 6.0, "decay_msec": 18.0, "sustain": 0.60, "release_msec": 35.0,
 	},
 	&"round_clear": {
 		"intent": "fecha a rodada; carrega a continuidade para a próxima",
 		"priority": 80,
+		"onset": &"announce",
 		"hz": 523.0, "end_hz": 1047.0, "seconds": 0.52, "gain": 0.34, "wave": 0,
-		"attack_msec": 8.0, "decay_msec": 90.0, "sustain": 0.70, "release_msec": 240.0,
+		"attack_msec": 42.0, "decay_msec": 90.0, "sustain": 0.70, "release_msec": 240.0,
 	},
 	&"campaign_complete": {
 		"intent": "fecha a campanha inteira; o cue mais raro do jogo",
 		"priority": 90,
+		"onset": &"announce",
 		"hz": 440.0, "end_hz": 1320.0, "seconds": 0.92, "gain": 0.34, "wave": 0,
-		"attack_msec": 12.0, "decay_msec": 140.0, "sustain": 0.65, "release_msec": 400.0,
+		"attack_msec": 74.0, "decay_msec": 140.0, "sustain": 0.65, "release_msec": 400.0,
 	},
 	&"game_over": {
 		"intent": "encerra a tentativa; nada depois dele importa mais que ele",
 		"priority": 95,
+		"onset": &"impact",
 		"hz": 220.0, "end_hz": 55.0, "seconds": 0.75, "gain": 0.34, "wave": 2,
 		"attack_msec": 5.0, "decay_msec": 120.0, "sustain": 0.40, "release_msec": 420.0,
 	},
 	&"death": {
 		"intent": "a perda de vida; o acontecimento mais alto da sessão",
 		"priority": 100,
+		"onset": &"impact",
 		"hz": 130.0, "end_hz": 44.0, "seconds": 0.42, "gain": 0.42, "wave": 2,
 		"attack_msec": 3.0, "decay_msec": 55.0, "sustain": 0.32, "release_msec": 280.0,
 	},
@@ -82,91 +126,109 @@ const CUE_RECIPES := {
 		"intent": "um patrulheiro emerge na borda; sinal curto de uma nova rota perigosa",
 		"priority": 91, "hz": 220.0, "end_hz": 330.0, "seconds": 0.13, "gain": 0.17, "wave": 3,
 		"attack_msec": 5.0, "decay_msec": 20.0, "sustain": 0.35, "release_msec": 70.0,
+		"onset": &"impact",
 	},
 	&"dart_arm": {
 		"intent": "telegrapha um dardo antes de armar; o tom ascendente pede atenção à direção",
 		"priority": 91, "hz": 1200.0, "end_hz": 1800.0, "seconds": 0.10, "gain": 0.11, "wave": 3,
 		"attack_msec": 4.0, "decay_msec": 15.0, "sustain": 0.40, "release_msec": 35.0,
+		"onset": &"impact",
 	},
 	&"dart_fire": {
 		"intent": "confirma o disparo já armado; estalo breve para não mascarar o telegraph seguinte",
 		"priority": 91, "hz": 1600.0, "end_hz": 650.0, "seconds": 0.045, "gain": 0.12, "wave": 2,
 		"attack_msec": 1.5, "decay_msec": 8.0, "sustain": 0.25, "release_msec": 28.0,
+		"onset": &"impact",
 	},
 	&"trail_cut": {
 		"intent": "um dardo cortou a trilha; impacto seco identifica ameaça imediata ao traçado",
 		"priority": 94, "hz": 340.0, "end_hz": 70.0, "seconds": 0.16, "gain": 0.34, "wave": 2,
 		"attack_msec": 2.0, "decay_msec": 25.0, "sustain": 0.25, "release_msec": 95.0,
+		"onset": &"impact",
 	},
 	&"ember": {
 		"intent": "uma brasa persegue a trilha; dois pulsos ásperos pedem movimento contínuo",
 		"priority": 93, "hz": 300.0, "end_hz": 620.0, "seconds": 0.25, "gain": 0.24, "wave": 2,
 		"attack_msec": 4.0, "decay_msec": 25.0, "sustain": 0.65, "release_msec": 70.0, "pulse_hz": 8.0,
+		"onset": &"impact",
 	},
 	&"threat": {
 		"intent": "a pressão subiu; pulso grave marca uma mudança confirmada do diretor",
 		"priority": 91, "hz": 110.0, "end_hz": 165.0, "seconds": 0.19, "gain": 0.20, "wave": 3,
-		"attack_msec": 6.0, "decay_msec": 25.0, "sustain": 0.45, "release_msec": 95.0,
+		"attack_msec": 20.0, "decay_msec": 25.0, "sustain": 0.45, "release_msec": 95.0,
+		"onset": &"announce",
 	},
 	&"overtime": {
 		"intent": "o tempo do setor acabou; três pulsos anunciam pressão crescente",
 		"priority": 93, "hz": 440.0, "end_hz": 660.0, "seconds": 0.50, "gain": 0.24, "wave": 3,
 		"attack_msec": 6.0, "decay_msec": 30.0, "sustain": 0.70, "release_msec": 130.0, "pulse_hz": 6.0,
+		"onset": &"impact",
 	},
 	&"boss_phase": {
 		"intent": "o Núcleo mudou de fase; ascensão grave distingue evolução de projétil",
 		"priority": 92, "hz": 82.0, "end_hz": 246.0, "seconds": 0.34, "gain": 0.28, "wave": 2,
-		"attack_msec": 5.0, "decay_msec": 50.0, "sustain": 0.50, "release_msec": 190.0,
+		"attack_msec": 20.0, "decay_msec": 50.0, "sustain": 0.50, "release_msec": 190.0,
+		"onset": &"announce",
 	},
 	&"boss_cornered": {
 		"intent": "o Núcleo encurralado entrou em fúria; o ronco curto antecede a reação",
 		"priority": 94, "hz": 70.0, "end_hz": 210.0, "seconds": 0.28, "gain": 0.30, "wave": 2,
-		"attack_msec": 3.0, "decay_msec": 40.0, "sustain": 0.50, "release_msec": 120.0,
+		"attack_msec": 20.0, "decay_msec": 40.0, "sustain": 0.50, "release_msec": 120.0,
+		"onset": &"announce",
 	},
 	&"extinguish": {
 		"intent": "território neutralizou um ator; pequena nota descendente confirma alívio",
 		"priority": 35, "hz": 620.0, "end_hz": 310.0, "seconds": 0.09, "gain": 0.13, "wave": 0,
 		"attack_msec": 3.0, "decay_msec": 12.0, "sustain": 0.25, "release_msec": 55.0,
+		"onset": &"impact",
 	},
 	&"calm": {
 		"intent": "a captura grande comprou respiro; tom arredondado confirma queda de pressão",
 		"priority": 36, "hz": 440.0, "end_hz": 330.0, "seconds": 0.22, "gain": 0.15, "wave": 0,
-		"attack_msec": 12.0, "decay_msec": 45.0, "sustain": 0.45, "release_msec": 120.0,
+		"attack_msec": 20.0, "decay_msec": 45.0, "sustain": 0.45, "release_msec": 120.0,
+		"onset": &"announce",
 	},
 	&"beacon": {
 		"intent": "uma baliza foi cercada; sino agudo diferencia objetivo da captura de área",
 		"priority": 55, "hz": 660.0, "end_hz": 990.0, "seconds": 0.18, "gain": 0.24, "wave": 0,
 		"attack_msec": 2.0, "decay_msec": 25.0, "sustain": 0.30, "release_msec": 120.0,
+		"onset": &"impact",
 	},
 	&"velocity": {
 		"intent": "Velocidade iniciou; varredura brilhante sobe uma oitava e meia",
 		"priority": 60, "hz": 440.0, "end_hz": 1320.0, "seconds": 0.20, "gain": 0.22, "wave": 3,
 		"attack_msec": 4.0, "decay_msec": 25.0, "sustain": 0.45, "release_msec": 100.0,
+		"onset": &"impact",
 	},
 	&"stasis": {
 		"intent": "Estase iniciou; tom cristalino desce e sustenta a suspensão do Núcleo",
 		"priority": 60, "hz": 760.0, "end_hz": 380.0, "seconds": 0.35, "gain": 0.23, "wave": 0,
-		"attack_msec": 10.0, "decay_msec": 55.0, "sustain": 0.55, "release_msec": 180.0,
+		"attack_msec": 20.0, "decay_msec": 55.0, "sustain": 0.55, "release_msec": 180.0,
+		"onset": &"announce",
 	},
 	&"shield_freeze": {
 		"intent": "Âncora iniciou; intervalo luminoso anuncia reserva de escudo protegida",
 		"priority": 60, "hz": 523.0, "end_hz": 659.0, "seconds": 0.32, "gain": 0.23, "wave": 3,
 		"attack_msec": 7.0, "decay_msec": 40.0, "sustain": 0.55, "release_msec": 160.0,
+		"onset": &"impact",
 	},
 	&"purge": {
 		"intent": "Expurgo neutralizou as ameaças menores; impacto grave com cauda limpa",
 		"priority": 62, "hz": 150.0, "end_hz": 42.0, "seconds": 0.30, "gain": 0.31, "wave": 3,
 		"attack_msec": 2.0, "decay_msec": 38.0, "sustain": 0.28, "release_msec": 180.0,
+		"onset": &"impact",
 	},
 	&"item_end": {
 		"intent": "um efeito temporário acabou; aviso descendente discreto devolve atenção ao campo",
 		"priority": 91, "hz": 880.0, "end_hz": 440.0, "seconds": 0.12, "gain": 0.15, "wave": 3,
 		"attack_msec": 5.0, "decay_msec": 15.0, "sustain": 0.35, "release_msec": 65.0,
+		"onset": &"impact",
 	},
 	&"sealed": {
 		"intent": "o Núcleo foi selado; resolução grave distingue a vitória especial",
 		"priority": 82, "hz": 196.0, "end_hz": 784.0, "seconds": 0.50, "gain": 0.32, "wave": 3,
 		"attack_msec": 5.0, "decay_msec": 70.0, "sustain": 0.50, "release_msec": 260.0,
+		"onset": &"impact",
 	},
 }
 
@@ -182,6 +244,30 @@ static func priority_for(cue_name: StringName) -> int:
 static func duration_msec(cue_name: StringName) -> int:
 	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
 	return maxi(1, int(round(float(recipe["seconds"]) * 1000.0)))
+
+
+## De que tipo é a subida do cue: `&"impact"` ou `&"announce"`. Ver `CUE_RECIPES`.
+static func onset_for(cue_name: StringName) -> StringName:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return recipe["onset"]
+
+
+## Tempo, em milissegundos, até o envelope chegar a amplitude cheia.
+static func attack_msec(cue_name: StringName) -> float:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return float(recipe["attack_msec"])
+
+
+## Duração, em milissegundos, da cauda que fecha o cue.
+static func release_msec(cue_name: StringName) -> float:
+	var recipe: Dictionary = CUE_RECIPES.get(cue_name, CUE_RECIPES[&"trail"])
+	return float(recipe["release_msec"])
+
+
+## O envelope do cue num instante, isolado do portador. Existe para que o teste
+## possa afirmar a forma da subida sem ter de separar envelope de onda no PCM.
+static func envelope_at_msec(cue_name: StringName, elapsed_msec: float) -> float:
+	return envelope_at(cue_name, elapsed_msec / 1000.0)
 
 
 static func cue(cue_name: StringName) -> AudioStreamWAV:
