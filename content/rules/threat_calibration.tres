@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ThreatProfile" format=3]
+
+[ext_resource type="Script" path="res://game/rules/threat_profile.gd" id="1_tkhs3"]
+
+[resource]
+script = ExtResource("1_tkhs3")
+ladder_dart_interval = PackedInt32Array(384, 336, 288, 240, 192, 144, 96, 72, 60, 48, 40, 96, 72, 48, 32, 24)
+ladder_dart_speed_fp = PackedInt32Array(85, 85, 85, 85, 85, 85, 85, 85, 128, 256, 256, 512, 512, 512, 512, 512)
+ladder_walker_speed_fp = PackedInt32Array(64, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 176, 192)
+ladder_max_walkers = PackedInt32Array(1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4)

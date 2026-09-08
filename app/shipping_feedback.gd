@@ -20,17 +20,19 @@ func ensure_ready() -> void:
 
 func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) -> void:
 	ensure_ready()
-	audio.sync(session, events, paused)
-	haptics.sync(events, exposure_of(session))
+	var exposure := exposure_of(session)
+	# A travessia do limiar é uma aresta com **um** dono: a memória do tick anterior vive em
+	# `haptics`. O hub pergunta antes de a avançar e entrega a mesma resposta aos dois canais,
+	# porque o que se ouve e o que se sente descrevem o mesmo instante — duas cópias da
+	# memória divergiriam em silêncio no primeiro tick em que só um dos canais sincronizasse.
+	var crossed := haptics.would_cross_warning(exposure)
+	audio.sync(session, events, paused, crossed)
+	haptics.sync(events, exposure, paused)
 
 
-## A exposição da trilha lida do snapshot já confirmado, para a háptica saber o instante em
-## que o jogador atravessa o limiar de risco. Leitura pura: o hub observa a sessão, nunca a
-## escreve.
-##
-## O cue sonoro do mesmo limiar ainda não existe — `QixProceduralAudioLibrary` está em
-## reautoração de envelopes (ver `docs/LOOP_LEDGER.md`), e um cue novo autorado agora nasceria
-## com a forma antiga.
+## A exposição da trilha lida do snapshot já confirmado, para som e háptica saberem o
+## instante em que o jogador atravessa o limiar de risco. Leitura pura: o hub observa a
+## sessão, nunca a escreve.
 static func exposure_of(session: GameSession) -> float:
 	if session == null:
 		return 0.0

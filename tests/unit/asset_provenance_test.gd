@@ -51,7 +51,7 @@ const SCANNED_DIRS: Array[String] = [
 
 const MEDIA_EXTENSIONS: Array[String] = [
 	"png", "jpg", "jpeg", "webp", "bmp", "svg", "tga",
-	"wav", "ogg", "mp3", "ttf", "otf",
+	"wav", "ogg", "mp3", "ttf", "otf", "glb", "blend",
 ]
 
 const MANIFEST := "res://assets/ASSET-PROVENANCE.md"

@@ -7,6 +7,10 @@ const BUS_MUSIC := &"Qix Music"
 const BUS_SFX := &"Qix SFX"
 const SFX_VOICES := 8
 const TRAIL_THROTTLE_MSEC := 36
+## O cue do limiar de exposição da trilha. Não está em `cue_for_kind` porque não é
+## um evento: é uma aresta lida sobre o snapshot já confirmado, e quem a reconhece
+## é o hub de feedback, que compara dois ticks. Ver `QixFeedbackHub.sync`.
+const EXPOSURE_CUE := &"exposure"
 
 @export_range(0.0, 1.0, 0.01) var master_volume := 0.90
 @export_range(0.0, 1.0, 0.01) var music_volume := 0.52
@@ -36,12 +40,15 @@ var _pause_started_msec := -1
 ## runtime headless nunca os inicia — relê-la devolveria `false` mesmo depois de a
 ## pausa ter sido aplicada, e o caminho de mix ficaria por testar.
 var _paused_voices := 0
+## Se a música recebeu a ordem de suspensão na última pausa. Pela mesma razão de
+## `_paused_voices`: reler `AudioStreamPlayer.stream_paused` devolve `false` fora
+## da árvore mesmo depois do `set`, portanto a ordem dada só é observável aqui.
+var _paused_music := false
 
 
 func _ready() -> void:
 	ensure_ready()
-	if enabled and runtime_allows_playback() and _music.stream != null and not _music.playing:
-		_music.play()
+	_start_loaded_music_if_stopped()
 
 
 func _exit_tree() -> void:
@@ -52,16 +59,20 @@ func _exit_tree() -> void:
 ## AudioStreamPlaybackWAV sobrevivendo ao teardown de builds e smoke tests.
 func shutdown() -> void:
 	if is_instance_valid(_music):
-		_music.stop()
+		_stop_music()
 		_music.stream = null
+		_music.stream_paused = false
 	for voice in _voices:
 		if is_instance_valid(voice):
 			voice.stop()
 			voice.stream = null
+			voice.stream_paused = false
 	_music_cache.clear()
 	_cue_cache.clear()
 	_round_index = -1
 	_release_all_voices()
+	_release_pause()
+	_last_trail_msec = -TRAIL_THROTTLE_MSEC
 
 
 func ensure_ready() -> void:
@@ -102,15 +113,45 @@ static func arguments_allow_playback(
 
 
 ## Interface única para o bootstrap após a simulação emitir eventos.
-func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) -> void:
+##
+## `exposure_crossed` é a aresta de `TrailExposure.crossed_warning` para este tick, calculada
+## pelo hub. O default `false` preserva quem sincroniza só por eventos.
+func sync(
+	session: GameSession,
+	events: Array[GameEvent],
+	paused: bool = false,
+	exposure_crossed: bool = false,
+) -> void:
 	ensure_ready()
 	if session != null and session.round_index != _round_index:
 		play_round_music(session.round_index)
-	apply_pause(paused, Time.get_ticks_msec())
-	if not enabled:
+	apply_pause(paused, _now_msec())
+	if not enabled or _paused:
 		return
-	for cue_name in cues_for_events(events):
+	var cues := cues_for_events(events)
+	for cue_name in cues:
 		play_cue(cue_name)
+	# Depois dos cues de evento de propósito: eles reservam voz primeiro, e o aviso entra
+	# no que sobrar — nunca por cima da notícia do tick.
+	if exposure_crossed and exposure_cue_survives(cues):
+		play_cue(EXPOSURE_CUE)
+
+
+## O aviso de exposição só soa se nada mais alto tiver acontecido no mesmo tick.
+##
+## Ao contrário da háptica — um actuador, um pulso, e por isso uma disputa que `plan` já
+## resolve — o mix tem oito vozes: sem esta regra o aviso entraria numa voz livre por cima
+## da captura ou da morte. E o problema não é disputa de canal, é que o aviso **perde o
+## objeto**: se o laço fechou, a notícia é o território; se o jogador morreu, já não há
+## trilha para estar exposta. A regra e o número são os mesmos de
+## `QixHapticFeedback._exposure_pulse`, para que ouvir e sentir não discordem sobre qual foi
+## o acontecimento do tick.
+static func exposure_cue_survives(event_cues: Array[StringName]) -> bool:
+	var exposure_priority := QixProceduralAudioLibrary.priority_for(EXPOSURE_CUE)
+	for cue_name in event_cues:
+		if QixProceduralAudioLibrary.priority_for(cue_name) > exposure_priority:
+			return false
+	return true
 
 
 ## Congela ou retoma **todo** o feedback sonoro: a música e as oito vozes de SFX.
@@ -125,6 +166,7 @@ func sync(session: GameSession, events: Array[GameEvent], paused: bool = false) 
 ## retomar roubaria a voz do `death` — exatamente o corte que `select_voice`
 ## existe para impedir. O mesmo vale para o estrangulamento de `trail`.
 func apply_pause(paused: bool, now_msec: int) -> void:
+	var resuming := not paused and _paused
 	if paused and not _paused:
 		_pause_started_msec = now_msec
 	elif not paused and _paused:
@@ -134,18 +176,29 @@ func apply_pause(paused: bool, now_msec: int) -> void:
 			_voice_free_msec[index] += elapsed
 		_last_trail_msec += elapsed
 	_paused = paused
-	if _music != null and _music.is_inside_tree():
-		_music.stream_paused = paused
-	# Sem guarda de `is_inside_tree`: `stream_paused` só percorre os playbacks vivos,
-	# portanto é inócuo fora da árvore, e assim a ordem dada é a mesma no runtime e
-	# no runner de teste — que corre inteiro dentro de `_initialize()`, antes de a
-	# árvore existir.
+	# Uma só guarda para a música e para as oito vozes: `is_instance_valid`, nunca
+	# `is_inside_tree`. `stream_paused` só percorre os playbacks vivos, portanto é
+	# inócuo fora da árvore, e assim a ordem dada é a mesma no runtime e no runner
+	# de teste — que corre inteiro dentro de `_initialize()`, antes de a árvore
+	# existir. Enquanto a música tinha guarda própria, um director ainda fora da
+	# árvore contava as oito vozes como suspensas e deixava a música sem ordem
+	# nenhuma; `presentation_state` afirmava uma pausa que a música não recebeu.
+	_paused_music = false
+	if is_instance_valid(_music):
+		_set_player_paused(_music, paused)
+		_paused_music = paused
 	var commanded := 0
 	for voice in _voices:
 		if is_instance_valid(voice):
-			voice.stream_paused = paused
+			_set_player_paused(voice, paused)
 			commanded += 1
 	_paused_voices = commanded if paused else 0
+	# M pode desligar e religar a música enquanto P mantém a pausa. stop() encerra o
+	# playback: stream_paused=false não cria outro. A mesma situação ocorre quando uma
+	# rodada carrega música durante a pausa. Retomar precisa iniciar esse stream parado,
+	# preservando a posição dos playbacks que apenas receberam suspensão.
+	if resuming:
+		_start_loaded_music_if_stopped()
 
 
 ## Instante que a mixagem considera "agora": o relógio real quando o jogo corre,
@@ -161,15 +214,37 @@ func play_round_music(round_index: int) -> void:
 	if not _music_cache.has(round_index):
 		_music_cache[round_index] = QixProceduralAudioLibrary.music_for_round(round_index)
 	_music.stream = _music_cache[round_index]
-	if enabled and runtime_allows_playback() and _music.is_inside_tree():
+	if enabled and not _paused:
+		_play_music()
+
+
+func _start_loaded_music_if_stopped() -> void:
+	if enabled and not _paused and is_instance_valid(_music) \
+			and _music.stream != null and not _music_is_playing():
+		_play_music()
+
+
+## Fronteiras de playback: testes substituem o dispositivo sem substituir a política
+## de pausa/ativação, e o caminho real continua respeitando árvore e modo headless.
+func _music_is_playing() -> bool:
+	return is_instance_valid(_music) and _music.playing
+
+
+func _play_music() -> void:
+	if runtime_allows_playback() and is_instance_valid(_music) and _music.is_inside_tree():
 		_music.play()
 
 
+func _stop_music() -> void:
+	if is_instance_valid(_music):
+		_music.stop()
+
+
 func play_cue(cue_name: StringName) -> void:
-	if not enabled:
+	if not enabled or _paused:
 		return
 	ensure_ready()
-	var now := mix_now_msec(Time.get_ticks_msec(), _pause_started_msec)
+	var now := mix_now_msec(_now_msec(), _pause_started_msec)
 	if cue_name == &"trail":
 		if now - _last_trail_msec < TRAIL_THROTTLE_MSEC:
 			return
@@ -196,7 +271,7 @@ func play_cue(cue_name: StringName) -> void:
 ## Prioridade que cada voz ainda segura neste instante, ou `PRIORITY_IDLE` para as
 ## que já terminaram. É o snapshot que `select_voice` consome.
 func voice_priorities_now() -> PackedInt32Array:
-	return voice_priorities_at(mix_now_msec(Time.get_ticks_msec(), _pause_started_msec))
+	return voice_priorities_at(mix_now_msec(_now_msec(), _pause_started_msec))
 
 
 ## Igual a `voice_priorities_now`, mas com o instante injetado — é por aqui que o
@@ -210,6 +285,20 @@ func voice_priorities_at(now: int) -> PackedInt32Array:
 			_voice_priorities[index] if busy else QixProceduralAudioLibrary.PRIORITY_IDLE
 		)
 	return snapshot
+
+
+## Pausa mantém a posição de música/SFX e congela seus prazos no mixer. Eventos recebidos
+## durante pausa são descartados: retomar nunca despeja uma fila antiga de alertas.
+func set_paused(value: bool) -> void:
+	apply_pause(value, _now_msec())
+
+
+func _set_player_paused(player: AudioStreamPlayer, value: bool) -> void:
+	player.stream_paused = value
+
+
+func _now_msec() -> int:
+	return Time.get_ticks_msec()
 
 
 ## Escolhe a voz que vai tocar `incoming_priority`, ou `-1` se o pedido deve ser
@@ -256,20 +345,26 @@ func set_enabled(value: bool) -> void:
 	enabled = value
 	if not value:
 		if _music != null:
-			_music.stop()
+			_stop_music()
 		for voice in _voices:
 			voice.stop()
 		_release_all_voices()
-	elif runtime_allows_playback() and _music != null and _music.stream != null and _music.is_inside_tree():
-		_music.play()
+	elif not _paused and _music != null and _music.stream != null:
+		_play_music()
 
 
 func presentation_state() -> Dictionary:
 	return {
 		"round_index": _round_index,
 		"music_loaded": _music != null and _music.stream != null,
-		"music_paused": _paused,
+		# `music_paused` é a ordem que a música recebeu, do mesmo modo que
+		# `paused_voices` é a que as vozes receberam. A *intenção* de pausa está em
+		# `mix_clock_frozen`; separá-las é o que torna visível uma música que ficou
+		# de fora da ordem — antes as duas eram o mesmo `_paused` e concordavam
+		# sempre, inclusive quando a música não tinha sido comandada.
+		"music_paused": _paused_music,
 		"mix_clock_frozen": _pause_started_msec >= 0,
+		"sfx_paused": _paused,
 		"voice_count": _voices.size(),
 		"cached_music": _music_cache.size(),
 		"cached_cues": _cue_cache.size(),
@@ -292,13 +387,47 @@ func _release_all_voices() -> void:
 	_voice_cursor = 0
 
 
+## Um director desligado não segura pausa nenhuma: sem streams, não há o que
+## suspender. Isto é `shutdown`, não `apply_pause(false, …)`, porque não há tempo
+## pausado a devolver a prazos de vozes que já foram soltas.
+##
+## Sem isto, desligar durante uma pausa deixava `_pause_started_msec` válido para
+## sempre, e `mix_now_msec` continuava a congelar o relógio de mix no instante da
+## pausa antiga — o primeiro cue depois de um recomeço datava do jogo anterior.
+func _release_pause() -> void:
+	_paused = false
+	_pause_started_msec = -1
+	_paused_voices = 0
+	_paused_music = false
+	_last_trail_msec = -TRAIL_THROTTLE_MSEC
+
+
 static func cues_for_events(events: Array[GameEvent]) -> Array[StringName]:
 	var cues: Array[StringName] = []
 	for event in events:
-		var cue_name := cue_for_kind(event.kind)
+		var cue_name := cue_for_event(event)
 		if cue_name != &"" and not cues.has(cue_name):
 			cues.append(cue_name)
 	return cues
+
+
+static func cue_for_event(event: GameEvent) -> StringName:
+	if event.kind == GameEvent.Kind.THREAT_LEVEL_CHANGED:
+		if int(event.data.get("index", 0)) <= int(event.data.get("previous", 0)):
+			return &""  # recuo da pressão já é comunicado por CALM_STARTED
+	if event.kind == GameEvent.Kind.ITEM_STARTED:
+		match int(event.data.get("item", ItemProfile.Kind.NONE)):
+			ItemProfile.Kind.VELOCITY: return &"velocity"
+			ItemProfile.Kind.STASIS: return &"stasis"
+			ItemProfile.Kind.SHIELD_FREEZE: return &"shield_freeze"
+			ItemProfile.Kind.PURGE: return &"purge"
+		return &""
+	if event.kind == GameEvent.Kind.ITEM_ENDED:
+		var item := int(event.data.get("item", ItemProfile.Kind.NONE))
+		# Expurgo é imediato: seu contador técnico de um tick não é perda de proteção.
+		if item <= ItemProfile.Kind.NONE or item >= ItemProfile.Kind.PURGE:
+			return &""
+	return cue_for_kind(event.kind)
 
 
 static func cue_for_kind(kind: int) -> StringName:
@@ -323,6 +452,36 @@ static func cue_for_kind(kind: int) -> StringName:
 			return &"game_over"
 		GameEvent.Kind.CAMPAIGN_COMPLETE:
 			return &"campaign_complete"
+		GameEvent.Kind.WALKER_SPAWNED:
+			return &"walker_spawn"
+		GameEvent.Kind.DART_ARMED:
+			return &"dart_arm"
+		GameEvent.Kind.DART_FIRED:
+			return &"dart_fire"
+		GameEvent.Kind.TRAIL_CUT:
+			return &"trail_cut"
+		GameEvent.Kind.EMBER_IGNITED, GameEvent.Kind.PLAYER_STALLING:
+			return &"ember"
+		GameEvent.Kind.THREAT_LEVEL_CHANGED:
+			return &"threat"
+		GameEvent.Kind.OVERTIME_STARTED:
+			return &"overtime"
+		GameEvent.Kind.BOSS_PHASE_CHANGED:
+			return &"boss_phase"
+		GameEvent.Kind.BOSS_CORNERED:
+			return &"boss_cornered"
+		GameEvent.Kind.WALKER_EXTINGUISHED, GameEvent.Kind.DART_ABSORBED, GameEvent.Kind.EMBER_EXTINGUISHED:
+			return &"extinguish"
+		GameEvent.Kind.CALM_STARTED:
+			return &"calm"
+		GameEvent.Kind.BEACON_CAPTURED:
+			return &"beacon"
+		GameEvent.Kind.ITEM_STARTED:
+			return &"velocity"  # default do catálogo; cue_for_event despacha pelo ID
+		GameEvent.Kind.ITEM_ENDED:
+			return &"item_end"
+		GameEvent.Kind.BOSS_SEALED:
+			return &"sealed"
 	return &""
 
 
@@ -331,11 +490,13 @@ func _ensure_players() -> void:
 		_music = AudioStreamPlayer.new()
 		_music.name = "Music"
 		_music.bus = BUS_MUSIC
+		_music.max_polyphony = 1
 		add_child(_music)
 	while _voices.size() < SFX_VOICES:
 		var voice := AudioStreamPlayer.new()
 		voice.name = "Sfx%02d" % _voices.size()
 		voice.bus = BUS_SFX
+		voice.max_polyphony = 1
 		add_child(voice)
 		_voices.append(voice)
 	if _voice_priorities.size() != _voices.size():

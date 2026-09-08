@@ -1,157 +1,121 @@
-# PROJECT_CONTRACT — QIX GAME (vertical slice)
+# PROJECT_CONTRACT — QIX GAME / Atlas Vivo
 
-> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** a seção § Raízes foi remedida nesta data — contagem de cenas, `uid://` e
-> `class_name` de `antipixel_state_machine/` conferidos por `grep` e pelo cache de classes
-> globais antes da remoção. Engine, viewport, renderer e tick seguem conferidos em
-> `project.godot`; a tabela de ownership, por existência de arquivo. Alvos, tamanhos de export e
-> estado do ferramental MCP seguem do run macOS de 2026-09-03 e **não** foram reexecutados.
+> **Verificado em** 2026-09-08 · commit `6d23de4` · integração local de `3c9724f` (#78) em andamento
+> **Alcance:** leitura de `project.godot`, arquivos de ownership, presets, plugin e grafo Git.
+> Este texto descreve o contrato combinado do Atlas Vivo e das mudanças remotas preservadas.
+> Suíte, renderer, exports e publicação da composição final estão **PENDENTES** nesta edição.
+> Os resultados anteriores pertencem às respectivas árvores; ver o [relato de integração](loop/runs/2026-09-08T-mcp-github-integration.md).
 
-Registrado no G0 e atualizado no shipping pass em 2026-09-03. Codinome interno; título público ainda não definido.
+QIX GAME é o codinome de um jogo territorial original com gramática de Qix, desafios inspirados
+em Volfied e identidade própria Lumen Cartography. Atlas Vivo é a evolução local com atores,
+objetivos e palco 2.5D, definida na [ADR-0014](decisions/ADR-0014-atlas-lifecycle-depth-stage.md).
+O estado de produto, a autoria e os próximos marcos estão em [ATLAS_VIVO.md](ATLAS_VIVO.md).
+Paridade integral com Volfied e produção AAA permanecem objetivos de desenvolvimento.
 
 ## Engine e stack
 
-| Item | Valor | Como foi verificado |
+| Item | Contrato atual | Fonte |
 |---|---|---|
-| Executável | `/Applications/Godot_mono.app/Contents/MacOS/Godot` | `--version` → `4.7.2.stable.mono.official.ed1daf0bf` |
-| Versão | **4.7.2-stable** (build mono; o projeto não usa C#) | idem; bate com `engine_policy` do prompt |
-| Linguagem | **GDScript tipado** | ADR-0003 |
-| Mundo | 2D nativo | perfil padrão do prompt |
-| Renderer | **GL Compatibility** | ADR-0002 |
-| Simulação | 60 ticks/s, tick fixo, inteiros | `physics/common/physics_ticks_per_second=60` persistido; `QixBootstrap._physics_process` chama um `GameSession.step` por tick não pausado |
-| Viewport lógico | 240×320 retrato, `stretch=viewport`, `scale_mode=integer`, `aspect=keep` | `project.godot` |
-| Campo histórico | 225×283 incl. moldura; interior 223×281 = 62 663 células | `06-gameplay.md` §4.4 |
+| Engine | Godot **4.7.2-stable**; executável macOS local `/Applications/Godot_mono.app/Contents/MacOS/Godot` | política do projeto; versão executável precisa ser conferida em cada ambiente |
+| Linguagem | GDScript tipado; o projeto não usa C# | ADR-0003 e scripts do projeto |
+| Simulação | domínio 2D em células, 60 ticks/s, inteiros e ponto fixo 8.8 | `game/simulation/game_simulation.gd`, `project.godot` |
+| Apresentação | palco 2.5D com câmera ortográfica e seis modelos GLB originais; fallback plano | `app/stage/depth_stage.gd`, ADR-0014 |
+| Renderer | GL Compatibility | `project.godot`, ADR-0002 |
+| Espaço lógico | 240×320 retrato; janela usa `canvas_items`, escala inteira | `project.godot` |
+| Campo de produção | 225×283 células com moldura; interior 223×281 | `RoundDefinition` e conteúdo de produção |
+| Camada tática | SubViewport 720×960; máscara territorial R8; HUD e touch fora do plano 3D | `QixDepthStage`, `BoardView`, ADR-0014 |
+| Replay | `RULES_VERSION = 4`, formato de log `SCHEMA_VERSION = 1` | `GameRules`, `ReplayLog` |
 
-## Alvos
+A dimensão de uma malha e a projeção da câmera são valores de apresentação. A posição de contato,
+a trilha, a captura e a letalidade continuam decididas pelo domínio. Trocar F2, F3 ou F4, escalar
+um modelo ou mudar a paleta não pode alterar checksum nem consumir RNG de simulação.
 
-| Alvo | Estado |
+## Alvos e evidência
+
+| Alvo | Estado e limite |
 |---|---|
-| macOS desktop (arm64) | candidate QA de 101.199.872 bytes; payload, smoke, áudio 900/900 ticks, frame/Metal, framebuffer, `codesign` e leak scan verdes; assinatura de distribuição/notarização pendentes |
-| Android retrato | candidate QA de 40.486.376 bytes assinado ad-hoc; runner iniciou `emulator-5554`, instalou e validou main loop +30 s; aparelho físico, AAB e loja pendentes |
-| Teclado | disponível |
-| Gamepad | tradução D-pad/stick/botões, estado por device, disconnect e dedup Start/A validados sinteticamente; físico **NOT_EXERCISED** |
-| Multitouch | overlay e concorrência de dedos validados sinteticamente; físico **NOT_EXERCISED** |
+| macOS arm64 | build Atlas local de QA e evidências anteriores em `build/modernization/`; export da composição final pendente |
+| Android retrato | alvo mantido; QA histórica da versão 2D está em SHIPPING_PASS; novo palco requer export/perfil e aparelho físico |
+| Teclado | adaptador e rota de campanha presentes; confirmação da composição final pendente |
+| Gamepad | D-pad/stick, dedup e desconexão têm provas sintéticas; experiência em dispositivo físico continua pendente |
+| Multitouch | floating stick, histerese e concorrência têm provas sintéticas; calibração física continua pendente |
+| Distribuição | assinatura de distribuição, notarização, AAB/loja e publicação comercial pendentes |
 
-## Raízes
+[SHIPPING_PASS.md](SHIPPING_PASS.md) conserva o candidato automatizado de 2026-09-03, com
+identidade de runner, tamanhos e limites próprios. [ATLAS_VIVO.md](ATLAS_VIVO.md) conserva as
+medidas da evolução local anterior à integração. Nenhum desses resultados certifica sozinho
+a árvore combinada, um aparelho diferente ou a qualidade percebida por uma pessoa.
 
-- `project_root`: `/Users/flaviocoutinho/development/qiqix/qix-game` (projeto novo; o `.git/` encontrado está incompleto e ainda não forma um repositório válido)
-- `reference_root`: `/Users/flaviocoutinho/development/qiqix` (`docs/00..08`, `docs/ACHADOS_ANOTACAO.md`, `reference/mame/`)
-- Não há `project.godot` nem `.git` em `reference_root`; nada ali é modificado por este projeto.
+## Raízes e dependências
 
-### Raízes de terceiros
+- Projeto: `/Users/flaviocoutinho/development/qiqix/qix-game`. É um repositório Git válido;
+  a referência histórica a `.git` incompleto não descreve a inspeção de 2026-09-08.
+- Referência de estudo: `/Users/flaviocoutinho/development/qiqix`, fora da raiz do jogo.
+  Este trabalho não modifica ROMs nem incorpora seus bytes ao produto.
+- Recursos, caches, logs e exports locais não substituem evidência ligada a um commit/árvore.
+  O relato de integração identifica a branch, os commits preservados e o snapshot das PRs.
 
-A raiz do repositório hospeda diretórios que **não são do jogo**. A regra é: código de vendor que
-o runtime carrega fica versionado; material de estudo que só acompanha o vendor, não.
+Código de terceiros fica sob `addons/` e tem estado declarado em
+[addons/README.md](../addons/README.md). Os projetos de exemplo `guide_examples/`, `samples/`
+e `antipixel_state_machine/` foram removidos do versionamento por decisões anteriores.
+Seus filtros de export e regras de ignore permanecem: reinstalar um vendor pode recriar uma
+pasta local sem torná-la conteúdo do jogo.
 
-| Diretório | O que é | Decisão |
-|---|---|---|
-| `addons/` | código de vendor; parte do runtime ou do ferramental de editor | versionado; inventário por addon é item aberto do loop |
-| `guide_examples/` | projeto-exemplo do addon GUIDE (32 cenas, 55 scripts) | **removido** do versionamento; ignorado |
-| `samples/` | projeto-exemplo do addon softbody2d (6 cenas, 6 scripts) | **removido** do versionamento; ignorado |
-| `antipixel_state_machine/` | máquina de estados de vendor na raiz (3 cenas, 7 scripts) | **removido** do versionamento; ignorado |
-
-`guide_examples/` e `samples/` eram demos: nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`,
-`tests/` ou `content/` os referenciava, e os cinco `uid://` que compartilhavam com `addons/` são
-**de posse dos addons** — a dependência apontava dos demos para o addon, nunca ao contrário.
-Custavam 38 das 43 cenas do repositório e um `class_name` de vendor (`LaserProjectile`) no
-namespace global.
-
-`antipixel_state_machine/` não era demo de addon nenhum, e por isso ficou de fora daquela poda:
-podia ser dependência real adormecida. Não era, e a medição de 2026-09-05 mostra por quê — quatro
-fatos independentes:
-
-1. **Sem consumidor.** Nenhum arquivo de `game/`, `ui/`, `app/`, `tools/`, `tests/` ou `content/`
-   citava o caminho, e nenhum dos **12 `uid://`** declarados dentro da pasta aparecia fora dela.
-   A posse era toda interna: só as próprias cenas de amostra consumiam os próprios scripts.
-2. **Nunca foi instalada.** As cenas de amostra e os três `@icon` apontam para
-   `res://addons/antipixel_state_machine/…` — caminho que **não existe** no repositório. A pasta
-   foi extraída na raiz em vez de em `addons/`; os `@icon`, que são string literal sem `uid://`,
-   ficavam quebrados desde o commit inicial.
-3. **Não era addon.** Sem `plugin.cfg` e ausente de `editor_plugins` em `project.godot`: era uma
-   biblioteca de scripts solta, não um plugin que o editor pudesse habilitar.
-4. **O domínio não poderia consumi-la.** É `extends Node` de ponta a ponta, e o invariante 1
-   proíbe `Node`, `Tween` e física em `game/simulation/`, `game/rules/` e `game/session/`. Como
-   máquina de estados do domínio ela estava descartada por contrato, não por preferência.
-
-O custo era maior que os 132 KB: cinco `class_name` genéricos — `State`, `StateMachine`,
-`StateComponent`, `NodeState`, `PackedSceneState` — ocupando o namespace global do projeto, que já
-hospeda `BoardState` e `RoundStartState`. O nome mais óbvio para um tipo de domínio futuro estava
-tomado por vendor que ninguém chamava.
-
-Os `exclude_filter` de `export_presets.cfg` continuam listando `guide_examples/**`, `samples/**` e
-`antipixel_state_machine/**`, e `tests/integration/shipping_export_test.gd` exige os três. É defesa
-deliberada: um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e o filtro
-garante que elas não entrem no payload mesmo assim. Filtro e `.gitignore` cobrem caminhos
-diferentes do mesmo risco.
+As sete remoções de `curved_lines_2d`, `phantom_camera`, `guide`, `GDDraw`, `yard`, `softbody2d`
+e `curve2collision` chegam juntas pelo #78, com os relatos de posse das PRs #60/#62/#63/#64/#66/#72/#73.
+A decisão é a ADR-0010; a publicação dessa integração em `main` ainda está pendente.
+Contagens anteriores de cenas/classes foram medidas em árvores diferentes e não são copiadas
+como inventário atual. O manifesto e sua guarda derivam o estado do disco.
 
 ## Ownership
 
-| Camada | Proprietário | Regra |
+| Camada | Proprietário e caminho | Regra |
 |---|---|---|
-| Território | `BoardState` (`game/simulation/board_state.gd`) | única autoridade; `PackedByteArray`; estados `FREE/BOUNDARY/TRAIL/CLAIMED` |
-| Regras | `GameRules` (`game/rules/game_rules.gd`) | `Resource` imutável em runtime |
-| Campanha | `CampaignDefinition` + `RoundContent` | ordem, transições e referências autoráveis; uma simulação/replay por rodada |
-| Tick | `GameSimulation.step(intent)` | sem `delta`; ordem fixa documentada no arquivo |
-| Captura | `FloodFillCaptureResolver` | puro; devolve `CapturePlan` ou `CaptureError`; não muta nada |
-| Acaso | `DeterministicRng` | xorshift32 com seed explícita; único ponto de aleatoriedade |
-| Apresentação | `BoardView`, `PlayerView`, `EnemyView`, HUD, transição e VFX | observa snapshots/eventos confirmados; não muta a simulação |
-| Leitura de risco | `TrailExposure` (`game/board/trail_exposure.gd`) | funções puras de apresentação; traduzem o comprimento da trilha confirmada num escalar 0..1 consumido por `BoardView` e pelo HUD; nenhum valor volta ao domínio nem entra em hash |
-| Revelação | `BoardView` + shader R8 | `BoardState.cells` alimenta a máscara; somente `CLAIMED` revela o fundo |
-| Composição | `app/bootstrap.gd` | composition root; injeta campanha e dirige a sessão |
-| Entrada de dispositivo | `GameInputAdapter` + `QixTouchControls` | estado cru por gamepad, dedup InputMap/evento, teclado/touch agregados; entrega somente `MoveIntent` ao domínio |
-| Feedback | `QixFeedbackHub` | observa sessão/eventos confirmados e aciona áudio/háptica sem mutar domínio |
-| Boss | `BossBehaviorProfile` + `BossBehaviorController` | Resource autorável; direção/velocidade determinísticas e parte do contrato de replay |
-| Geração de conteúdo | `CampaignContentTransaction` | WAL v3 persistente, lock loopback interprocessual, digests/tamanhos, manifest ancorado, máquina de estados, promoção adjacente, rollback e recovery fail-closed |
+| Território | `BoardState`, `game/simulation/board/` | única autoridade sobre células `FREE/BOUNDARY/TRAIL/CLAIMED`; `PackedByteArray` |
+| Captura | `FloodFillCaptureResolver`, `CapturePlan`, `CaptureError`, em `game/simulation/board/` | resolução pura; plano confirmado é aplicado por BoardState |
+| Tick | `GameSimulation.step(intent)` | avança exatamente um tick; ordem normativa no cabeçalho do arquivo |
+| Jogador | `PlayerState` e `PlayerMotion`, `game/simulation/player/` | posição, trilha e movimento em grade; sem consulta ao dispositivo |
+| Chefe | `BossState`, `BossMotion`, `BossBehaviorController`, `game/simulation/enemies/` | fases, direção e velocidade determinísticas; controller já está dentro da guarda de domínio |
+| Atores menores | `ActorLifecycle`, `MinorActorPools`, `WalkerRules`, `DartRules`, `EmberRules`, `game/simulation/enemies/` | IDs por spawn, capacidades e lifecycle; pools limitados; warmup/dormência sem contato letal |
+| Diretor | `DirectorState` e `ThreatDirector`, `game/simulation/director/` | agenda determinística, graça de respawn, pressão e limites autoráveis |
+| Objetivos | `BeaconState` e `BeaconRules`, `game/simulation/objectives/` | coleta apenas após CLAIMED confirmado; cadeia e item em ordem autoral |
+| Relógios | `ShieldClock` e `EffectTimers`, `game/simulation/time/` | contadores inteiros; consumo conforme tick, sem relógio de parede |
+| Pontuação | `ScoreLedger` e `BonusLadder`, `game/simulation/scoring/` | economia e encerramentos; BonusLadder é Resource autorável incluído no hash de GameRules |
+| Entrada lógica, eventos e replay | `MoveIntent`, `GameEvent`, `DeterministicRng`, `ReplayLog`, `game/simulation/replay/` | xorshift32 com seed explícita; eventos confirmados; compatibilidade antes de reproduzir |
+| Regras | `GameRules`, `BossBehaviorProfile`, `ThreatProfile`, `ItemProfile`, `game/rules/` | Resources autoráveis e imutáveis em runtime; bytes canônicos compõem o config_hash |
+| Campanha | `CampaignDefinition`, `RoundContent`, `RoundDefinition`, `game/rules/` | ordem, geometria, seed, transições e referências de conteúdo |
+| Sessão | `GameSession`, `game/session/` | uma simulação e um replay por rodada; arquiva apenas tentativas encerradas |
+| Visual autorável | `RoundVisualDefinition`, `game/rules/` | paleta, fundo e escala de modelos; sem canonical_bytes e fora do tick/hash |
+| Palco e views | `QixDepthStage`, `BoardView`, player/boss/minor views, HUD, transição e VFX | observam snapshots/eventos; não mutam domínio; proxies 3D sem colisores |
+| Risco apresentado | `TrailExposure`, `game/board/` | traduz trilha confirmada em leitura visual/sonora/háptica; não volta ao domínio |
+| Composição | `app/bootstrap.gd` | dirige sessão, injeta conteúdo e conecta adaptadores/apresentação |
+| Dispositivos | `GameInputAdapter`, `QixTouchControls` | estado cru, histerese e dedup; entregam MoveIntent ao domínio |
+| Feedback | `QixFeedbackHub`, áudio e háptica | efeitos de eventos já confirmados; pausa e redução de movimento não alteram regras |
+| Conteúdo gerado | `CampaignContentTransaction` | validação, journal/WAL, lock, promoção, rollback e recovery; fonte em `tools/build_campaign_content.gd` |
 
-Autoloads presentes: `_fennara_game_capture` e `_mcp_game_helper` são **ferramental MCP**, não
-são consumidos pelo domínio nem pelas views. Os presets fazem exclusões seletivas, não removem
-`addons/**` em bloco. O export hook retirou o autoload e os dez scripts de runtime Fennara, e o
-verificador confirmou também a ausência de `addons/fennara/bin/`; já o fechamento necessário do
-helper Godot AI permaneceu completo, com cinco dependências presentes. Os smokes macOS/Android do
-runner `20260903T065739Z-65912` provaram que esse payload inicia sem referência quebrada. Para
-distribuição real, a presença do helper Godot AI deve ser uma decisão explícita: removê-lo por
-completo ou mantê-lo junto de todo o fechamento necessário.
+`RoundVisualDefinition` e a costura `RoundContent` são exceções declaradas à presença de tipos
+visuais em `game/rules/`. Isso não isenta a pasta inteira: a guarda específica verifica que o
+visual não tem serializador canônico nem é nomeado pelo domínio. O inventário de serializadores
+acompanha os Resources reais de configuração, sem proibir novos perfis por uma contagem fixa.
 
-## Addons — quem é jogo, quem é ferramenta
+Na vitória, a sessão arquiva e congela o checksum. A dissipação posterior do Núcleo pertence à
+transição visual; não se continua avançando a simulação arquivada para terminar uma animação.
+Os contratos de lifecycle, IDs, limite de pools e alterações deliberadas de replay estão na ADR-0014.
 
-Inventário verificado em **2026-09-04** contra o checkout de `main` em `74c173a`. Existe porque
-nove pastas em `addons/` não dizem, por si, quais participam do jogo: sem esta tabela, cada leitor
-refaz a mesma investigação e alguns concluem errado.
+## Ferramentas de editor e MCP
 
-| Addon | Versão | Habilitado em `[editor_plugins]` | Consumido pelo jogo | Destino no export |
-|---|---|---|---|---|
-| `godot_ai` | 3.2.4 | **sim** (único) | autoload `_mcp_game_helper` | `runtime/` embarca; `clients/`, `custom_tools/`, `debugger/`, `dock_panels/`, `export/`, `handlers/`, `testing/` excluídos |
-| `fennara` | 0.4.2 | não é plugin de editor — é `GDExtension` com bibliotecas `*.editor.*` | autoload `_fennara_game_capture` | `runtime/` embarca; `ai/`, `bin/`, `dist/` e o `.gdextension` excluídos |
-| `guide` (G.U.I.D.E) | 0.14.0 | não | **nenhum** | excluído em bloco |
-| `curved_lines_2d` (Scalable Vector Shapes 2D) | 2.33.3 | não | **nenhum** | excluído em bloco |
-| `phantom_camera` | 0.11.0.3 | não | **nenhum** | excluído em bloco |
-| `GDDraw` | 0.2.0 | não | **nenhum** | excluído em bloco |
-| `softbody2d` | 1.7.1 | não | **nenhum** | excluído em bloco |
-| `curve2collision` | 1.0.0 | não | **nenhum** | excluído em bloco |
-| `yard` | 1.2.0 | não | **nenhum** | excluído em bloco |
+| Componente | Estado observado nesta integração | Limite da afirmação |
+|---|---|---|
+| `godot_ai` | plugin local **4.0.2**, habilitado; atualização preservada em `6d23de4` | `plugin.cfg` e código presentes não provam todas as ferramentas em runtime |
+| `fennara` | extensão e helper presentes; integração existente preservada | conexão ao editor e QA nativa dependem de execução no ambiente alvo |
+| GitHub | 32 PRs auditadas por `gh` e refs locais; inventário por SHA no relato | leitura e autorização não equivalem a merge realizado nem aprovação independente |
+| Blender MCP | biblioteca original e recibos da produção Atlas preservados | evidência datada em ATLAS_VIVO e no manifesto de modelos |
 
-Como "nenhum" foi verificado — dois testes independentes sobre `app/`, `game/`, `ui/`, `tools/`,
-`tests/`, `content/` e `assets/`:
-
-1. Nenhuma dessas árvores contém a string `res://addons/`.
-2. Dos 174 `class_name` declarados pelos nove addons, **nenhum** aparece como palavra nessas
-   árvores. A entrada do jogo é `GameInputAdapter` sobre o `InputMap` de `project.godot`, não o
-   G.U.I.D.E.; a câmera é fixa em 240×320, não `phantom_camera`.
-
-Nenhuma pasta de terceiros vive mais **fora** de `addons/`. As três que viviam — `samples/`
-(demos do `softbody2d`), `guide_examples/` (demos do `guide`) e `antipixel_state_machine/` —
-foram removidas do versionamento, a última em 2026-09-05.
-
-Consequência prática para quem lê o repositório: das **103** cenas do checkout, **2** são do jogo
-— `app/bootstrap.tscn` e `ui/touch/touch_controls.tscn` — e as outras **101** são de terceiros,
-todas em `addons/`. Isso vale como regra de leitura, não só como contagem: **um `.tscn` fora de
-`addons/` é do jogo.** Antes da poda eram 2 em 145, espalhadas por quatro raízes, e procurar uma
-cena do jogo pelo nome devolvia 98 % de ruído.
-
-O que esta tabela **não** decide: se os sete addons dormentes devem ser removidos. Eles já não
-entram no payload (os `exclude_filter` de ambos os presets em `export_presets.cfg` listam os sete
-por nome), então o custo deles é de leitura e de busca, não de bytes entregues ao jogador. A
-remoção é uma decisão separada, com o seu próprio item no ledger.
+Os autoloads `_fennara_game_capture` e `_mcp_game_helper` são ferramental. Domínio e views não
+podem depender deles para uma partida. Os presets e hooks de export controlam o payload por
+caminho, sem excluir `addons/**` em bloco. A política precisa ser verificada novamente no export
+da composição final, sobretudo após atualizar o plugin; smokes antigos não provam o fechamento
+transitivo das dependências da versão 4.0.2.
 
 ## Comandos reais
 
@@ -159,44 +123,54 @@ remoção é uma decisão separada, com o seu próprio item no ledger.
 G=/Applications/Godot_mono.app/Contents/MacOS/Godot
 cd /Users/flaviocoutinho/development/qiqix/qix-game
 
-$G --headless --path . --import            # obrigatório 1× por checkout (cache de class_name)
-$G --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd # testes puros + integração
-$G --headless --path . --script res://tools/build_campaign_content.gd          # baseline transacional
-$G --headless --path . --script res://tools/profile_board_view.gd              # perfil CPU/R8
-$G --headless --path . --script res://tools/verify_palette_contrast.gd         # contraste por estado
-tools/shipping/run_shipping_qa.sh                                               # exports + probes
-$G --path . --editor                       # abre o editor (liga godot-ai e fennara)
-$G --path .                                # roda a cena principal
+$G --headless --path . --import
+$G --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd
+$G --headless --path . --script res://tools/verify_m2_capture_route.gd
+$G --headless --path . --script res://tools/profile_simulation_step.gd
+$G --headless --path . --script res://tools/profile_board_view.gd
+$G --headless --path . --script res://tools/build_campaign_content.gd
+$G --path . --script res://tools/dev/verify_depth_stage.gd
+bash tools/shipping/build_atlas_macos_local.sh
+tools/shipping/run_shipping_qa.sh
+$G --path . --editor
+$G --path .
 ```
 
-## O que o portão automático cobre
+Importar antes da descoberta de classes. Registrar saída completa e inspecionar erros, mesmo
+quando o processo devolve zero. O gerador de conteúdo modifica Resources versionados; executar
+quando a fonte autoral mudou, preservando seu journal. O probe de palco exige renderer real.
 
-`.github/workflows/verificacao.yml` roda em todo PR contra `main` (e em todo push a `main`).
-Ele baixa o Godot 4.7.2-stable headless, confere a versão, importa e executa:
+M2 é uma fixture de isolamento territorial, com chefe, diretor e itens explicitamente isolados.
+Ela protege a captura; não demonstra dificuldade ou conclusão da campanha. A rota de campanha
+ativa, incluindo os quatro itens e replay de cada rodada, está em
+`tests/integration/boss_active_campaign_playthrough_test.gd`.
 
-| Comando | No portão | Por quê |
-|---|---|---|
-| `--import` | sim | sem ele não há cache de `class_name` e toda falha é falsa |
-| `tests/run_tests.gd` | sim | sai com 1 se houver falha — é o que torna o portão capaz de ficar vermelho |
-| `tools/verify_m2_capture_route.gd` | sim | protege a rota 17,9 → 82,5%, que nenhum teste unitário cobre inteira |
-| `tools/profile_board_view.gd` | não | orçamento de performance depende de GPU real; ver `docs/PERFORMANCE.md` |
-| `tools/build_campaign_content.gd` | não | gera conteúdo versionado; rodar no CI mascararia baseline desatualizado |
-| `tools/shipping/run_shipping_qa.sh` | não | exige SDKs e assinatura; permanece local (`docs/SHIPPING_PASS.md`) |
+## Portão automático e limites
 
-O portão roda sobre o **merge do PR com a base**, não sobre o head isolado. Essa distinção é o
-ponto: onze PRs verificados um a um contra `main` não viram a regressão que só aparece quando
-dois deles coexistem.
+`.github/workflows/verificacao.yml` usa Godot 4.7.2-stable no Linux e o wrapper
+`tools/ci/headless_gate.py`. O wrapper conserva logs, verifica exit code e diagnósticos, importa,
+executa a suíte, a rota M2 e a geometria real do HUD. Testes Python do próprio gate e verificação
+de sintaxe dos scripts do loop também fazem parte do workflow.
 
-## Ferramentas MCP observadas na sessão
+O passo adicional do #83 verifica bytecode no **índice Git**; deve acompanhar a regra de ignore
+e a guarda textual. Seu porte para a composição final está registrado no relato da integração.
+O CI do evento `pull_request` avalia a composição com a base, não soma resultados de branches
+isoladas. Revisão da mesma conta autora não produz aprovação independente no GitHub.
 
-| Servidor | Versão | Estado no G1 |
-|---|---|---|
-| `godot-ai` | 3.2.4 | conectado ao editor; runtime, input, inspeção e logs exercitados |
-| `fennara` | 0.4.2 | conectado ao editor; diagnósticos direcionados e validação de cena exercitados |
-| `github` | remoto | não usado |
+Isolar a extensão nativa de editor Fennara ausente exige a opção explícita do wrapper e um
+checkout apropriado. Essa modalidade não valida extensão nativa, GPU, áudio físico, Android,
+assinatura ou publicação. Para performance e distribuição, consultar
+[PERFORMANCE.md](PERFORMANCE.md) e [SHIPPING_PASS.md](SHIPPING_PASS.md).
 
-Skill `godot-engineering`: **não instalada** nesta máquina. Fallback: diretrizes dos addons e documentação oficial do Godot 4.7.
+## Proveniência e histórico do contrato
 
-## Referências ausentes
+Nenhum byte extraído de ROM pode entrar no jogo. Fontes de referência e limites de uso estão em
+[reference/volfied/README.md](../reference/volfied/README.md); cada asset tem origem em
+[ASSET-PROVENANCE.md](../assets/ASSET-PROVENANCE.md). Biblioteca Blender, fonte e manifest de GLBs
+preservam a reprodução dos modelos originais.
 
-Os ZIPs de clones citados no prompt (`01-xiq`, `02-quix`, `04..13`) e o manual de Qix para Game Boy **não existem** nesta máquina. Não há adaptação de código de terceiros; `CODE_PROVENANCE.md` só será criado se isso mudar.
+O contrato anterior registrava medições de G0/G1 e shipping de 2026-09-03; poda de raízes em
+`cba520a`; sete remoções e verificação de Resources visuais em branches remotas de setembro/07.
+Esses textos permanecem nos commits e nos relatos individuais. A reconciliação de setembro/08
+removeu contagens concorrentes e afirmações antigas de Git inválido, viewport plano e plugin
+3.2.4 do contrato corrente, sem transformar resultados históricos em validação do Atlas combinado.

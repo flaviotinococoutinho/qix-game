@@ -23,94 +23,56 @@ extends TestCase
 const CAMPAIGN_PATH := "res://content/campaigns/main_campaign.tres"
 
 ## Contrato declarado. Mudar qualquer um destes invalida replays gravados.
-const GOLDEN_RULES_VERSION := 2
+## 4 em 2026-09-07: lifecycle, justiça, balizas, efeitos e bônus (ADR-0012).
+## Valores medidos por tools/dev/print_golden_checksums.gd após o bump deliberado.
+## Histórico: 2 → 3 em 2026-09-05 (ADR-0010/0011: elenco menor, diretor de ameaça, fases do
+## Núcleo, fallback de direção). Replays gravados sob a versão 2 deixaram de valer.
+const GOLDEN_RULES_VERSION := 4
 const GOLDEN_SCHEMA_VERSION := 1
 
-## Um por rodada de produção: seed e hash de (regras ⊕ geometria ⊕ perfil de boss).
+## Um por rodada de produção: seed, hash de (regras ⊕ geometria ⊕ perfil de boss) e uma rota
+## curta com o **chefe ativo** — nada aqui imobiliza ou desloca o boss, para que o perfil de
+## comportamento também esteja dentro do checksum final. Cada rota é o começo da rota humana de
+## `boss_active_campaign_playthrough_test.gd`: atravessa a fronteira e fecha a primeira captura.
 ## `ReplayLog.config_hash` é o que o runtime confere antes de reproduzir qualquer log.
 const GOLDEN_ROUNDS := [
 	{
 		"id": &"abyssal_relay",
 		"seed": 1482031771,
-		"config_hash": "a044393ee6d0f7ae98612db663499032a9d5c8fb17a7621f5c26326804d00f9c",
+		"config_hash": "14dd171dfb689135b6d2e30191f7a9f0156e61be1919fce87d10a3a2516d852c",
+		"route": [[MoveIntent.Dir.LEFT, false, 36], [MoveIntent.Dir.DOWN, true, 141]],
+		"ticks": 177,
+		"permille": 179,
+		"score": 3490,
+		"initial_checksum": "de10ab08cc65b3b8590aeb02e20a4f122f6c6c45716c347cbbe00acdb6a3018b",
+		"final_checksum": "8eced70a2512a08ae8f5e63cc94c0ec1a44488ef49e7fe482faadfb47d47a455",
+		"replay_checksum": "e34b9c1bded742abff6a6c8d44783da2eb0758f8f1591e147bbce6b1f2eca2c5",
 	},
 	{
 		"id": &"aurora_foundry",
 		"seed": 189234077,
-		"config_hash": "5f5c07f5dc27ef640a06932591f8ec261aebd7ff6e9dd7a44a5e9f8e4de91408",
+		"config_hash": "ed2512d123940b985bfca5200af7d6a9ead8547b972bdd915154b3aea47b5958",
+		"route": [[MoveIntent.Dir.LEFT, false, 6], [MoveIntent.Dir.DOWN, true, 141]],
+		"ticks": 147,
+		"permille": 556,
+		"score": 9260,
+		"initial_checksum": "44c84c2395f82cdbcca8737ed67fadef59c0fb8e13571db2cc981b843aa2c40c",
+		"final_checksum": "88a68736a37b443c45f5ffa8080349fab96dfe30e2546f543e495bc45cf21105",
+		"replay_checksum": "6c24cdda0da6a1fc1c4ca8fd41b2b2e0d3cf569b66ecba4582025f40c29de561",
 	},
 	{
 		"id": &"verdant_singularity",
 		"seed": 933117401,
-		"config_hash": "bf7e3ac9db8bc272d099fc3a23ca1158ee760ee9f0f82199cfd0196c2984d67d",
+		"config_hash": "cd3c57cb8131f7b7f69c0440981d045f318297b0b8f30b608d06275c97dc4b1f",
+		"route": [[MoveIntent.Dir.LEFT, false, 16], [MoveIntent.Dir.DOWN, true, 141]],
+		"ticks": 157,
+		"permille": 358,
+		"score": 7280,
+		"initial_checksum": "6f0e1adc533399166c7438677f8077a193060b384746cc0ad0df8fcfd5ec241d",
+		"final_checksum": "a509cccc924207e68377b2e4135ecfeb7da06fd9703de642a3af01481af7250c",
+		"replay_checksum": "d4a97d27e05f1a6e124095ed7ab6dee18db9aa5584be0cd098f596496dc84ae3",
 	},
 ]
-
-## Rota curta e reproduzível na rodada 1, com o **chefe ativo** — nada aqui imobiliza ou desloca
-## o boss, para que o perfil de comportamento também esteja dentro do checksum final.
-## São os dois primeiros segmentos da rota humana de `boss_active_campaign_playthrough_test.gd`:
-## atravessa a fronteira e fecha a primeira captura.
-const ROUTE := [
-	[MoveIntent.Dir.LEFT, false, 36],
-	[MoveIntent.Dir.DOWN, true, 141],
-]
-
-## Volta completa pelo perímetro, igual nas três rodadas (a geometria de produção é 225×283 nas
-## três). O jogador parte de (112,0), passa pelos quatro cantos e **fecha exatamente onde começou**
-## — nenhum trecho é bloqueado, nenhuma trilha é aberta, nenhuma captura acontece. Por isso o que
-## sobra no checksum final, tirando o jogador de volta ao ponto de partida e o escudo em contagem
-## regressiva, é a **trajetória do chefe**.
-##
-## São 506 ticks: mais que um período de pulso de `boss_pursuit` (360) e mais que dois de
-## `boss_sweep` (240), para que a janela de aceleração de cada perfil caia dentro do dourado.
-const BOSS_LAP_ROUTE := [
-	[MoveIntent.Dir.LEFT, 56],    # (112,0) → canto superior esquerdo
-	[MoveIntent.Dir.DOWN, 141],   # → canto inferior esquerdo
-	[MoveIntent.Dir.RIGHT, 112],  # → canto inferior direito
-	[MoveIntent.Dir.UP, 141],     # → canto superior direito
-	[MoveIntent.Dir.LEFT, 56],    # → de volta a (112,0)
-]
-
-const BOSS_LAP_TICKS := 506
-const BOSS_LAP_START := Vector2i(112, 0)
-
-## Um por perfil de boss de produção. `pulse_ticks` e `peak_speed_fp` não são decoração: são a
-## prova de que a janela de pulso do perfil **está dentro** da volta — sem eles o checksum final
-## poderia fixar 506 ticks de velocidade base e ninguém perceberia que o pulso saiu do dourado.
-## `boss_wander` não autora pulso (`pulse_period_ticks` = 0), então 0 ticks acelerados é o correto.
-const GOLDEN_BOSS_LAPS := [
-	{
-		"id": &"abyssal_relay",
-		"pattern": 0,  # WANDER
-		"peak_speed_fp": 96,
-		"pulse_ticks": 0,
-		"boss_cell": Vector2i(107, 82),
-		"final_checksum": "c0790abb74c1cff534218cc3546f1aa3e82f195bbc99e938c905924255ee38f7",
-	},
-	{
-		"id": &"aurora_foundry",
-		"pattern": 1,  # PURSUIT
-		"peak_speed_fp": 128,
-		"pulse_ticks": 60,
-		"boss_cell": Vector2i(177, 118),
-		"final_checksum": "037b6212a9f6a3be86735ec77ecaa314f3d5df9bb05dc17aea5a9cfca2a15bfc",
-	},
-	{
-		"id": &"verdant_singularity",
-		"pattern": 2,  # SWEEP
-		"peak_speed_fp": 160,
-		"pulse_ticks": 96,
-		"boss_cell": Vector2i(125, 127),
-		"final_checksum": "8a9e82d9918774311640e80c1a5eff97d066aea45f1cc98825205fa6bb7fab65",
-	},
-]
-
-const GOLDEN_TICKS := 177
-const GOLDEN_PERMILLE := 179
-const GOLDEN_SCORE := 2_490
-const GOLDEN_INITIAL_CHECKSUM := "9a44499781ea0ee82e80a16d3eedc8fc496469ebebcff5ef92ae5e58195659f0"
-const GOLDEN_FINAL_CHECKSUM := "fe898e008ce1e332ebe0a369f1bb1474e37cbd1ee35c15d403548e80f202fa3c"
-const GOLDEN_REPLAY_CHECKSUM := "ae29339010984eeaf036b13e1fcda74384b9306322ede94b6aa5561cdfb1011f"
 
 const DRIFT_HINT := (
 	"mudou o contrato de replay: se você só mexeu em apresentação, o invariante 8 foi violado"
@@ -161,187 +123,78 @@ func test_production_round_config_hashes_are_pinned_per_round() -> void:
 		)
 
 
-func test_production_route_reproduces_the_pinned_checksums_with_the_boss_active() -> void:
+func test_production_routes_reproduce_the_pinned_checksums_with_the_boss_active() -> void:
 	var campaign := load(CAMPAIGN_PATH) as CampaignDefinition
 	ok(campaign != null, "campanha de produção precisa carregar")
 	if campaign == null:
 		return
-	var content := campaign.rounds[0]
-	ok(content.rules.boss_substeps > 0, "o chefe precisa estar ativo para entrar no checksum")
-
-	var simulation := GameSimulation.new(
-		content.rules, content.round_definition, content.seed_value
-	)
-	eq(
-		simulation.state_checksum().hex_encode(),
-		GOLDEN_INITIAL_CHECKSUM,
-		"checksum do estado inicial " + DRIFT_HINT,
-	)
-
-	var replay := ReplayLog.start(simulation)
-	for segment in ROUTE:
-		for _tick in int(segment[2]):
-			var intent := MoveIntent.make(segment[0], segment[1])
-			simulation.step(intent)
-			replay.record(intent)
-
-	eq(replay.tick_count(), GOLDEN_TICKS, "comprimento da rota mudou; a rota é parte do dourado")
-	eq(simulation.permille, GOLDEN_PERMILLE, "progresso da primeira captura " + DRIFT_HINT)
-	eq(simulation.score, GOLDEN_SCORE, "pontuação da primeira captura " + DRIFT_HINT)
-	eq(simulation.fills_done, 1, "a rota dourada precisa fechar exatamente uma captura")
-	eq(
-		simulation.state_checksum().hex_encode(),
-		GOLDEN_FINAL_CHECKSUM,
-		"checksum final após %d ticks " % GOLDEN_TICKS + DRIFT_HINT,
-	)
-	eq(
-		replay.checksum().hex_encode(),
-		GOLDEN_REPLAY_CHECKSUM,
-		"checksum do log serializado " + DRIFT_HINT,
-	)
-
-
-## A rota dourada acima corre só na rodada 1, com `boss_wander`. PURSUIT e SWEEP mudam a
-## trajetória do chefe — e a trajetória entra no checksum (`bx_fp`, `by_fp`, `bvx_fp`, `bvy_fp`,
-## `boss_dir_index`, `boss_effective_speed_fp`). Sem um literal por perfil, editar
-## `content/rules/boss_pursuit.tres` ou `boss_sweep.tres` invalida replays gravados **em silêncio**:
-## `boss_campaign_balance_test.gd` compara cada perfil consigo mesmo e continua verde.
-func test_each_production_boss_profile_has_a_pinned_final_checksum() -> void:
-	var campaign := load(CAMPAIGN_PATH) as CampaignDefinition
-	ok(campaign != null, "campanha de produção precisa carregar")
-	if campaign == null:
-		return
-	eq(campaign.rounds.size(), GOLDEN_BOSS_LAPS.size(), "número de rodadas de produção " + DRIFT_HINT)
-	if campaign.rounds.size() != GOLDEN_BOSS_LAPS.size():
-		return
-
-	for index in GOLDEN_BOSS_LAPS.size():
-		var golden: Dictionary = GOLDEN_BOSS_LAPS[index]
+	for index in mini(campaign.rounds.size(), GOLDEN_ROUNDS.size()):
+		var golden: Dictionary = GOLDEN_ROUNDS[index]
 		var content := campaign.rounds[index]
-		eq(content.round_id, golden.id, "identidade da rodada %d mudou" % index)
-		eq(
-			content.rules.boss_behavior.pattern,
-			golden.pattern,
-			"o padrão de boss da rodada %d mudou; o dourado abaixo é de outro perfil" % index,
-		)
+		var label := "%s: " % golden.id
+		ok(content.rules.boss_substeps > 0, label + "o chefe precisa estar ativo para entrar no checksum")
 
-		# Regras de produção **sem duplicar nem afrouxar**: é o contrato que o jogo grava.
 		var simulation := GameSimulation.new(
 			content.rules, content.round_definition, content.seed_value
 		)
-		eq(Vector2i(simulation.px, simulation.py), BOSS_LAP_START, "partida da volta mudou")
+		eq(
+			simulation.state_checksum().hex_encode(),
+			golden.initial_checksum,
+			label + "checksum do estado inicial " + DRIFT_HINT,
+		)
 
-		var base_speed_fp: int = content.rules.boss_speed_fp
-		var peak_speed_fp := base_speed_fp
-		var pulse_ticks := 0
-		for segment in BOSS_LAP_ROUTE:
-			for _tick in int(segment[1]):
-				simulation.step(MoveIntent.make(segment[0], false))
-				if simulation.boss_effective_speed_fp > base_speed_fp:
-					pulse_ticks += 1
-					peak_speed_fp = maxi(peak_speed_fp, simulation.boss_effective_speed_fp)
+		var replay := ReplayLog.start(simulation)
+		for segment in golden.route:
+			for _tick in int(segment[2]):
+				var intent := MoveIntent.make(segment[0], segment[1])
+				simulation.step(intent)
+				replay.record(intent)
 
-		eq(simulation.tick, BOSS_LAP_TICKS, "comprimento da volta mudou; a rota é parte do dourado")
-		# A volta tem de continuar sendo uma volta: se qualquer trecho passar a ser bloqueado, ou a
-		# geometria mudar, o jogador não fecha no ponto de partida e o dourado deixa de medir o boss.
-		eq(
-			Vector2i(simulation.px, simulation.py),
-			BOSS_LAP_START,
-			"a volta pelo perímetro da rodada %d não fechou; a geometria mudou" % index,
-		)
-		eq(simulation.phase, GameSimulation.Phase.PLAYING, "a volta não pode terminar em morte")
-		eq(simulation.fills_done, 0, "a volta não pode capturar território")
-		ok(not simulation.trail_active, "a volta não abre trilha")
-
-		eq(
-			peak_speed_fp,
-			golden.peak_speed_fp,
-			"velocidade de pico do chefe na rodada %d " % index + DRIFT_HINT,
-		)
-		eq(
-			pulse_ticks,
-			golden.pulse_ticks,
-			"ticks acelerados do chefe na rodada %d — a janela de pulso saiu da volta" % index,
-		)
-		eq(
-			simulation.boss_cell(),
-			golden.boss_cell,
-			"célula final do chefe na rodada %d " % index + DRIFT_HINT,
-		)
+		eq(replay.tick_count(), golden.ticks, label + "comprimento da rota mudou; a rota é parte do dourado")
+		eq(simulation.permille, golden.permille, label + "progresso da primeira captura " + DRIFT_HINT)
+		eq(simulation.score, golden.score, label + "pontuação da primeira captura " + DRIFT_HINT)
+		eq(simulation.fills_done, 1, label + "a rota dourada precisa fechar exatamente uma captura")
 		eq(
 			simulation.state_checksum().hex_encode(),
 			golden.final_checksum,
-			"checksum após a volta na rodada %d " % index + DRIFT_HINT,
+			label + "checksum final após %d ticks " % golden.ticks + DRIFT_HINT,
+		)
+		eq(
+			replay.checksum().hex_encode(),
+			golden.replay_checksum,
+			label + "checksum do log serializado " + DRIFT_HINT,
 		)
 
 
-## O log gravado numa rodada com PURSUIT/SWEEP tem de reproduzir o mesmo checksum depois de passar
-## por disco. Cobre o invariante 7 na via que o jogo usa de verdade — `from_bytes` + `replay_into`.
-func test_each_boss_lap_survives_serialization_and_replays_bit_exact() -> void:
+func test_pinned_replays_still_reproduce_bit_exact_on_a_fresh_simulation() -> void:
 	var campaign := load(CAMPAIGN_PATH) as CampaignDefinition
 	ok(campaign != null, "campanha de produção precisa carregar")
 	if campaign == null:
 		return
-	if campaign.rounds.size() != GOLDEN_BOSS_LAPS.size():
-		return
-
-	for index in GOLDEN_BOSS_LAPS.size():
-		var golden: Dictionary = GOLDEN_BOSS_LAPS[index]
+	for index in mini(campaign.rounds.size(), GOLDEN_ROUNDS.size()):
+		var golden: Dictionary = GOLDEN_ROUNDS[index]
 		var content := campaign.rounds[index]
 		var recorded := GameSimulation.new(
 			content.rules, content.round_definition, content.seed_value
 		)
 		var replay := ReplayLog.start(recorded)
-		for segment in BOSS_LAP_ROUTE:
-			for _tick in int(segment[1]):
-				var intent := MoveIntent.make(segment[0], false)
+		for segment in golden.route:
+			for _tick in int(segment[2]):
+				var intent := MoveIntent.make(segment[0], segment[1])
 				recorded.step(intent)
 				replay.record(intent)
 
+		# Serializa e desserializa: o log que o jogo grava em disco tem de valer o mesmo.
 		var restored := ReplayLog.from_bytes(replay.to_bytes())
-		ok(restored != null, "o log da volta da rodada %d precisa sobreviver a to_bytes" % index)
+		ok(restored != null, "%s: o log dourado precisa sobreviver a to_bytes/from_bytes" % golden.id)
 		if restored == null:
 			continue
+
 		var fresh := GameSimulation.new(content.rules, content.round_definition, content.seed_value)
+		eq(restored.compatibility_error(fresh), "", "%s: log dourado precisa ser compatível com o runtime" % golden.id)
+		var final_checksum := restored.replay_into(fresh)
 		eq(
-			restored.compatibility_error(fresh),
-			"",
-			"log da volta da rodada %d precisa ser compatível com o runtime" % index,
-		)
-		eq(
-			restored.replay_into(fresh).hex_encode(),
+			final_checksum.hex_encode(),
 			golden.final_checksum,
-			"reprodução da volta da rodada %d divergiu do checksum fixado " % index + DRIFT_HINT,
+			"%s: reprodução do log dourado divergiu do checksum fixado " % golden.id + DRIFT_HINT,
 		)
-
-
-func test_pinned_replay_still_reproduces_bit_exact_on_a_fresh_simulation() -> void:
-	var campaign := load(CAMPAIGN_PATH) as CampaignDefinition
-	ok(campaign != null, "campanha de produção precisa carregar")
-	if campaign == null:
-		return
-	var content := campaign.rounds[0]
-	var recorded := GameSimulation.new(
-		content.rules, content.round_definition, content.seed_value
-	)
-	var replay := ReplayLog.start(recorded)
-	for segment in ROUTE:
-		for _tick in int(segment[2]):
-			var intent := MoveIntent.make(segment[0], segment[1])
-			recorded.step(intent)
-			replay.record(intent)
-
-	# Serializa e desserializa: o log que o jogo grava em disco tem de valer o mesmo.
-	var restored := ReplayLog.from_bytes(replay.to_bytes())
-	ok(restored != null, "o log dourado precisa sobreviver a to_bytes/from_bytes")
-	if restored == null:
-		return
-
-	var fresh := GameSimulation.new(content.rules, content.round_definition, content.seed_value)
-	eq(restored.compatibility_error(fresh), "", "log dourado precisa ser compatível com o runtime")
-	var final_checksum := restored.replay_into(fresh)
-	eq(
-		final_checksum.hex_encode(),
-		GOLDEN_FINAL_CHECKSUM,
-		"reprodução do log dourado divergiu do checksum fixado " + DRIFT_HINT,
-	)

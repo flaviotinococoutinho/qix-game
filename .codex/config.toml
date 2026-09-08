@@ -1,0 +1,9 @@
+[mcp_servers.godot-ai]
+command = "python3"
+args = ["-B", "tools/mcp/godot_mcp.py"]
+startup_timeout_sec = 90
+
+
+[mcp_servers.blender]
+command = "python3"
+args = ["-B", "tools/mcp/blender_mcp.py"]

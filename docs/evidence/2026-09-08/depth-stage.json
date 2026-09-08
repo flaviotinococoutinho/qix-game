@@ -1,0 +1,20 @@
+{
+	"assertions": 20,
+	"beacons": 1,
+	"errors": [],
+	"permille": 179,
+	"renderer": "gl_compatibility",
+	"stage": {
+		"actor_proxies": 6,
+		"enabled": true,
+		"hit_ticks": 0,
+		"loaded_models": 6,
+		"pulse_ticks": 18,
+		"reduced_motion": false,
+		"render_scale": 3
+	},
+	"viewport": [
+		480,
+		640
+	]
+}

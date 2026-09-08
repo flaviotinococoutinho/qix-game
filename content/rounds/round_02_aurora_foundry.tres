@@ -1,14 +1,14 @@
 [gd_resource type="Resource" script_class="RoundContent" format=3]
 
-[ext_resource type="Resource" path="res://content/rounds/definitions/round_02_aurora_foundry.tres" id="1_qkmd4"]
-[ext_resource type="Resource" path="res://content/rules/pressure.tres" id="2_ne8s5"]
-[ext_resource type="Script" path="res://game/rules/round_content.gd" id="3_47en5"]
-[ext_resource type="Resource" path="res://content/visuals/round_02_aurora_foundry.tres" id="4_qbba8"]
+[ext_resource type="Resource" path="res://content/rounds/definitions/round_02_aurora_foundry.tres" id="1_j32ai"]
+[ext_resource type="Resource" path="res://content/rules/pressure.tres" id="2_ls7xn"]
+[ext_resource type="Script" path="res://game/rules/round_content.gd" id="3_ueutk"]
+[ext_resource type="Resource" path="res://content/visuals/round_02_aurora_foundry.tres" id="4_efwun"]
 
 [resource]
-script = ExtResource("3_47en5")
+script = ExtResource("3_ueutk")
 round_id = &"aurora_foundry"
-rules = ExtResource("2_ne8s5")
-round_definition = ExtResource("1_qkmd4")
+rules = ExtResource("2_ls7xn")
+round_definition = ExtResource("1_j32ai")
 seed_value = 189234077
-visual = ExtResource("4_qbba8")
+visual = ExtResource("4_efwun")

@@ -1,46 +1,36 @@
 extends TestCase
-## Contrato do speed-up do jogador — hoje **inerte**.
-##
-## `GameRules.substeps_speedup` e `GameRules.new_segment_slow_px` são autorados, validados por
-## `validation_errors()` e entram em `canonical_bytes()` (logo, no `config_hash` do replay).
-## `GameSimulation._player_substeps()` só os consulta quando `speedup_active` é verdadeiro — e
-## **nenhum caminho do domínio, da sessão ou da apresentação escreve nesse campo**. O intent que
-## o domínio recebe (`MoveIntent`) carrega direção e `drawing`, e não tem bit de "rápido".
-##
-## Consequência medida abaixo: mexer nesses dois números **invalida todo replay existente** e
-## **não muda um único tick** de jogo. Um leitor de `GameRules` vê "4 subpassos com speed-up,
-## nunca nos primeiros 8 px de um segmento novo" e conclui, razoavelmente, que o jogo tem
-## speed-up. Não tem.
-##
-## Este teste fica **vermelho no dia em que alguém ligar o speed-up**. Isso é o objetivo: quem
-## ligar tem de voltar aqui, reescrever o contrato e fechar o item do `docs/LOOP_LEDGER.md`.
+## O nome preserva a regressão original: sem itens nem flag explícita, as regras de aceleração
+## não mudam o movimento. Atlas v4 dá a elas um produtor real: o item VELOCITY, capturado numa
+## baliza e mantido em EffectTimers. Os três casos isolados continuam úteis para provar que a
+## configuração não acelera o jogador sozinha; o caso de produção fecha captura → efeito → passo.
+## Ambos os parâmetros participam do config_hash, mesmo numa rodada que não ofereça itens.
 
 ## [substeps_speedup, new_segment_slow_px] — o primeiro par é o de produção.
 const SWEEP := [[4, 8], [1, 8], [8, 0], [2, 32]]
 
 
-func test_speedup_active_stays_off_along_a_full_capture_route() -> void:
+func test_explicit_speedup_flag_stays_off_without_items() -> void:
 	var simulation := _run_route(4, 8)
 	eq(simulation.speedup_active, false,
-		"nenhum caminho liga speedup_active; se isto falhar, o speed-up ganhou produtor")
+		"a fixture sem itens não liga a flag explícita de aceleração")
 	eq(simulation.fills_done, 2, "a rota precisa mesmo capturar, senão não mede nada")
 
 
-func test_authored_speedup_rules_do_not_change_a_single_tick() -> void:
+func test_speedup_rules_do_not_change_movement_without_an_active_source() -> void:
 	var reference := _run_route(SWEEP[0][0], SWEEP[0][1])
 	var reference_checksum := reference.state_checksum()
 	for index in range(1, SWEEP.size()):
 		var variant: Array = SWEEP[index]
 		var simulation := _run_route(variant[0], variant[1])
 		eq(simulation.state_checksum(), reference_checksum,
-			"substeps_speedup=%d / new_segment_slow_px=%d mudou o estado — o speed-up ganhou efeito"
+			"substeps_speedup=%d / new_segment_slow_px=%d mudou o estado sem fonte de aceleração"
 				% [variant[0], variant[1]])
 		eq(simulation.tick, reference.tick)
 		eq(simulation.permille, reference.permille)
 		eq(simulation.score, reference.score)
 
 
-func test_inert_speedup_rules_still_invalidate_every_existing_replay() -> void:
+func test_speedup_configuration_participates_in_replay_even_without_items() -> void:
 	var round_definition := _route_round()
 	var seen := {}
 	for variant in SWEEP:
@@ -50,19 +40,51 @@ func test_inert_speedup_rules_still_invalidate_every_existing_replay() -> void:
 			"config_hash repetiu para substeps_speedup=%d / new_segment_slow_px=%d" % variant)
 		seen[hash_hex] = true
 	eq(seen.size(), SWEEP.size(),
-		"cada valor destes campos inertes produz um config_hash distinto: editá-los custa "
-		+ "compatibilidade de replay e não compra comportamento nenhum")
+		"as regras autoradas participam do contrato de replay mesmo na fixture sem itens")
 
 
-func test_production_rounds_author_a_speedup_that_never_happens() -> void:
+func test_production_beacon_activates_authored_velocity_and_replays() -> void:
 	var campaign := load("res://content/campaigns/main_campaign.tres") as CampaignDefinition
 	ok(campaign != null, "campanha de produção precisa carregar")
+	if campaign == null:
+		return
 	ok(not campaign.rounds.is_empty(), "campanha de produção sem rodadas")
+	if campaign.rounds.is_empty():
+		return
 	for index in campaign.rounds.size():
 		var rules: GameRules = campaign.rounds[index].rules
+		var profile := rules.items as ItemProfile
+		ok(profile != null and profile.enabled, "rodada %d oferece itens" % index)
 		ok(rules.substeps_speedup > rules.substeps_normal,
-			"rodada %d autora um speed-up (%d > %d subpassos) que nunca é alcançado"
+			"rodada %d autora VELOCITY mais rápida (%d > %d subpassos)"
 				% [index, rules.substeps_speedup, rules.substeps_normal])
+	var content := campaign.rounds[0]
+	var simulation := GameSimulation.new(content.rules, content.round_definition, content.seed_value)
+	var replay := ReplayLog.start(simulation)
+	var collected_velocity := false
+	# Primeira captura da rota humana validada, com chefe e ameaças de produção ativos.
+	for segment in [[MoveIntent.Dir.LEFT, false, 36], [MoveIntent.Dir.DOWN, true, 141]]:
+		for _tick in int(segment[2]):
+			var intent := MoveIntent.make(segment[0], segment[1])
+			replay.record(intent)
+			for event in simulation.step(intent):
+				if event.kind == GameEvent.Kind.ITEM_STARTED and event.data.item == ItemProfile.Kind.VELOCITY:
+					collected_velocity = true
+	ok(collected_velocity, "capturar a baliza de produção ativa VELOCITY")
+	ok(simulation.effects.active(ItemProfile.Kind.VELOCITY))
+	eq(simulation.speedup_active, false, "o timer é autoritativo, sem copiar o efeito para a flag")
+	var before_x := simulation.px
+	var move := MoveIntent.make(MoveIntent.Dir.LEFT, false)
+	replay.record(move)
+	simulation.step(move)
+	eq(before_x - simulation.px, content.rules.substeps_speedup,
+		"VELOCITY adquirida pela captura usa a velocidade autorada no próximo tick")
+	var restored := ReplayLog.from_bytes(replay.to_bytes())
+	ok(restored != null)
+	if restored != null:
+		var fresh := GameSimulation.new(content.rules, content.round_definition, content.seed_value)
+		eq(restored.replay_into(fresh), simulation.state_checksum(),
+			"captura, duração do item e movimento acelerado sobrevivem ao replay")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -80,6 +102,7 @@ func _route_rules(substeps_speedup: int, new_segment_slow_px: int) -> GameRules:
 	rules.boss_turn_every_ticks = 0
 	rules.shield_ticks = 10_000
 	rules.target_permille = 1000         # não terminar a rodada antes do fim da rota
+	(rules.items as ItemProfile).enabled = false
 	return rules
 
 

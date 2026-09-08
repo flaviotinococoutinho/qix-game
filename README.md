@@ -1,6 +1,6 @@
 # QIX GAME (codinome)
 
-Reimaginação original de um jogo territorial (gramática de Qix, sistemas de Volfied). Godot **4.7.2-stable**, GDScript tipado, 2D, retrato 240×320.
+Reimaginação original de um jogo territorial (gramática de Qix, sistemas de Volfied). Godot **4.7.2-stable**, GDScript tipado, simulação 2D determinística e apresentação **2.5D**, retrato lógico 240×320.
 
 O vertical slice M2/G2 e o shipping candidate já encadeiam uma campanha autorável de três
 rodadas: várias capturas até a meta de 80%, score/vidas carregados entre setores, replay isolado
@@ -13,7 +13,24 @@ A identidade visual “Lumen Cartography” combina cartografia bioluminescente,
 territorial R8, ícone original e três cenários: Abyssal Relay, Aurora Foundry e Verdant
 Singularity. Consulte `assets/ASSET-PROVENANCE.md` antes de distribuir.
 
+## Atlas Vivo — integração de 2026-09-08
+
+O jogo ganhou palco ortográfico com seis modelos 3D originais feitos pelo MCP do Blender,
+HUD em resolução nativa, atores com identidade e ciclo de vida, diretor de ameaça, balizas,
+quatro efeitos temporários e bônus de conclusão. A campanha tem rotas verificadas com chefe,
+menores e itens ativos. Regras/replays estão na versão 4; gravações antigas são incompatíveis.
+
+Leia [Atlas Vivo](docs/ATLAS_VIVO.md) para autoria, limites e próximos marcos de produção.
+[Integração MCP](docs/MCP_INTEGRATION.md) descreve os launchers, diagnóstico e testes Godot/Blender.
+Fontes editáveis e hashes estão em `tools/assets/source/` e `assets/models/lumen/`.
+Os relatórios da nova implementação ficam em `build/modernization/`; os números de shipping
+mais abaixo são **históricos da apresentação 2D de 2026-09-03**, não certificam esta versão.
+
 ## Abrir, executar, testar
+
+Build macOS da integração: `build/integration-20260908/Lumen Atlas Integrado.app`.
+O comando abaixo reconstrói o pacote de QA na pasta `build/modernization/`.
+Reconstrução local com assinatura verificada: `bash tools/shipping/build_atlas_macos_local.sh`.
 
 ```bash
 G=/Applications/Godot_mono.app/Contents/MacOS/Godot
@@ -30,6 +47,7 @@ $G --path .                                                  # jogar
 Controles:
 
 - teclado: setas/WASD = direção; Espaço/Z = desenhar; Esc/P = pausa; Enter = confirmar;
+- apresentação: F2 = 2D/2.5D; F4 = reduzir movimento; M = som; F3 = diagnóstico de atores;
 - gamepad: D-pad ou analógico esquerdo = direção; A/X = desenhar; A = confirmar; Start = pausa;
 - touch: stick esquerdo = direção; `DRAW` = desenhar/confirmar; botão superior direito = pausa.
 
@@ -47,7 +65,7 @@ que silenciam probes curtos para evitar o leak de teardown conhecido
 ([#76745](https://github.com/godotengine/godot/issues/76745)). O runtime normal continua com
 áudio, inclusive nos smokes macOS e Android.
 
-## Estado do shipping candidate
+## Registro histórico do shipping candidate — 2026-09-03
 
 - suíte final: **134 testes, 11.489 asserções, 0 falhas**;
 - runner `20260903T065739Z-65912`: macOS e Android concluídos com `overall_exit=0` e estado

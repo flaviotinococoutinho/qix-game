@@ -16,8 +16,8 @@ var _previous_exposure := 0.0
 ## `exposure_crossed` vem de `TrailExposure.crossed_warning`; quem chama `plan` direto e só
 ## se importa com eventos não precisa passá-lo. A aresta entra como candidata igual às
 ## outras: se a morte do jogador cai no mesmo tick, é a morte que se sente.
-func plan(events: Array[GameEvent], exposure_crossed: bool = false) -> Dictionary:
-	if not enabled:
+func plan(events: Array[GameEvent], exposure_crossed: bool = false, paused: bool = false) -> Dictionary:
+	if not enabled or paused:
 		return {}
 	var best: Dictionary = _exposure_pulse() if exposure_crossed else {}
 	for event in events:
@@ -34,18 +34,32 @@ func plan(events: Array[GameEvent], exposure_crossed: bool = false) -> Dictionar
 	return best
 
 
+## Leitura pura: diz se `exposure` atravessaria o limiar contra a memória deste tick, **sem
+## a avançar**.
+##
+## Existe para que a aresta continue a ter um dono só. O canal sonoro do mesmo limiar precisa
+## da mesma resposta, e se cada canal guardasse a sua cópia de `_previous_exposure` bastaria
+## um `sync` desemparelhado — um canal desligado, um tick de arranque — para o jogador sentir
+## e não ouvir. O hub pergunta aqui antes de chamar `sync`, que é quem avança a memória.
+func would_cross_warning(exposure: float) -> bool:
+	return TrailExposure.crossed_warning(_previous_exposure, exposure)
+
+
 ## `exposure` é a leitura de `TrailExposure` para o tick que acabou de ser confirmado. O
 ## default `0.0` preserva o comportamento de quem sincroniza só por eventos.
 ##
-## A pausa não precisa de tratamento especial: com a simulação parada a trilha não cresce,
-## a leitura não se move, e nenhuma aresta nasce ao pausar ou retomar.
-func sync(events: Array[GameEvent], exposure: float = 0.0) -> Dictionary:
+## Pausa interrompe vibração e conserva a memória da exposição; eventos não ficam em fila.
+func sync(events: Array[GameEvent], exposure: float = 0.0, paused: bool = false) -> Dictionary:
+	if paused:
+		for joypad_id in Input.get_connected_joypads():
+			Input.stop_joy_vibration(joypad_id)
+		return {}
 	var crossed := TrailExposure.crossed_warning(_previous_exposure, exposure)
 	# Fora do `if enabled` de propósito: com háptica desligada a leitura continua a andar,
 	# senão religar num traço já longo dispararia uma aresta que o jogador atravessou faz
 	# tempo.
 	_previous_exposure = exposure
-	var pulse := plan(events, crossed)
+	var pulse := plan(events, crossed, paused)
 	if pulse.is_empty():
 		return pulse
 	for joypad_id in Input.get_connected_joypads():
@@ -85,7 +99,7 @@ func _pulse_for_event(event: GameEvent) -> Dictionary:
 		GameEvent.Kind.CAPTURE_REJECTED:
 			return _pulse(&"reject", 45, 0.25, 0.42, 110, 0.38)
 		GameEvent.Kind.SHIELD_CRITICAL:
-			return _pulse(&"shield", 50, 0.50, 0.12, 120, 0.42)
+			return _pulse(&"shield", 92, 0.50, 0.12, 120, 0.42)
 		GameEvent.Kind.PLAYER_DIED:
 			return _pulse(&"death", 100, 0.72, 1.00, 380, 0.90)
 		GameEvent.Kind.PLAYER_RESPAWNED:
@@ -96,6 +110,29 @@ func _pulse_for_event(event: GameEvent) -> Dictionary:
 			return _pulse(&"game_over", 95, 0.52, 0.92, 460, 0.82)
 		GameEvent.Kind.CAMPAIGN_COMPLETE:
 			return _pulse(&"campaign_complete", 90, 0.82, 0.78, 520, 0.86)
+	# O despacho por evento preserva o silêncio de ameaça em queda e da expiração instantânea
+	# de Expurgo. Som e pulso recebem a mesma prioridade da receita autorada.
+	var cue_name := QixAudioDirector.cue_for_event(event)
+	var priority := QixProceduralAudioLibrary.priority_for(cue_name)
+	match cue_name:
+		&"trail_cut":
+			return _pulse(cue_name, priority, 0.42, 0.65, 95, 0.58)
+		&"ember", &"boss_cornered":
+			return _pulse(cue_name, priority, 0.50, 0.48, 140, 0.52)
+		&"boss_phase", &"overtime":
+			return _pulse(cue_name, priority, 0.48, 0.36, 180, 0.50)
+		&"dart_arm", &"walker_spawn":
+			return _pulse(cue_name, priority, 0.18, 0.08, 35, 0.18)
+		&"threat", &"item_end":
+			return _pulse(cue_name, priority, 0.25, 0.14, 65, 0.24)
+		&"beacon":
+			return _pulse(cue_name, priority, 0.32, 0.24, 65, 0.32)
+		&"velocity", &"stasis", &"shield_freeze":
+			return _pulse(cue_name, priority, 0.36, 0.20, 110, 0.35)
+		&"purge":
+			return _pulse(cue_name, priority, 0.40, 0.58, 125, 0.50)
+		&"sealed":
+			return _pulse(cue_name, priority, 0.65, 0.72, 230, 0.72)
 	return {}
 
 

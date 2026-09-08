@@ -44,10 +44,32 @@ State Machine Antipixel Godot Documentation.pdf
 guide_examples/
 samples/
 
+# ── Addons removidos pela ADR-0010 ───────────────────────────────────────────
+# Uma pasta que estava como `a-remover` em addons/README.md e saiu do
+# versionamento. Ignorar impede que um checkout que a rebaixe pela AssetLib a
+# recommite por acidente — mas NÃO a esconde: ela reaparecendo em disco,
+# addons_manifest_test.gd fica vermelho por pasta sem linha no manifesto, que é
+# exatamente a barreira que a ADR-0010 quis. Quem decidir mantê-la escreve a
+# linha com o estado novo e faz `git add -f`.
+#
+# As sete saíram uma por PR (#60, #62, #63, #64, #66, #72, #73) e foram integradas juntas.
+# Só duas delas traziam a própria linha aqui; as outras cinco confiavam no `.gitignore`
+# de quem entrasse antes — proteção que dependia da ordem de merge. Ficam as sete.
+# A evidência de posse de cada uma está na tabela de addons/README.md.
+addons/GDDraw/
+addons/curve2collision/
+addons/curved_lines_2d/
+addons/guide/
+addons/phantom_camera/
+addons/softbody2d/
+addons/yard/
+
+# Bytecode Python é derivado, depende do interpretador e não participa de merges.
+# Ignore global + guarda do índice no CI cobrem caches novos e arquivos já rastreados.
+__pycache__/
+*.py[cod]
+
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
 
-# Bytecode derivado de Python, em qualquer profundidade.
-__pycache__/
-*.py[cod]

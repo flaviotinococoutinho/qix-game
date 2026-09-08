@@ -116,7 +116,7 @@ func test_the_cadence_reads_the_session_and_never_writes_to_it() -> void:
 			seen_hidden = true
 		# A fração vem da view, não da sessão: `#25` tirou `transition_progress()` do domínio
 		# porque devolvia `float` (invariante 1). Quem apresenta é dono da divisão.
-		if view._beat(view._transition_progress(session)) > 0.0:
+		if view._beat(view.transition_progress(session)) > 0.0:
 			seen_beat = true
 		session.step(MoveIntent.none())
 	ok(seen_hidden, "o prompt esteve em cena a intro inteira: não há cadência")

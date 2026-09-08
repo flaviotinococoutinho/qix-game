@@ -1,5 +1,55 @@
 # Proveniência dos assets visuais
 
+## Atlas Vivo — biblioteca de atores 2.5D
+
+- Data: 2026-09-07.
+- Ferramenta: Blender **5.2.0 LTS**, pelo MCP oficial instalado (`blmcp`), ferramenta
+  `execute_blender_code_for_cli`. Não houve instalação nem download de modelos/texturas.
+- Autoria: geometria procedural original definida em `tools/assets/build_lumen_models.py`,
+  executada pelo adaptador `tools/assets/blender_mcp_job.py`. Materiais e peças também são
+  definidos pelo script; não contêm imagens, malhas, sons ou bytes extraídos de ROM.
+- Fonte editável: `tools/assets/source/lumen_actor_library.blend`, excluída do import/export
+  automático. Cada ator preserva peças nomeadas para edição e futura animação.
+- Runtime: seis GLBs em `assets/models/lumen/`. O arquivo `manifest.json` registra versão,
+  componentes, tamanho em bytes e SHA-256 de cada arquivo. O Godot instancia essas malhas
+  exclusivamente como apresentação, sem colisores que alterem a simulação.
+- Rastreabilidade local: `build/modernization/blender-models-receipt.json` preserva a chamada
+  MCP; `lumen-models-gallery.png` preserva o render de inspeção. A galeria não é textura de jogo.
+- Revisão: os seis modelos foram inspecionados no render Blender e carregados no renderer
+  real do Godot. Silhuetas distintas, paleta coerente, ausência de texto e marcas de terceiros.
+- Licença: esta geometria e os scripts originais são contribuições ao projeto sob sua licença
+  raiz MIT. A proveniência dos fundos gerados anteriormente permanece registrada abaixo.
+
+| Arquivo GLB | Papel | Triângulos |
+|---|---|---:|
+| `surveyor.glb` | jogador / cartógrafo | 1.192 |
+| `core.glb` | núcleo inimigo | 1.380 |
+| `walker.glb` | vagalume de fronteira | 572 |
+| `dart.glb` | dardo | 260 |
+| `ember.glb` | brasa de trilha | 640 |
+| `beacon.glb` | baliza capturável | 1.040 |
+
+Regenerar reconstrói a biblioteca a partir do script; antes disso, incorpore alterações
+manuais do `.blend` ao gerador ou preserve/exporte a revisão artística separadamente.
+
+## Probe do jogador — drone cartógrafo
+
+- Data: 2026-09-05.
+- Arquivo: `_gen/probe_player.png` (removido); probe histórico, ausente da árvore integrada. PNG RGBA, `32 × 32` pixels.
+- Ferramenta: `image_gen.imagegen` integrado ao Codex; uma única geração. Modelo e seed não informados pela ferramenta.
+- Rastreabilidade: `exec-15dca976-777c-4632-bed7-3b7cc2063912`.
+- Fonte preservada no cache: `/Users/flaviocoutinho/.codex/generated_images/01a06fbc-bbfc-71c0-9a0a-aafd464403a1/exec-15dca976-777c-4632-bed7-3b7cc2063912.png`.
+- Tratamento: fonte de `1254 × 1254` reduzida para `32 × 32` por vizinho mais próximo via CoreGraphics, sem suavização e preservando alfa.
+- SHA-256 histórico (removido): `8741690767f4ce61a45d6353154e118d42993fbd5729efcc2750f2b20f649088`.
+- Verificação: arquivo final reaberto; dimensões e canal alfa confirmados, com 800 pixels totalmente transparentes. Inspeção visual da fonte e do sprite final: sujeito único, vista superior, ciano e núcleo dourado, sem texto, marca-d'água ou sombra projetada. Probe sem integração ao runtime.
+- Proveniência: geração original OpenAI, sem material extraído de ROM; as observações de uso e revisão deste manifesto continuam aplicáveis.
+
+Prompt final:
+
+```text
+Create exactly ONE image. Asset type: pixel art game sprite for a Qix-like territory game. A tiny luminous cartographer drone (the player cursor), one single compact subject centered in one 32x32 px cell, orthographic top-down. Bioluminescent cyan body with a pale gold luminous core. Crisp hard pixel edges, limited palette, simple readable silhouette at 32x32 pixels, no antialiasing, no blur or glow outside the silhouette. Fully transparent background with actual alpha transparency, not a checkerboard drawn into the image. No drop shadow, no text, no watermark. Output one PNG sprite, exactly 32 pixels wide by 32 pixels tall if supported. No extra panels, no sprite sheet, no scene, no other subjects.
+```
+
 Este manifesto registra a origem e o tratamento dos fundos usados pela campanha
 `lumen_cartography`. Ele separa explicitamente fontes geradas, derivados de runtime e
 tentativas rejeitadas. Nenhuma arte de ROM, screenshot de outro jogo ou referência externa
@@ -85,3 +135,17 @@ Materials/textures: subtle crystalline and organic-map texture confined inside t
 Constraints: square raster artwork; original design; no text, no letters, no numbers, no typography, no logos, no trademarks, no signature, no watermark; no character or face; no HUD; no screenshot; no rounded-square frame; no circular badge; no bevelled app-icon mockup; no device mockup; no drop shadow outside the art; do not imitate any existing game or artist.
 Avoid: clutter, tiny filigree, thin low-contrast lines, photorealistic landscape, generic neon triangle, generic letter Q, gradients that wash out the silhouette.
 ```
+
+## Inventário dos modelos e fonte editável
+
+Hashes calculados dos arquivos da árvore integrada em 2026-09-08. A geometria e autoria são descritas acima; o manifesto JSON registra também componentes, tamanhos e triângulos.
+
+| Arquivo | SHA-256 |
+|---|---|
+| `assets/models/lumen/beacon.glb` | `07ec77896fa8d5fc3680287a821e16d6ee6ea2eead70422cc019d2ad0f6facff` |
+| `assets/models/lumen/core.glb` | `10fb359018180d85ac4535f44da8641ed33dfefcc259ad643cc832197416ec3f` |
+| `assets/models/lumen/dart.glb` | `cf830eccef27faf410d68c2019bb29889524ac61042a8dd0f5b28f982c92a60a` |
+| `assets/models/lumen/ember.glb` | `2767e81aaaeac72def60578c6b12643e2261b61c625a37e9b938b7bcac4cef6f` |
+| `assets/models/lumen/surveyor.glb` | `c1dd4df17b703238a34dafc2fd290e9baa874830780f70e38d4b2f648f7abe86` |
+| `assets/models/lumen/walker.glb` | `e05c045deddf88a081f209168ef61b5feb11ad2c1fe4518a26ea6340e315bd95` |
+| `tools/assets/source/lumen_actor_library.blend` | `f299c20d5b5edc811443cc9da8af78200679c4ea3bc796e35edf10247bf6a26e` |

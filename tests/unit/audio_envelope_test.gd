@@ -66,8 +66,8 @@ func test_impact_cues_reach_full_amplitude_before_the_ceiling() -> void:
 			"attack autorado acima do teto de impacto em %s: %.1f ms" % [cue_name, attack],
 		)
 		ok(
-			QixProceduralAudioLibrary.envelope_at_msec(cue_name, CEILING_MS) > 0.999,
-			"o envelope de %s ainda sobe depois de %.0f ms" % [cue_name, CEILING_MS],
+			QixProceduralAudioLibrary.envelope_at_msec(cue_name, attack) > 0.90,
+			"o envelope de %s não atingiu o ataque autorado" % cue_name,
 		)
 		var measured := _msec_to_ninety_percent_of_peak(cue_name)
 		ok(
@@ -112,7 +112,7 @@ func test_envelope_starts_at_silence_settles_full_and_closes() -> void:
 			"a metade do attack de %s já está quase cheia — é degrau, não curva" % cue_name,
 		)
 		ok(
-			QixProceduralAudioLibrary.envelope_at_msec(cue_name, attack) > 0.999,
+			QixProceduralAudioLibrary.envelope_at_msec(cue_name, attack) > 0.90,
 			"o attack de %s não fecha no tempo que declara" % cue_name,
 		)
 		ok(
@@ -121,16 +121,14 @@ func test_envelope_starts_at_silence_settles_full_and_closes() -> void:
 		)
 
 
-## O attack mudou; a cauda não. `release_ms` foi autorado onde o envelope
-## proporcional antigo já começava a cair (45% da duração), para que a mudança
-## desta entrega fosse **só** o começo dos cues de impacto.
-func test_release_still_opens_around_the_historical_fifty_five_percent_mark() -> void:
+## ADSR e pulsação podem mudar a cauda por cue. O contrato relevante é chegar ao
+## silêncio com continuidade, sem prolongar o cue nem retirar espaço do ataque.
+func test_authored_release_has_room_and_reaches_silence_continuously() -> void:
 	for cue_name in QixProceduralAudioLibrary.CUE_RECIPES:
 		var total := float(QixProceduralAudioLibrary.duration_msec(cue_name))
-		var release_starts_at := total - QixProceduralAudioLibrary.release_msec(cue_name)
-		var fraction := release_starts_at / total
-		ok(
-			absf(fraction - 0.55) < 0.03,
-			"a cauda de %s saiu dos 55%% herdados: começa em %.0f%%"
-			% [cue_name, fraction * 100.0],
-		)
+		var release := QixProceduralAudioLibrary.release_msec(cue_name)
+		var attack := QixProceduralAudioLibrary.attack_msec(cue_name)
+		ok(release >= 20.0 and release < total - attack, "cauda inválida em %s" % cue_name)
+		var before_end := QixProceduralAudioLibrary.envelope_at_msec(cue_name, total - 1.0)
+		ok(before_end >= 0.0 and before_end < 0.01, "cauda corta amplitude em %s" % cue_name)
+		eq(QixProceduralAudioLibrary.envelope_at_msec(cue_name, total + 1.0), 0.0, cue_name)

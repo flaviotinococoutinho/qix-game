@@ -1,25 +1,29 @@
 class_name GameSimulation
 extends RefCounted
-## Dono do estado, da ordem do tick e das regras. `step(intent)` avança exatamente um tick.
+## Orquestrador de uma rodada: dono da ordem do tick, da arbitragem e do checksum composto.
+## `step(intent)` avança exatamente um tick. Os estados vivem em objetos pequenos
+## (`PlayerState`, `BossState`, `MinorActorPools`, `DirectorState`, `ScoreLedger`, `ShieldClock`)
+## e as regras em funções estáticas (`PlayerMotion`, `BossMotion`, `WalkerRules`, `DartRules`,
+## `EmberRules`, `ThreatDirector`, `FloodFillCaptureResolver`).
 ##
-## Ordem do tick (prompt mestre, "Ordem do tick e determinismo"):
-##  1. canonicaliza o intent (trilha ativa força draw);
-##  2. subpassos do jogador: escreve trilha e testa contato contra o estado atual;
+## Ordem do tick (normativa; ADR-0010/0011):
+##  1. avança dissipações dos pools; canonicaliza o intent (trilha ativa força draw; fallback só vale se diferir do primário);
+##  2. subpassos do jogador: primário, ou fallback se o primário bloqueou; escreve trilha e
+##     testa contato contra Núcleo, vagalumes e dardos armados no estado atual; conta stall;
 ##  3. fechamento → CapturePlan, TRAIL fica ativa até a arbitragem;
-##  4. inimigos em ordem estável (só o chefe no corte), testando todos os segmentos varridos;
-##  5. arbitragem: LETHAL_CONTACT_WINS escolhe contato; caso contrário, captura válida vence;
-##  6. sem contato, aplica o plano atomicamente (TRAIL → BOUNDARY);
-##  7. shield, score, condição de rodada;
-##  8. lista ordenada de eventos confirmados.
+##  4. Núcleo: fase, virada (caça à trilha), reflexões, fúria — todos os subpassos;
+##  5. diretor de ameaça: índice, contagens, spawns (nunca no tick de um fechamento);
+##  6. atores menores em ordem estável — vagalumes, dardos (corte acende brasa), brasas —
+##     cada um testando contato;
+##  7. arbitragem: LETHAL_CONTACT_WINS escolhe contato; caso contrário, captura válida vence;
+##  8. sem contato, expira efeitos consumidos; aplica o plano atomicamente (TRAIL → BOUNDARY) e faz a varredura
+##     pós-captura: atores inválidos apagam, balizas pagam/ativam itens, diretor recarrega;
+##  9. escudo, graça pós-reentrada (após TODAS as colisões), razão de fim de rodada;
+## 10. lista ordenada de eventos confirmados.
 ## Inteiros e ponto fixo 8.8 apenas. Nada aqui lê relógio, Input, Tween ou física.
 
 enum Phase { PLAYING, DYING, ROUND_WON, GAME_OVER }
-enum DeathReason { BOSS_CONTACT, SHIELD_EXPIRED }
-
-const BossBehaviorControllerScript = preload("res://game/enemies/boss_behavior_controller.gd")
-
-const DX := [0, 0, 1, 0, -1]   # indexado por MoveIntent.Dir
-const DY := [0, -1, 0, 1, 0]
+enum DeathReason { BOSS_CONTACT, SHIELD_EXPIRED, WALKER_CONTACT, DART_CONTACT, EMBER_CONTACT }
 
 var rules: GameRules
 var round_def: RoundDefinition
@@ -30,39 +34,96 @@ var board: BoardState
 var rng: DeterministicRng
 var resolver := FloodFillCaptureResolver.new()
 
+var player := PlayerState.new()
+var boss := BossState.new()
+var pools := MinorActorPools.new()
+var director := DirectorState.new()
+var ledger := ScoreLedger.new()
+var shield := ShieldClock.new()
+var beacons := BeaconState.new()
+var effects := EffectTimers.new()
+
 var tick: int = 0
 var phase: int = Phase.PLAYING
 var lives: int
-var score: int = 0
-var permille: int = 0
-var fills_done: int = 0
-var permille_remainder: int = 0
-var shield_ticks: int
-var shield_critical_sent: bool = false
 var death_ticks_left: int = 0
-## SEM PRODUTOR: nada neste arquivo, na sessão ou na apresentação escreve `true` aqui, portanto
-## `_player_substeps()` devolve sempre `substeps_normal`. O campo continua no checksum de propósito
-## — tirá-lo invalidaria os replays existentes. Ver `tests/unit/speedup_rules_inert_test.gd`.
+## Flag explícita de aceleração preservada no estado/checksum. A campanha ativa a aceleração
+## pelo timer autoritativo de VELOCITY; `_player_substeps()` consulta ambos sem duplicar timers.
 var speedup_active: bool = false
+var round_end_reason: int = GameRules.RoundEndReason.NONE
+var deaths_this_round: int = 0
 
-# jogador
-var px: int
-var py: int
-var pdir: int = MoveIntent.Dir.NONE
-var trail: PackedInt32Array = PackedInt32Array()
-var trail_active: bool = false
-var first_vertex: Vector2i
-var segment_len: int = 0
-var trail_px_since_score: int = 0
+# ---------------------------------------------------------------------------------------------
+# Fachada de leitura. Views, HUD e testes leem por aqui; os setters existem para fixtures de
+# apresentação e nunca são chamados por quem observa a simulação em jogo.
+# ---------------------------------------------------------------------------------------------
 
-# chefe (ponto fixo 8.8)
-var boss_alive: bool = true
-var bx_fp: int
-var by_fp: int
-var bvx_fp: int
-var bvy_fp: int
-var boss_dir_index: int
-var boss_effective_speed_fp: int
+var px: int:
+	get: return player.px
+	set(value): player.px = value
+var py: int:
+	get: return player.py
+	set(value): player.py = value
+var pdir: int:
+	get: return player.pdir
+	set(value): player.pdir = value
+var trail: PackedInt32Array:
+	get: return player.trail
+	set(value): player.trail = value
+var trail_active: bool:
+	get: return player.trail_active
+	set(value): player.trail_active = value
+var first_vertex: Vector2i:
+	get: return player.first_vertex
+	set(value): player.first_vertex = value
+var segment_len: int:
+	get: return player.segment_len
+	set(value): player.segment_len = value
+var trail_px_since_score: int:
+	get: return player.trail_px_since_score
+	set(value): player.trail_px_since_score = value
+
+var score: int:
+	get: return ledger.score
+	set(value): ledger.score = value
+var permille: int:
+	get: return ledger.permille
+	set(value): ledger.permille = value
+var fills_done: int:
+	get: return ledger.fills_done
+	set(value): ledger.fills_done = value
+var permille_remainder: int:
+	get: return ledger.permille_remainder
+	set(value): ledger.permille_remainder = value
+
+var shield_ticks: int:
+	get: return shield.ticks
+	set(value): shield.ticks = value
+var shield_critical_sent: bool:
+	get: return shield.critical_sent
+	set(value): shield.critical_sent = value
+
+var boss_alive: bool:
+	get: return boss.alive
+	set(value): boss.alive = value
+var bx_fp: int:
+	get: return boss.x_fp
+	set(value): boss.x_fp = value
+var by_fp: int:
+	get: return boss.y_fp
+	set(value): boss.y_fp = value
+var bvx_fp: int:
+	get: return boss.vx_fp
+	set(value): boss.vx_fp = value
+var bvy_fp: int:
+	get: return boss.vy_fp
+	set(value): boss.vy_fp = value
+var boss_dir_index: int:
+	get: return boss.dir_index
+	set(value): boss.dir_index = value
+var boss_effective_speed_fp: int:
+	get: return boss.effective_speed_fp
+	set(value): boss.effective_speed_fp = value
 
 
 func _init(
@@ -90,59 +151,62 @@ func reset_round() -> void:
 	tick = 0
 	phase = Phase.PLAYING
 	lives = round_start_state.lives
-	score = round_start_state.score
-	permille = 0
-	fills_done = 0
-	permille_remainder = 0
-	shield_ticks = rules.shield_ticks
-	shield_critical_sent = false
+	ledger.reset(round_start_state.score)
+	shield.reset(rules)
 	death_ticks_left = 0
 	speedup_active = false
-	px = round_def.player_spawn.x
-	py = round_def.player_spawn.y
-	assert(board.get_cell(px, py) == BoardState.Cell.BOUNDARY, "spawn precisa estar na moldura")
-	pdir = MoveIntent.Dir.NONE
-	trail = PackedInt32Array()
-	trail_active = false
-	first_vertex = Vector2i(px, py)
-	segment_len = 0
-	trail_px_since_score = 0
-	boss_alive = true
-	bx_fp = round_def.boss_start.x << 8
-	by_fp = round_def.boss_start.y << 8
-	boss_dir_index = round_def.boss_dir_index & 15
-	boss_effective_speed_fp = BossBehaviorControllerScript.effective_speed_fp(
-		rules.boss_behavior,
-		rules.boss_speed_fp,
-		tick,
-	)
-	_set_boss_velocity(boss_dir_index, boss_effective_speed_fp)
-	assert(board.get_cell(boss_cell().x, boss_cell().y) == BoardState.Cell.FREE, "chefe nasce em FREE")
+	round_end_reason = GameRules.RoundEndReason.NONE
+	deaths_this_round = 0
+	effects.reset()
+	var beacons_valid := beacons.reset(round_def.beacon_cells, round_def.field_width, round_def.field_height)
+	assert(beacons_valid, "balizas inválidas")
+	player.reset(round_def.player_spawn)
+	assert(board.get_cell(player.px, player.py) == BoardState.Cell.BOUNDARY, "spawn precisa estar na moldura")
+	boss.reset(round_def.boss_start, round_def.boss_dir_index)
+	boss.set_velocity(boss.dir_index, BossMotion.speed_for(boss, rules, tick))
+	assert(board.get_cell(boss.cell().x, boss.cell().y) == BoardState.Cell.FREE, "chefe nasce em FREE")
+	pools.clear()
+	director.reset(threat_profile())
+
+
+func threat_profile() -> ThreatProfile:
+	return rules.threat as ThreatProfile
+
+
+func threat_enabled() -> bool:
+	var profile := threat_profile()
+	return profile != null and profile.enabled
+
+
+func item_profile() -> ItemProfile:
+	return rules.items as ItemProfile
+
+
+func items_enabled() -> bool:
+	var profile := item_profile()
+	return profile != null and profile.enabled
 
 
 func boss_cell() -> Vector2i:
-	return Vector2i(bx_fp >> 8, by_fp >> 8)
+	return boss.cell()
 
 
 ## Células que o chefe ocupa para contato: centro + cruz (raio 1).
 func boss_contact_cells() -> PackedInt32Array:
-	var c := boss_cell()
-	var out := PackedInt32Array()
-	out.append(board.index_of(c.x, c.y))
-	for d in 4:
-		var nx: int = c.x + BoardState.NEIGHBOR_DX[d]
-		var ny: int = c.y + BoardState.NEIGHBOR_DY[d]
-		if board.in_bounds(nx, ny):
-			out.append(board.index_of(nx, ny))
-	return out
+	return boss.contact_cells(board)
 
 
 func player_index() -> int:
-	return board.index_of(px, py)
+	return player.index_in(board)
 
 
 func interior_cells() -> int:
 	return board.interior_cell_count()
+
+
+## Atores menores podem matar? Não durante a graça pós-reentrada (o Núcleo continua letal).
+func minor_lethal_allowed() -> bool:
+	return threat_enabled() and director.respawn_grace_left <= 0
 
 
 # ---------------------------------------------------------------------------------------------
@@ -152,49 +216,89 @@ func interior_cells() -> int:
 func step(raw_intent: MoveIntent) -> Array[GameEvent]:
 	var events: Array[GameEvent] = []
 	if phase == Phase.ROUND_WON or phase == Phase.GAME_OVER:
+		pools.advance_removals()
+		boss.advance_removal()
 		tick += 1
-		return events  # rodada concluída: nenhuma mutação de gameplay
+		return events  # rodada concluída: só dissipações já confirmadas avançam
 	if phase == Phase.DYING:
 		death_ticks_left -= 1
+		player.lifecycle_ticks = maxi(0, death_ticks_left)
 		if death_ticks_left <= 0:
 			_respawn(events)
 		tick += 1
 		return events
 
-	# 1. canonicalizar
-	var intent := MoveIntent.make(raw_intent.direction, raw_intent.drawing or trail_active)
-	if intent.direction < MoveIntent.Dir.NONE or intent.direction > MoveIntent.Dir.LEFT:
+	pools.advance_removals()
+	var shield_frozen_this_tick := items_enabled() and effects.active(ItemProfile.Kind.SHIELD_FREEZE)
+	# 1. canonicalizar (trilha ativa força draw; fallback igual ao primário não é fallback)
+	var intent := MoveIntent.make(
+		raw_intent.direction, raw_intent.drawing or player.trail_active, raw_intent.fallback
+	)
+	if not MoveIntent.is_valid_dir(intent.direction):
 		intent.direction = MoveIntent.Dir.NONE
+	if not MoveIntent.is_valid_dir(intent.fallback) or intent.fallback == intent.direction:
+		intent.fallback = MoveIntent.Dir.NONE
+	var fallback_intent := MoveIntent.make(intent.fallback, intent.drawing)
 
 	# 2/3. jogador
 	var lethal := false
 	var lethal_reason := DeathReason.BOSS_CONTACT
 	var plan: RefCounted = null
+	var start_cell := player.cell()
 	var substeps := _player_substeps()
 	for _s in substeps:
-		var closed := _player_substep(intent, events)
-		if _player_touches_boss():
+		var result := PlayerMotion.substep(player, board, rules, intent, ledger, events)
+		if result == PlayerMotion.StepResult.BLOCKED and intent.fallback != MoveIntent.Dir.NONE:
+			# Buffer de curva: a curva pedida ainda não é legal, então a direção segurada continua.
+			result = PlayerMotion.substep(player, board, rules, fallback_intent, ledger, events)
+		if BossMotion.touches_player(boss, board, player):
 			lethal = true
-		if closed:
-			plan = resolver.resolve(board, trail, _anchor_indices())
+		if not lethal:
+			var minor_reason := _player_touches_minor()
+			if minor_reason >= 0:
+				lethal = true
+				lethal_reason = minor_reason
+		if result == PlayerMotion.StepResult.CLOSED:
+			plan = resolver.resolve(board, player.trail, _anchor_indices())
 			break  # fill armado → o jogador para (§4.3)
+	if player.cell() == start_cell:
+		player.stall_ticks += 1
+	else:
+		player.stall_ticks = 0
 
-	# 4. chefe: todos os subpassos, testando cada célula varrida
-	if boss_alive and _boss_update():
+	# 4. Núcleo: todos os subpassos, testando cada célula varrida
+	if boss.alive and BossMotion.update(
+		boss, board, rules, tick, ledger.permille, player, rng, director, events
+	):
 		lethal = true
+		lethal_reason = DeathReason.BOSS_CONTACT
 
-	# 5. arbitragem: somente uma captura válida pode superar contato no mesmo tick.
+	# 5. diretor de ameaça (nunca nasce nada no tick de um fechamento)
+	ThreatDirector.update(self, plan != null, events)
+
+	# 6. atores menores
+	var minor_contact := _minor_actors_update(events, plan == null)
+	if minor_contact >= 0 and not lethal:
+		lethal = true
+		lethal_reason = minor_contact
+
+	# 7. arbitragem: somente uma captura válida pode superar contato no mesmo tick.
 	if lethal and plan is CapturePlan:
 		if rules.lethal_contact_wins:
 			plan = null
 		else:
 			lethal = false
 	if lethal:
+		# Movimento já consumiu os efeitos deste tick, mesmo quando termina em morte.
+		_advance_effects(events)
 		_die(lethal_reason, events)
 		tick += 1
 		return events
 
-	# 6. aplicar plano
+	# 8. Efeitos duram ticks completos de movimento/contato. Pickups deste commit
+	# começam a contar no próximo tick; o escudo conserva o estado lido no início.
+	_advance_effects(events)
+	# aplicar plano
 	if plan != null:
 		if plan is CapturePlan:
 			_commit_capture(plan as CapturePlan, events)
@@ -202,173 +306,125 @@ func step(raw_intent: MoveIntent) -> Array[GameEvent]:
 			var err := plan as CaptureError
 			events.append(GameEvent.make(GameEvent.Kind.CAPTURE_REJECTED,
 				{"code": err.code, "message": err.message}))
-			_undo_trail()  # política da simulação: rejeição desfaz a trilha sem morte
+			_undo_trail(events)  # política da simulação: rejeição desfaz a trilha sem morte
 
-	# 7. shield
-	if phase == Phase.PLAYING and not (rules.shield_pauses_during_trail and trail_active):
-		shield_ticks -= 1
-		if shield_ticks <= rules.shield_critical_ticks and not shield_critical_sent:
-			shield_critical_sent = true
-			events.append(GameEvent.make(GameEvent.Kind.SHIELD_CRITICAL))
-		if shield_ticks <= 0:
-			_die(DeathReason.SHIELD_EXPIRED, events)
+	# 9. escudo
+	if phase == Phase.PLAYING:
+		var paused := (rules.shield_pauses_during_trail and player.trail_active) \
+			or shield_frozen_this_tick or (items_enabled() and effects.active(ItemProfile.Kind.SHIELD_FREEZE))
+		match shield.advance(rules, paused):
+			ShieldClock.Outcome.CRITICAL:
+				events.append(GameEvent.make(GameEvent.Kind.SHIELD_CRITICAL))
+			ShieldClock.Outcome.EXPIRED:
+				_die(DeathReason.SHIELD_EXPIRED, events)
 
+	_advance_respawn_grace()
 	tick += 1
 	return events
 
 
+func _advance_respawn_grace() -> void:
+	if phase != Phase.PLAYING:
+		return
+	if director.respawn_grace_left > 0:
+		director.respawn_grace_left -= 1
+	player.lifecycle_ticks = director.respawn_grace_left
+	player.lifecycle_state = ActorLifecycle.State.WARMUP if player.lifecycle_ticks > 0 else ActorLifecycle.State.ACTIVE
+
+
 func _player_substeps() -> int:
-	if not speedup_active:
+	if not speedup_active and not (items_enabled() and effects.active(ItemProfile.Kind.VELOCITY)):
 		return rules.substeps_normal
-	if trail_active and segment_len < rules.new_segment_slow_px:
+	if player.trail_active and player.segment_len < rules.new_segment_slow_px:
 		return rules.substeps_normal
 	return rules.substeps_speedup
 
 
-## Devolve true se este subpasso fechou a trilha numa fronteira.
-func _player_substep(intent: MoveIntent, events: Array[GameEvent]) -> bool:
-	if intent.direction == MoveIntent.Dir.NONE:
-		return false
-	var nx: int = px + DX[intent.direction]
-	var ny: int = py + DY[intent.direction]
-	if not board.in_bounds(nx, ny):
-		return false
-	var nxt := board.get_cell(nx, ny)
-	if not trail_active:
-		if nxt == BoardState.Cell.BOUNDARY:
-			px = nx
-			py = ny
-			pdir = intent.direction
-			return false
-		if nxt == BoardState.Cell.FREE and intent.drawing:
-			first_vertex = Vector2i(px, py)
-			trail_active = true
-			trail = PackedInt32Array()
-			segment_len = 0
-			trail_px_since_score = 0
-			_extend_trail(nx, ny, intent.direction, events)
-			events.append(GameEvent.make(GameEvent.Kind.TRAIL_STARTED, {"x": nx, "y": ny}))
-			return false
-		return false  # FREE sem draw, CLAIMED: não sai da fronteira
-	# trilha ativa
-	if nxt == BoardState.Cell.FREE:
-		_extend_trail(nx, ny, intent.direction, events)
-		return false
-	if nxt == BoardState.Cell.BOUNDARY:
-		px = nx
-		py = ny
-		pdir = intent.direction
-		return true  # fechamento; TRAIL permanece até a arbitragem
-	return false  # CLAIMED ou a própria TRAIL: bloqueado (§4.5a "apaga a marca e pára")
-
-
-func _extend_trail(nx: int, ny: int, dir: int, events: Array[GameEvent]) -> void:
-	if pdir != MoveIntent.Dir.NONE and _axis(pdir) != _axis(dir):
-		segment_len = 0  # vértice: mudança legal de eixo zera o comprimento do segmento (§4.5b)
-	px = nx
-	py = ny
-	pdir = dir
-	var i := board.index_of(nx, ny)
-	board.set_index(i, BoardState.Cell.TRAIL)
-	trail.append(i)
-	segment_len += 1
-	trail_px_since_score += 1
-	if trail_px_since_score >= rules.trail_score_every_px:
-		trail_px_since_score = 0
-		_add_score(rules.trail_score_points, events)
-
-
-static func _axis(dir: int) -> int:
-	return 0 if (dir == MoveIntent.Dir.UP or dir == MoveIntent.Dir.DOWN) else 1
-
-
-func _player_touches_boss() -> bool:
-	if not boss_alive:
-		return false
-	var pi := player_index()
-	for c in boss_contact_cells():
-		if c == pi:
-			return true
-		if trail_active and board.cells[c] == BoardState.Cell.TRAIL:
-			return true
-	return false
-
-
 func _anchor_indices() -> PackedInt32Array:
 	var out := PackedInt32Array()
-	if boss_alive and round_def.boss_protects_territory:
-		var c := boss_cell()
+	if boss.alive and round_def.boss_protects_territory:
+		var c := boss.cell()
 		out.append(board.index_of(c.x, c.y))
 	return out
 
 
-# --- chefe ------------------------------------------------------------------------------------
+# --- atores menores ---------------------------------------------------------------------------
 
-func _set_boss_velocity(idx: int, speed_fp: int) -> void:
-	boss_dir_index = idx & 15
-	boss_effective_speed_fp = speed_fp
-	bvx_fp = (BossBehaviorControllerScript.DIRECTION_X[boss_dir_index] * speed_fp) >> 8
-	bvy_fp = (BossBehaviorControllerScript.DIRECTION_Y[boss_dir_index] * speed_fp) >> 8
+## O jogador andou para cima de um ator armado? Devolve a razão de morte ou -1.
+func _player_touches_minor() -> int:
+	if not minor_lethal_allowed():
+		return -1
+	var cell := player.cell()
+	for slot in MinorActorPools.MAX_WALKERS:
+		if pools.walker_alive(slot) and pools.walker_lifecycle(slot) == ActorLifecycle.State.ACTIVE \
+			and pools.walker_cell(slot) == cell and WalkerRules.is_live_boundary(board, cell.x, cell.y):
+			pools.set_walker(slot, MinorActorPools.W.REASON, MinorActorPools.Reason.HIT_PLAYER)
+			return DeathReason.WALKER_CONTACT
+	for slot in MinorActorPools.MAX_DARTS:
+		if pools.dart_alive(slot) and pools.dart_lifecycle(slot) == ActorLifecycle.State.ACTIVE \
+			and board.get_cell(cell.x, cell.y) == BoardState.Cell.TRAIL:
+			var dart_cell := pools.dart_cell(slot)
+			if absi(dart_cell.x - cell.x) <= 1 and absi(dart_cell.y - cell.y) <= 1:
+				pools.set_dart(slot, MinorActorPools.D.REASON, MinorActorPools.Reason.HIT_PLAYER)
+				return DeathReason.DART_CONTACT
+	return -1
 
 
-## Devolve true se alguma célula varrida tocou jogador ou trilha.
-func _boss_update() -> bool:
-	var hit := false
-	var effective_speed: int = BossBehaviorControllerScript.effective_speed_fp(
-		rules.boss_behavior,
-		rules.boss_speed_fp,
-		tick,
-	)
-	if effective_speed != boss_effective_speed_fp:
-		_set_boss_velocity(boss_dir_index, effective_speed)
-	if rules.boss_turn_every_ticks > 0 and tick > 0 and tick % rules.boss_turn_every_ticks == 0:
-		var next_direction: int = BossBehaviorControllerScript.next_direction(
-			rules.boss_behavior,
-			boss_dir_index,
-			boss_cell(),
-			Vector2i(px, py),
-			rng,
-		)
-		_set_boss_velocity(next_direction, effective_speed)
-	for _s in rules.boss_substeps:
-		# eixo x
-		var cx := bx_fp >> 8
-		var cy := by_fp >> 8
-		var nx_fp := bx_fp + bvx_fp
-		var nx := nx_fp >> 8
-		if nx != cx:
-			var c := board.get_cell(nx, cy)
-			if c == BoardState.Cell.FREE:
-				bx_fp = nx_fp
-			else:
-				if c == BoardState.Cell.TRAIL:
-					hit = true
-				_set_boss_velocity(
-					BossBehaviorControllerScript.reflected_horizontal(boss_dir_index),
-					boss_effective_speed_fp,
-				)
-		else:
-			bx_fp = nx_fp
-		# eixo y
-		cx = bx_fp >> 8
-		var ny_fp := by_fp + bvy_fp
-		var ny := ny_fp >> 8
-		if ny != cy:
-			var c2 := board.get_cell(cx, ny)
-			if c2 == BoardState.Cell.FREE:
-				by_fp = ny_fp
-			else:
-				if c2 == BoardState.Cell.TRAIL:
-					hit = true
-				_set_boss_velocity(
-					BossBehaviorControllerScript.reflected_vertical(boss_dir_index),
-					boss_effective_speed_fp,
-				)
-		else:
-			by_fp = ny_fp
-		if _player_touches_boss():
-			hit = true
-	return hit
+## Um tick de cada ator menor, em ordem de slot. Devolve a razão de morte ou -1.
+func _minor_actors_update(events: Array[GameEvent], allow_spawn: bool = true) -> int:
+	if not threat_enabled():
+		return -1
+	var profile := threat_profile()
+	var lethal_allowed := minor_lethal_allowed()
+	var lethal := -1
+	var walker_speed: int = profile.ladder_walker_speed_fp[director.threat_index]
+	for slot in MinorActorPools.MAX_WALKERS:
+		if not pools.walker_alive(slot):
+			continue
+		var outcome := WalkerRules.update(pools, slot, board, walker_speed, profile.walker_dormant_ticks, profile.actor_despawn_ticks)
+		if outcome == WalkerRules.StepOutcome.EXTINGUISHED:
+			var cell := pools.walker_cell(slot)
+			ledger.add(profile.walker_trap_points, events)
+			events.append(GameEvent.make(GameEvent.Kind.WALKER_EXTINGUISHED, {
+				"slot": slot, "x": cell.x, "y": cell.y, "points": profile.walker_trap_points}))
+			continue
+		if lethal < 0 and lethal_allowed and pools.walker_lifecycle(slot) == ActorLifecycle.State.ACTIVE \
+			and pools.walker_cell(slot) == player.cell():
+			pools.set_walker(slot, MinorActorPools.W.REASON, MinorActorPools.Reason.HIT_PLAYER)
+			lethal = DeathReason.WALKER_CONTACT
+	var cut_index: Array[int] = []
+	for slot in MinorActorPools.MAX_DARTS:
+		if not pools.dart_alive(slot):
+			continue
+		cut_index.clear()
+		var outcome := DartRules.update(pools, slot, board, player, lethal_allowed, cut_index, profile.actor_despawn_ticks)
+		match outcome:
+			DartRules.Outcome.FIRED:
+				events.append(GameEvent.make(GameEvent.Kind.DART_FIRED, {"slot": slot}))
+			DartRules.Outcome.ABSORBED, DartRules.Outcome.EXPIRED:
+				var cell := pools.dart_cell(slot)
+				events.append(GameEvent.make(GameEvent.Kind.DART_ABSORBED, {
+					"slot": slot, "x": cell.x, "y": cell.y}))
+			DartRules.Outcome.CUT:
+				var cell := pools.dart_cell(slot)
+				var index: int = cut_index[0] if not cut_index.is_empty() else 0
+				events.append(GameEvent.make(GameEvent.Kind.TRAIL_CUT, {
+					"slot": slot, "trail_index": index, "x": cell.x, "y": cell.y}))
+				var ember_slot := pools.free_ember_slot()
+				if ember_slot >= 0 and allow_spawn:
+					EmberRules.ignite(pools, ember_slot, index, MinorActorPools.Cause.CUT, profile.ember_warmup_ticks)
+					events.append(GameEvent.make(GameEvent.Kind.EMBER_IGNITED, {
+						"slot": ember_slot, "trail_index": index, "cause": MinorActorPools.Cause.CUT}))
+			DartRules.Outcome.CONTACT:
+				if lethal < 0:
+					lethal = DeathReason.DART_CONTACT
+	for slot in MinorActorPools.MAX_EMBERS:
+		if not pools.ember_alive(slot):
+			continue
+		var outcome := EmberRules.update(pools, slot, player, profile.ember_speed_fp, profile.actor_despawn_ticks)
+		if outcome == EmberRules.Outcome.CONTACT and lethal < 0 and lethal_allowed:
+			lethal = DeathReason.EMBER_CONTACT
+	return lethal
 
 
 # --- captura ----------------------------------------------------------------------------------
@@ -378,106 +434,174 @@ func _commit_capture(plan: CapturePlan, events: Array[GameEvent]) -> void:
 	if not board.apply_capture_plan(plan):
 		events.append(GameEvent.make(GameEvent.Kind.CAPTURE_REJECTED,
 			{"code": -1, "message": "board recusou o plano (versão %d ≠ %d)" % [plan.board_version, board.version]}))
-		_undo_trail()
+		_undo_trail(events)
 		return
 	assert(board.owned_interior - before == plan.filled_delta)
-	trail = PackedInt32Array()
-	trail_active = false
-	segment_len = 0
-	fills_done += 1
-	var old_permille := permille
-	_update_permille(plan.filled_delta)
+	PlayerMotion.consolidate_trail(player)
+	var old_permille := ledger.record_fill(board, rules, plan.filled_delta)
 	events.append(GameEvent.make(GameEvent.Kind.CAPTURED, {
 		"claimed": plan.claimed_indices.size(), "trail": plan.trail_indices.size(),
-		"filled_delta": plan.filled_delta, "permille": permille}))
-	if permille != old_permille:
-		events.append(GameEvent.make(GameEvent.Kind.PERCENT_CHANGED, {"permille": permille}))
-		_add_score((permille - old_permille) * rules.area_points_per_permille, events)
-	if permille >= rules.target_permille:
-		phase = Phase.ROUND_WON
-		_add_score(rules.completion_bonus, events)
-		events.append(GameEvent.make(GameEvent.Kind.ROUND_WON, {"permille": permille, "score": score}))
+		"filled_delta": plan.filled_delta, "permille": ledger.permille}))
+	if ledger.permille != old_permille:
+		events.append(GameEvent.make(GameEvent.Kind.PERCENT_CHANGED, {"permille": ledger.permille}))
+		ledger.add((ledger.permille - old_permille) * rules.area_points_per_permille, events)
+	# Varredura pós-captura (§7.3: "logo a seguir a cada preenchimento, não continuamente").
+	var extinguished := EmberRules.extinguish_all(pools, _actor_despawn_ticks())
+	if extinguished > 0:
+		events.append(GameEvent.make(GameEvent.Kind.EMBER_EXTINGUISHED, {"count": extinguished}))
+	for slot in DartRules.absorb_grounded(pools, board, _actor_despawn_ticks()):
+		var cell := pools.dart_cell(slot)
+		events.append(GameEvent.make(GameEvent.Kind.DART_ABSORBED, {"slot": slot, "x": cell.x, "y": cell.y}))
+	for slot in MinorActorPools.MAX_WALKERS:
+		if pools.walker_alive(slot):
+			var cell := pools.walker_cell(slot)
+			if not WalkerRules.is_live_boundary(board, cell.x, cell.y):
+				pools.set_walker(slot, MinorActorPools.W.STATE, ActorLifecycle.State.DORMANT)
+				pools.set_walker(slot, MinorActorPools.W.REASON, MinorActorPools.Reason.DORMANT)
+	ThreatDirector.on_capture(self, ledger.permille - old_permille, events)
+	_capture_beacons(events)
+	var free_remaining := board.interior_cell_count() - board.owned_interior
+	var profile := item_profile()
+	if items_enabled() and boss.alive and profile.sealed_free_cell_limit > 0 \
+		and free_remaining <= profile.sealed_free_cell_limit:
+		events.append(GameEvent.make(GameEvent.Kind.BOSS_SEALED, {"free_remaining": free_remaining}))
+		_complete_round(GameRules.RoundEndReason.SEALED, events)
+	elif ledger.permille >= rules.target_permille:
+		_complete_round(GameRules.RoundEndReason.SINGLE_FILL if ledger.fills_done == 1
+			else GameRules.RoundEndReason.TARGET, events)
 
 
-func _update_permille(filled_delta: int) -> void:
-	match rules.percent_mode:
-		GameRules.PercentMode.EXACT:
-			@warning_ignore("integer_division")
-			permille = board.owned_interior * 1000 / board.interior_cell_count()
-		GameRules.PercentMode.VOLFIED_63:
-			var acc := permille_remainder + filled_delta
-			@warning_ignore("integer_division")
-			permille += acc / 63
-			permille_remainder = acc % 63
-			if fills_done == 6:
-				permille += 6
-			permille = mini(permille, 999)
-	permille = clampi(permille, 0, 1000)
+func _complete_round(reason: int, events: Array[GameEvent]) -> void:
+	phase = Phase.ROUND_WON
+	round_end_reason = reason
+	boss.begin_dying(_actor_despawn_ticks())
+	var bonus := rules.completion_bonus
+	var ladder := rules.bonus_ladder as BonusLadder
+	if ladder != null and ladder.enabled:
+		bonus = ladder.award(ledger.permille, reason, deaths_this_round == 0)
+	ledger.add(bonus, events)
+	events.append(GameEvent.make(GameEvent.Kind.ROUND_WON, {
+		"permille": ledger.permille, "score": ledger.score, "reason": reason, "bonus": bonus}))
 
 
-func _add_score(delta: int, events: Array[GameEvent]) -> void:
-	if delta == 0:
+func _capture_beacons(events: Array[GameEvent]) -> void:
+	if not items_enabled():
 		return
-	score += delta
-	events.append(GameEvent.make(GameEvent.Kind.SCORE_CHANGED, {"score": score, "delta": delta}))
+	var first_event := events.size()
+	var points := BeaconRules.capture_claimed(beacons, board, ledger.fills_done, item_profile(), events)
+	var last_beacon_event := events.size()
+	ledger.add(points, events)
+	for index in range(first_event, last_beacon_event):
+		if events[index].kind == GameEvent.Kind.BEACON_CAPTURED:
+			_activate_item(int(events[index].data.item), events)
+
+
+func _activate_item(kind: int, events: Array[GameEvent]) -> void:
+	var profile := item_profile()
+	if not items_enabled() or not effects.activate(kind, profile):
+		return
+	if kind == ItemProfile.Kind.STASIS:
+		boss.stasis_ticks = effects.remaining[kind]
+	if kind == ItemProfile.Kind.PURGE:
+		for slot in MinorActorPools.MAX_WALKERS:
+			if pools.walker_alive(slot):
+				var cell := pools.walker_cell(slot)
+				pools.retire_walker(slot, MinorActorPools.Reason.EXTINGUISHED, _actor_despawn_ticks())
+				events.append(GameEvent.make(GameEvent.Kind.WALKER_EXTINGUISHED, {
+					"slot": slot, "x": cell.x, "y": cell.y, "points": 0}))
+		for slot in MinorActorPools.MAX_DARTS:
+			if pools.dart_alive(slot):
+				var cell := pools.dart_cell(slot)
+				pools.retire_dart(slot, MinorActorPools.Reason.ABSORBED, _actor_despawn_ticks())
+				events.append(GameEvent.make(GameEvent.Kind.DART_ABSORBED, {"slot": slot, "x": cell.x, "y": cell.y}))
+		var extinguished := EmberRules.extinguish_all(pools, _actor_despawn_ticks())
+		if extinguished > 0:
+			events.append(GameEvent.make(GameEvent.Kind.EMBER_EXTINGUISHED, {"count": extinguished}))
+		shield.ticks = maxi(shield.ticks, profile.shield_floor_ticks)
+		if shield.ticks > rules.shield_critical_ticks:
+			shield.critical_sent = false
+	events.append(GameEvent.make(GameEvent.Kind.ITEM_STARTED, {"item": kind, "ticks": effects.remaining[kind]}))
+
+
+func _advance_effects(events: Array[GameEvent]) -> void:
+	if not items_enabled():
+		return
+	for kind in effects.advance():
+		events.append(GameEvent.make(GameEvent.Kind.ITEM_ENDED, {"item": kind}))
+
+
+
+func _actor_despawn_ticks() -> int:
+	var profile := threat_profile()
+	return profile.actor_despawn_ticks if profile != null else 0
+
+
+func _undo_trail(events: Array[GameEvent]) -> void:
+	PlayerMotion.undo_trail(player, board)
+	var extinguished := EmberRules.extinguish_all(pools, _actor_despawn_ticks())
+	if extinguished > 0:
+		events.append(GameEvent.make(GameEvent.Kind.EMBER_EXTINGUISHED, {"count": extinguished}))
 
 
 # --- morte ------------------------------------------------------------------------------------
 
-func _undo_trail() -> void:
-	for i in trail:
-		if board.cells[i] == BoardState.Cell.TRAIL:
-			board.set_index(i, BoardState.Cell.FREE)
-	trail = PackedInt32Array()
-	trail_active = false
-	segment_len = 0
-	trail_px_since_score = 0
-
-
 func _die(reason: int, events: Array[GameEvent]) -> void:
-	var had_trail := trail_active
-	_undo_trail()  # §4.6: desfaz a trilha até o primeiro vértice; nenhum resíduo TRAIL
+	var had_trail := player.trail_active
+	_undo_trail(events)  # §4.6: desfaz a trilha até o primeiro vértice; nenhum resíduo TRAIL
 	if not had_trail:
-		first_vertex = Vector2i(px, py)
+		player.first_vertex = player.cell()
 	lives -= 1
+	deaths_this_round += 1
 	phase = Phase.DYING
 	death_ticks_left = rules.death_ticks
+	player.lifecycle_state = ActorLifecycle.State.DYING
+	player.lifecycle_ticks = death_ticks_left
 	events.append(GameEvent.make(GameEvent.Kind.PLAYER_DIED, {"reason": reason, "lives": lives}))
 
 
 func _respawn(events: Array[GameEvent]) -> void:
 	if lives <= 0:
 		phase = Phase.GAME_OVER
+		player.lifecycle_state = ActorLifecycle.State.DESPAWNED
+		player.lifecycle_ticks = 0
 		events.append(GameEvent.make(GameEvent.Kind.GAME_OVER))
 		return
-	px = first_vertex.x
-	py = first_vertex.y
-	pdir = MoveIntent.Dir.NONE
-	shield_ticks = rules.shield_ticks
-	shield_critical_sent = false
+	player.px = player.first_vertex.x
+	player.py = player.first_vertex.y
+	player.pdir = MoveIntent.Dir.NONE
+	player.stall_ticks = 0
+	shield.reset(rules)
+	var profile := threat_profile()
+	director.respawn_grace_left = profile.respawn_grace_ticks if profile != null and profile.enabled else 0
+	player.lifecycle_ticks = director.respawn_grace_left
+	player.lifecycle_state = ActorLifecycle.State.WARMUP if player.lifecycle_ticks > 0 else ActorLifecycle.State.ACTIVE
 	phase = Phase.PLAYING
-	events.append(GameEvent.make(GameEvent.Kind.PLAYER_RESPAWNED, {"x": px, "y": py}))
+	events.append(GameEvent.make(GameEvent.Kind.PLAYER_RESPAWNED, {"x": player.px, "y": player.py}))
 
 
 # --- checksum ---------------------------------------------------------------------------------
 
 ## SHA-256 de todo o estado em bytes canônicos, ordem fixa. Nunca JSON/Dictionary/hash().
+## A ordem abaixo é contrato: mudar exige bump de `GameRules.RULES_VERSION` e dourados novos.
 func state_checksum() -> PackedByteArray:
 	var ctx := HashingContext.new()
 	ctx.start(HashingContext.HASH_SHA256)
 	ctx.update(board.canonical_bytes())
-	var vals := [tick, phase, lives, score, permille, fills_done, permille_remainder,
-		shield_ticks, 1 if shield_critical_sent else 0, death_ticks_left, 1 if speedup_active else 0,
-		px, py, pdir, 1 if trail_active else 0, first_vertex.x, first_vertex.y,
-		segment_len, trail_px_since_score,
-		1 if boss_alive else 0, bx_fp, by_fp, bvx_fp, bvy_fp, boss_dir_index,
-		boss_effective_speed_fp,
-		rng.state, trail.size()]
+	var vals: Array[int] = [tick, phase, lives, death_ticks_left, 1 if speedup_active else 0, round_end_reason, deaths_this_round]
+	vals.append_array(ledger.canonical_values())
+	vals.append_array(shield.canonical_values())
+	vals.append_array(player.canonical_values())
+	vals.append_array(boss.canonical_values())
+	vals.append_array(director.canonical_values())
+	vals.append_array([rng.state, player.trail.size()])
 	var b := PackedByteArray()
 	b.resize(vals.size() * 4)
 	for k in vals.size():
 		b.encode_s32(k * 4, vals[k])
 	ctx.update(b)
-	if trail.size() > 0:
-		ctx.update(trail.to_byte_array())
+	if player.trail.size() > 0:
+		ctx.update(player.trail.to_byte_array())
+	ctx.update(pools.canonical_bytes())
+	ctx.update(beacons.canonical_bytes())
+	ctx.update(effects.canonical_bytes())
 	return ctx.finish()

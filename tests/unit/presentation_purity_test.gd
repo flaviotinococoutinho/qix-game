@@ -47,12 +47,8 @@ const PRESENTATION_DIRS: Array[String] = [
 ##
 ## - `app/bootstrap.gd` é o **composition root**, não apresentação: é ele quem dirige o loop e
 ##   chama `session.step()`. Se ele não pudesse mutar, ninguém poderia, e não haveria jogo.
-## - `game/enemies/boss_behavior_controller.gd` é **domínio morando fora de `game/simulation/`**:
-##   `GameSimulation` o carrega por `preload` e o consulta dentro do tick, com o
-##   `DeterministicRng` na mão. Está em `game/enemies/` por proximidade temática, não por camada.
 const EXEMPT_FILES: Dictionary = {
 	"res://app/bootstrap.gd": "composition root: é quem avança a sessão",
-	"res://game/enemies/boss_behavior_controller.gd": "domínio puro consultado dentro do tick",
 }
 
 ## Tipos cujo estado é do domínio (simulação, sessão, replay) ou de conteúdo imutável em runtime

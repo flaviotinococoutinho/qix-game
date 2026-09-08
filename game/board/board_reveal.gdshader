@@ -19,23 +19,27 @@ uniform float trail_exposure : hint_range(0.0, 1.0) = 0.0;
 
 void fragment() {
 	float state = floor(texture(state_mask, UV).r * 255.0 + 0.5);
-	float scan = 0.92 + 0.08 * step(0.5, fract((FRAGCOORD.y + scan_phase) * 0.5));
+	// Padrões em células lógicas preservam o período entre 2D e 2.5D.
+	vec2 cell = UV / TEXTURE_PIXEL_SIZE;
+	float scan = 0.92 + 0.08 * step(0.5, fract((cell.y + scan_phase) * 0.5));
 	vec4 result;
 
 	if (state < 0.5) {
 		// FREE mantém a ilustração completamente coberta.
-		result = vec4(free_color.rgb * scan, free_color.a);
+		vec2 grid_distance = abs(fract(cell / 24.0 - 0.5) - 0.5) * 24.0;
+		float grid = 1.0 - smoothstep(0.0, 0.32, min(grid_distance.x, grid_distance.y));
+		float well = 0.84 + 0.16 * (1.0 - length(UV - vec2(0.5)));
+		result = vec4(free_color.rgb * scan * well + vec3(0.006, 0.012, 0.016) * grid, free_color.a);
 	} else if (state < 1.5) {
 		// BOUNDARY é a malha segura de alta legibilidade.
-		float glint = 0.86 + 0.14 * step(0.72, fract((FRAGCOORD.x + FRAGCOORD.y) * 0.25));
+		float glint = 0.86 + 0.14 * step(0.72, fract((cell.x + cell.y) * 0.25));
 		result = vec4(boundary_color.rgb * glint, boundary_color.a);
 	} else if (state < 2.5) {
 		// TRAIL pulsa sem depender da simulação: a fase é somente visual.
 		// Quanto mais longe da moldura o traço chega, mais rápido ele pulsa e mais alto fica o
 		// piso de luminância — frequência e brilho, não matiz, para que o aviso sobreviva a
-		// deuteranopia e à barra de qualidade de ART_DIRECTION.md. A *taxa* que acelera o pulso
-		// vive na view, integrada tick a tick; aqui só chega a fase resultante.
-		float pulse = 0.5 + 0.5 * sin(trail_pulse_phase + FRAGCOORD.x * 0.22 + FRAGCOORD.y * 0.16);
+		// A view integra a fase; a taxa de risco muda sem saltar a animação.
+		float pulse = 0.5 + 0.5 * sin(trail_pulse_phase + cell.x * 0.22 + cell.y * 0.16);
 		float heat = mix(pulse, 0.55 + 0.45 * pulse, trail_exposure);
 		result = mix(trail_color, trail_hot_color, heat);
 	} else {

@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from datetime import datetime
 import json
 import math
 import os
 from pathlib import Path
+import re
 import statistics
 import sys
 import tempfile
@@ -26,10 +28,14 @@ HUD_PREFIX = "metal-HUD:"
 MINIMUM_VALID_PAIRS = 30
 # The HUD can prefix its first metric batch with the host monotonic clock in
 # milliseconds (observed as a multi-billion value paired with exactly 0 GPU
-# time).  This is metadata, not a frame interval.  Keep every finite positive
-# interval below one day -- including multi-second stalls -- so the max-frame
-# gate can never hide a hitch merely because it exceeded an ingestion cutoff.
-INITIAL_CLOCK_MARKER_MINIMUM_MS = 86_400_000.0
+# time). Only the leading prefix of the first HUD batch can be this marker.
+# Corroborating startup timestamps and a complete first frame batch are required
+# regardless of the marker's magnitude. Truncated logs must fail closed.
+INITIAL_CLOCK_MARKER_MINIMUM_MS = 3_600_000.0
+STARTUP_TIMESTAMP_TOLERANCE_MS = 1000.0
+_PROCESS_TIMESTAMP = re.compile(
+    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) .*?\[(\d+):\d+\]"
+)
 GPU_P95_BUDGET_MS = 8.0
 GPU_MAX_BUDGET_MS = 16.667
 FRAME_INTERVAL_P95_BUDGET_MS = 25.0
@@ -92,6 +98,57 @@ def summarize(samples: list[float]) -> dict[str, int | float | None]:
     }
 
 
+def _process_timestamp(line: str) -> tuple[datetime, str] | None:
+    match = _PROCESS_TIMESTAMP.match(line)
+    if match is None:
+        return None
+    try:
+        return datetime.strptime(match[1], "%Y-%m-%d %H:%M:%S.%f"), match[2]
+    except ValueError:
+        return None
+
+
+def _initial_clock_prefix_size(
+    fields: list[str],
+    line: str,
+    startup: tuple[datetime, str] | None,
+) -> int:
+    """Reconhece somente o prefixo de relógio, nunca um corte global de ingestão."""
+
+    try:
+        interval, gpu_time = (_finite_float(value) for value in fields[3:5])
+        frame_number = _finite_float(fields[0])
+    except (ValueError, ArithmeticError):
+        return 0
+    if gpu_time != 0.0 or interval < INITIAL_CLOCK_MARKER_MINIMUM_MS:
+        return 0
+
+    prefix_size = 1
+    if len(fields) >= 7:
+        try:
+            if (_finite_float(fields[5]), _finite_float(fields[6])) == (interval, 0.0):
+                prefix_size = 2
+        except (ValueError, ArithmeticError):
+            pass  # o parser de amostras ainda registra este par inválido
+
+    # Startup local observado: dois buffers podem publicar N*2 ou N*2-1 pares,
+    # pois o flush pode cortar entre cópias do último frame. Um log iniciado no
+    # meio da execução não tem esse histórico completo e não recebe a exceção.
+    pair_count = (len(fields) - 3) // 2
+    if frame_number < 1 or not frame_number.is_integer():
+        return 0
+    complete_batch = pair_count == int(frame_number) if prefix_size == 1 else (
+        pair_count in (int(frame_number) * 2 - 1, int(frame_number) * 2)
+    )
+    batch = _process_timestamp(line)
+    if not complete_batch or startup is None or batch is None or startup[1] != batch[1]:
+        return 0
+    elapsed_ms = (batch[0] - startup[0]).total_seconds() * 1000.0
+    if elapsed_ms < 0.0 or interval <= elapsed_ms + STARTUP_TIMESTAMP_TOLERANCE_MS:
+        return 0
+    return prefix_size
+
+
 def parse_samples(log_text: str) -> dict[str, object]:
     frame_intervals: list[float] = []
     gpu_times: list[float] = []
@@ -100,16 +157,29 @@ def parse_samples(log_text: str) -> dict[str, object]:
     candidate_pairs = 0
     unpaired_metrics = 0
     discarded_reasons: Counter[str] = Counter()
+    startup: tuple[datetime, str] | None = None
+    previous_batch: tuple[datetime, str] | None = None
 
     for line in log_text.splitlines():
         prefix_position = line.find(HUD_PREFIX)
         if prefix_position < 0:
+            # Esta mensagem é emitida na inicialização do HUD, antes do primeiro
+            # batch. Não usar um timestamp arbitrário de outro processo como prova.
+            if hud_lines == 0 and startup is None and "[libMTLHud] Metric " in line:
+                startup = _process_timestamp(line)
             continue
 
         hud_lines += 1
         payload = line[prefix_position + len(HUD_PREFIX) :].strip()
         fields = [field.strip() for field in payload.split(",")]
         line_is_malformed = False
+        batch_timestamp = _process_timestamp(line)
+        if batch_timestamp is not None:
+            if previous_batch is not None and (
+                batch_timestamp[1] != previous_batch[1] or batch_timestamp[0] < previous_batch[0]
+            ):
+                line_is_malformed = True
+            previous_batch = batch_timestamp
 
         # A valid batch needs the three metadata fields and at least one pair.
         if len(fields) < 5:
@@ -126,6 +196,7 @@ def parse_samples(log_text: str) -> dict[str, object]:
             continue
 
         metric_fields = fields[3:]
+        clock_prefix_size = _initial_clock_prefix_size(fields, line, startup) if hud_lines == 1 else 0
         if len(metric_fields) % 2:
             line_is_malformed = True
             unpaired_metrics += 1
@@ -153,10 +224,7 @@ def parse_samples(log_text: str) -> dict[str, object]:
                 discarded_reasons["negative_gpu_time"] += 1
                 line_is_malformed = True
                 continue
-            if (
-                interval >= INITIAL_CLOCK_MARKER_MINIMUM_MS
-                and gpu_time == 0.0
-            ):
+            if metric_index // 2 < clock_prefix_size:
                 discarded_reasons["initial_clock_marker"] += 1
                 continue
 
@@ -237,6 +305,8 @@ def build_report(log_text: str, *, input_path: str = "<memory>") -> dict[str, ob
         "requirements": {
             "minimum_valid_pairs": MINIMUM_VALID_PAIRS,
             "initial_clock_marker_minimum_ms": INITIAL_CLOCK_MARKER_MINIMUM_MS,
+            "startup_timestamp_tolerance_ms": STARTUP_TIMESTAMP_TOLERANCE_MS,
+            "initial_clock_marker_policy": "first_batch_leading_zero_gpu_prefix_only; requires_same_process_startup_and_complete_frame_history",
             "gpu_p95_budget_ms": GPU_P95_BUDGET_MS,
             "gpu_max_budget_ms": GPU_MAX_BUDGET_MS,
             "frame_interval_p95_budget_ms": FRAME_INTERVAL_P95_BUDGET_MS,

@@ -20,13 +20,15 @@ const PROFILE_SAMPLE_CAPACITY := 240
 const TRAIL_PULSE_BASE_RATE := 0.20
 const TRAIL_PULSE_EXPOSURE_GAIN := 0.55
 ## Deslocamento da varredura, em linhas por tick. O período é 2.0 porque o shader avalia
-## `fract((FRAGCOORD.y + scan_phase) * 0.5)`.
+## `fract((cell.y + scan_phase) * 0.5)`.
 const SCAN_RATE := 0.08
 const SCAN_PERIOD := 2.0
 
 const MONITOR_LAST := &"Qix Board/refresh_usec"
 const MONITOR_P95 := &"Qix Board/refresh_p95_usec"
 const MONITOR_UPLOADS := &"Qix Board/refresh_count"
+
+@export var draw_outer_background: bool = true
 
 var _mask_image: Image
 var _mask_texture: ImageTexture
@@ -314,6 +316,8 @@ func _add_monitor_if_available(monitor_name: StringName, callable: Callable) -> 
 
 func _draw() -> void:
 	# O fundo externo fica neste CanvasItem; o shader afeta somente o Sprite2D filho.
+	if not draw_outer_background:
+		return
 	draw_rect(
 		Rect2(Vector2.ZERO, Vector2(CoordinateSpace.VIEWPORT)),
 		BACKGROUND_COLOR,

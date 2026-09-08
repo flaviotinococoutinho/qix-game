@@ -11,6 +11,7 @@ concurrency:
   group: verificacao-${{ github.ref }}
   cancel-in-progress: true
 env:
+  PYTHONDONTWRITEBYTECODE: "1"
   GODOT_VERSION: 4.7.2-stable
 jobs:
   suite-headless:
@@ -36,14 +37,42 @@ jobs:
           chmod +x ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64
       - name: Regressões do próprio portão de CI
         run: python3 -m unittest discover -s tools/ci -p 'test_*.py' -v
+      # A guarda em GDScript (`python_bytecode_not_versioned_test.gd`) prova que a *regra* existe
+      # no `.gitignore`; não consulta o índice do Git, porque um teste headless não o alcança e
+      # `.pyc` em disco é legítimo. Este passo é a outra metade: prova que o índice está limpo.
+      # Sem os dois, um arquivo já rastreado continua rastreado — o `.gitignore` não o expulsa.
+      - name: Bytecode de Python fora do índice
+        run: |
+          set -euo pipefail
+          rastreado="$(git ls-files | grep -E '(^|/)__pycache__/|\.py[cod]$' || true)"
+          if [ -n "${rastreado}" ]; then
+            echo "Bytecode de Python versionado:" >&2
+            echo "${rastreado}" >&2
+            echo "É binário derivado e o Git não o mescla. Use: git rm --cached <arquivo>" >&2
+            exit 1
+          fi
+          echo "índice limpo de bytecode de Python"
+      - name: Regressões MCP, assets e parser Metal
+        run: |
+          python3 -B -m unittest discover -s tools/mcp -p 'test_*.py' -v
+          python3 -B -m unittest discover -s tools/assets -p 'test_*.py' -v
+          python3 -B -m unittest discover -s tools/profile -p 'test_*.py' -v
+          python3 -B tools/assets/validate_lumen_models.py
       - name: Importação, suíte, rota M2 e geometria real do HUD
         run: |
           python3 tools/ci/headless_gate.py \
             --godot "$HOME/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64" \
             --logs "${RUNNER_TEMP}/qix-headless" \
             --isolate-missing-editor-extension
-      - name: Sintaxe do relatório de superfície
-        run: bash -n tools/loop/unclaimed_surface.sh
+      # Só `unclaimed_surface.sh` era checado, e foi por isso que os dois relatórios de fila
+      # puderam divergir sem que nada reclamasse. O portão passa a cobrir a pasta inteira.
+      - name: Sintaxe do ferramental do loop
+        run: |
+          set -euo pipefail
+          for script in tools/loop/*.sh; do
+            echo "bash -n ${script}"
+            bash -n "${script}"
+          done
       - name: Evidências completas por commit
         if: always()
         uses: actions/upload-artifact@v4

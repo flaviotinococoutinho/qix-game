@@ -1,6 +1,12 @@
 class_name GameSession
 extends RefCounted
 ## Máquina determinística de campanha. Uma GameSimulation e um ReplayLog por rodada.
+##
+## Contrato de `records`: uma rodada só é arquivada pela via PLAYING → vitória/derrota
+## (`_archive_current_round`). Forçar `phase` num teste não arquiva nada. Quem conta rodadas
+## concluídas conta `records` com `completed == true`.
+## Progresso da transição é (total − restantes) / total: a conversão para float é da view
+## (`QixRoundTransitionView.transition_progress`), porque o domínio só fala em inteiros.
 
 enum Phase { ROUND_INTRO, PLAYING, ROUND_CLEAR, GAME_OVER, CAMPAIGN_COMPLETE }
 
@@ -18,10 +24,13 @@ var replay: ReplayLog
 ##    da simulação. Escrever `phase` de fora — pôr a sessão em `ROUND_CLEAR` num teste, por
 ##    exemplo — **não** arquiva nada: a fase é consequência do arquivamento, não a sua causa.
 ##  - Uma entrada por rodada, e quem garante isso é a máquina de fases: arquivar tira a sessão de
-##    `PLAYING` no mesmo tick, e só `PLAYING` arquiva. `_current_archived` é cinto sobre suspensório
-##    — hoje **nenhum caminho o alcança** (trocá-lo por `if false:` não derruba um teste sequer,
-##    medido em 2026-09-06). Mantido porque as duas chamadas de `_archive_current_round` são
-##    mutuamente exclusivas por construção, e isso é fácil de quebrar sem perceber.
+##    `PLAYING` no mesmo tick, e só `PLAYING` arquiva. Havia aqui um `_current_archived` de cinto
+##    sobre suspensório; nenhum caminho o alcançava (medido em 2026-09-06 e reconfirmado em
+##    2026-09-08). Um guarda inalcançável não protege: ele **esconde** o dia em que a máquina de
+##    fases quebrar, transformando um registro duplicado num silêncio. A proteção agora é a
+##    pré-condição declarada em `_archive_current_round` mais
+##    `session_records_contract_test.gd::test_a_record_only_appears_on_a_step_that_started_in_playing`,
+##    que percorre a campanha inteira e reprova o segundo registro em vez de o absorver.
 ##  - Vitória e derrota arquivam igual; `RoundRunRecord.completed` é o que as distingue.
 ##  - `restart_campaign()` esvazia a lista.
 ##
@@ -29,7 +38,6 @@ var replay: ReplayLog
 ## rodadas visitadas. Durante `ROUND_INTRO` e `PLAYING` da rodada N (1-based), vale
 ## `records.size() == N - 1`.
 var records: Array[RoundRunRecord] = []
-var _current_archived: bool = false
 
 
 func _init(definition: CampaignDefinition) -> void:
@@ -53,7 +61,7 @@ func is_gameplay_active() -> bool:
 
 ## Quantos ticks da transição corrente já correram. O domínio conta ticks; transformar isso na
 ## fração de uma barra é trabalho de quem desenha a barra — ver
-## `RoundTransitionView._transition_progress`. Invariante 1 do `CLAUDE.md`: aqui só entram
+## `QixRoundTransitionView.transition_progress`. Invariante 1 do `CLAUDE.md`: aqui só entram
 ## inteiros e ponto fixo 8.8, e `tests/unit/domain_purity_test.gd` recusa o contrário.
 func transition_elapsed_ticks() -> int:
 	return maxi(transition_ticks_total - transition_ticks_left, 0)
@@ -137,16 +145,16 @@ func _start_current_round(start_state: RoundStartState) -> void:
 		start_state,
 	)
 	replay = ReplayLog.start(simulation)
-	_current_archived = false
 	if campaign.intro_ticks > 0:
 		_enter_phase(Phase.ROUND_INTRO, campaign.intro_ticks)
 	else:
 		_enter_phase(Phase.PLAYING, 0)
 
 
+## Exige a fase de entrada; a unicidade é garantida por step, que sai de PLAYING
+## no mesmo tick, e pelo teste que limita o acréscimo a um registro por passo.
 func _archive_current_round(completed: bool) -> void:
-	if _current_archived:
-		return
+	assert(phase == Phase.PLAYING, "só a fase PLAYING arquiva: arquivar é o que a encerra")
 	var record := RoundRunRecord.new()
 	record.round_id = current_content().round_id
 	record.round_index = round_index
@@ -158,7 +166,6 @@ func _archive_current_round(completed: bool) -> void:
 	record.final_score = simulation.score
 	record.final_lives = simulation.lives
 	records.append(record)
-	_current_archived = true
 
 
 func _enter_phase(next_phase: int, duration_ticks: int) -> void:

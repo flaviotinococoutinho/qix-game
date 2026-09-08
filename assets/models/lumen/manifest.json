@@ -1,0 +1,112 @@
+{
+  "generator": "Blender official MCP / execute_blender_code_for_cli",
+  "blender": "5.2.0 LTS",
+  "original_geometry": true,
+  "external_textures": [],
+  "assets": [
+    {
+      "path": "assets/models/lumen/surveyor.glb",
+      "triangles": 1192,
+      "components": [
+        "Cartography stylus",
+        "Ceramic carapace",
+        "Core",
+        "ExhaustLeft",
+        "ExhaustRight",
+        "Housing",
+        "Lens guard",
+        "RailLeft",
+        "RailRight",
+        "ThrusterLeft",
+        "ThrusterRight",
+        "WingLeft",
+        "WingRight"
+      ],
+      "bytes": 84436,
+      "sha256": "c1dd4df17b703238a34dafc2fd290e9baa874830780f70e38d4b2f648f7abe86"
+    },
+    {
+      "path": "assets/models/lumen/core.glb",
+      "triangles": 1380,
+      "components": [
+        "Core.001",
+        "Crown",
+        "Eye",
+        "Housing.001",
+        "Inner orbit",
+        "Petal00",
+        "Petal01",
+        "Petal02",
+        "Petal03",
+        "Petal04",
+        "Petal05",
+        "Plasma00",
+        "Plasma01",
+        "Plasma02",
+        "Plasma03",
+        "Plasma04",
+        "Plasma05"
+      ],
+      "bytes": 110692,
+      "sha256": "10fb359018180d85ac4535f44da8641ed33dfefcc259ad643cc832197416ec3f"
+    },
+    {
+      "path": "assets/models/lumen/walker.glb",
+      "triangles": 572,
+      "components": [
+        "Antenna-1",
+        "Antenna1",
+        "Core.002",
+        "Housing.002",
+        "Leg-1-0.28",
+        "Leg-10.28",
+        "Leg1-0.28",
+        "Leg10.28"
+      ],
+      "bytes": 38772,
+      "sha256": "e05c045deddf88a081f209168ef61b5feb11ad2c1fe4518a26ea6340e315bd95"
+    },
+    {
+      "path": "assets/models/lumen/dart.glb",
+      "triangles": 260,
+      "components": [
+        "Core.003",
+        "Exhaust",
+        "Fin-1",
+        "Fin1",
+        "Housing.003"
+      ],
+      "bytes": 18820,
+      "sha256": "cf830eccef27faf410d68c2019bb29889524ac61042a8dd0f5b28f982c92a60a"
+    },
+    {
+      "path": "assets/models/lumen/ember.glb",
+      "triangles": 640,
+      "components": [
+        "Core.004",
+        "Crown.001",
+        "Heart",
+        "Spark0",
+        "Spark1",
+        "Spark2"
+      ],
+      "bytes": 50588,
+      "sha256": "2767e81aaaeac72def60578c6b12643e2261b61c625a37e9b938b7bcac4cef6f"
+    },
+    {
+      "path": "assets/models/lumen/beacon.glb",
+      "triangles": 1040,
+      "components": [
+        "Core.005",
+        "Crown.002",
+        "Housing.004",
+        "Receiver0",
+        "Receiver1",
+        "Receiver2",
+        "Receiver3"
+      ],
+      "bytes": 57692,
+      "sha256": "07ec77896fa8d5fc3680287a821e16d6ee6ea2eead70422cc019d2ad0f6facff"
+    }
+  ]
+}

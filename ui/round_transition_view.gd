@@ -2,7 +2,18 @@ class_name QixRoundTransitionView
 extends Control
 ## Overlay de transição dirigido pela Phase/ticks reais da GameSession.
 
-const PANEL_RECT := Rect2(22.0, 87.0, 196.0, 146.0)
+const PANEL_RECT := Rect2(22.0, 58.0, 196.0, 146.0)
+const CONTROLS_RECT := Rect2(22.0, 214.0, 196.0, 84.0)
+const CONTROL_ROW_Y := 22.0
+const CONTROL_ROW_STEP := 12.0
+const CONTROL_ROW_HEIGHT := 11.0
+const CONTROL_LINES := [
+	"SETAS / WASD  MOVER · ESPAÇO / Z  DESENHAR",
+	"FECHE NA BORDA PARA CONQUISTAR A ÁREA",
+	"TOQUE: STICK + DESENHAR · ESC / P  PAUSA",
+	"F2  VISTA 2D / 2.5D · M  SOM",
+	"F4  REDUZIR MOVIMENTO",
+]
 const PROGRESS_WIDTH := 160.0
 const DEFAULT_ACCENT := Color("50e3c2")
 const DEFAULT_THREAT := Color("ff4d6d")
@@ -55,6 +66,7 @@ var _result_label: Label
 var _continuity_label: Label
 var _progress_fill: ColorRect
 var _prompt_label: Label
+var _controls: ColorRect
 var _built: bool = false
 
 
@@ -66,7 +78,10 @@ func _ready() -> void:
 	size = Vector2(CoordinateSpace.VIEWPORT.x, CoordinateSpace.VIEWPORT.y)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scrim = _bar("Scrim", self, Vector2.ZERO, size, Color("02070bd1"))
+	_bar("PanelShadow", self, PANEL_RECT.position + Vector2(3.0, 5.0), PANEL_RECT.size, Color("01040a99"))
 	_panel = _bar("Panel", self, PANEL_RECT.position, PANEL_RECT.size, Color("07141af2"))
+	_bar("PanelLight", _panel, Vector2.ZERO, Vector2(PANEL_RECT.size.x, 0.6), Color("95d8ef77"))
+	_bar("PanelDepth", _panel, Vector2(0.0, PANEL_RECT.size.y - 2.0), Vector2(PANEL_RECT.size.x, 2.0), Color("020b13"))
 	_edge = _bar("Edge", _panel, Vector2.ZERO, Vector2(EDGE_WIDTH, PANEL_RECT.size.y), DEFAULT_ACCENT)
 	_phase_label = _label("Phase", _panel, Vector2(ROW_INSET_X, ROW_PHASE_Y), Vector2(ROW_WIDTH, 14.0), 7, HORIZONTAL_ALIGNMENT_LEFT)
 	_title_label = _label("Title", _panel, Vector2(ROW_INSET_X, ROW_TITLE_Y), Vector2(ROW_WIDTH, 23.0), 13, HORIZONTAL_ALIGNMENT_LEFT)
@@ -78,6 +93,18 @@ func _ready() -> void:
 	_bar("ProgressTrack", _panel, Vector2(ROW_INSET_X, ROW_PROGRESS_Y), Vector2(PROGRESS_WIDTH, 3.0), Color("1a343d"))
 	_progress_fill = _bar("ProgressFill", _panel, Vector2(ROW_INSET_X, ROW_PROGRESS_Y), Vector2(0.0, 3.0), DEFAULT_ACCENT)
 	_prompt_label = _label("Prompt", _panel, Vector2(ROW_INSET_X, ROW_PROMPT_Y), Vector2(ROW_WIDTH, 16.0), 7, HORIZONTAL_ALIGNMENT_LEFT)
+	_controls = _bar("Controls", self, CONTROLS_RECT.position, CONTROLS_RECT.size, Color("06121ee8"))
+	_bar("ControlsEdge", _controls, Vector2.ZERO, Vector2(1.0, CONTROLS_RECT.size.y), Color("467a91"))
+	var controls_title := _label("Legend", _controls, Vector2(10.0, 7.0), Vector2(176.0, 10.0), 6, HORIZONTAL_ALIGNMENT_LEFT)
+	controls_title.text = "COMANDOS DO CARTÓGRAFO"
+	controls_title.add_theme_color_override("font_color", Color("86b6c8"))
+	for index in CONTROL_LINES.size():
+		var row := _label("Command%d" % index, _controls,
+			Vector2(10.0, CONTROL_ROW_Y + float(index) * CONTROL_ROW_STEP),
+			Vector2(178.0, CONTROL_ROW_HEIGHT), 7, HORIZONTAL_ALIGNMENT_LEFT)
+		row.text = CONTROL_LINES[index]
+		row.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_controls.visible = false
 	visible = false
 
 
@@ -90,6 +117,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 	var visual := session.current_content().visual
 	var accent := visual.accent_color if visual != null else DEFAULT_ACCENT
 	var threat := visual.threat_color if visual != null else DEFAULT_THREAT
+	_controls.visible = paused or session.phase == GameSession.Phase.ROUND_INTRO
 	_edge.color = accent
 	_progress_fill.color = accent
 	_title_label.add_theme_color_override("font_color", accent)
@@ -124,7 +152,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			_result_label.text = "OBJETIVO  %02d%%" % target_percent
 			_continuity_label.text = _carry_in_line(session)
 			_prompt_label.text = "ENTER  ·  INICIAR AGORA"
-			var progress := _transition_progress(session)
+			var progress := transition_progress(session)
 			_set_progress(progress)
 			_apply_cadence(progress, accent)
 		GameSession.Phase.ROUND_CLEAR:
@@ -140,7 +168,7 @@ func sync(session: GameSession, paused: bool = false, _events: Array[GameEvent] 
 			# (ciano → âmbar → lima, `docs/ART_DIRECTION.md`) acontece na passagem, não
 			# depois dela. É a ameaça crescente aparecendo antes de ser enfrentada.
 			_prompt_label.add_theme_color_override("font_color", _next_accent(session, accent))
-			var progress := _transition_progress(session)
+			var progress := transition_progress(session)
 			_set_progress(progress)
 			_apply_cadence(progress, accent)
 		GameSession.Phase.GAME_OVER:
@@ -225,16 +253,16 @@ func _next_accent(session: GameSession, fallback: Color) -> Color:
 	return next_visual.accent_color if next_visual != null else fallback
 
 
-## Fração da barra de passagem, de 0 (acabou de entrar na fase) a 1 (a fase vai virar).
-##
-## A divisão mora aqui e não em `GameSession` porque o domínio conta ticks inteiros — invariante 1
-## do `CLAUDE.md`, "só inteiros e ponto fixo 8.8". A sessão continua dona do *significado* (quantos
-## ticks já correram); esta view é dona do único lugar onde isso vira pixel. Nenhum tick, checksum
-## ou replay depende deste número.
-func _transition_progress(session: GameSession) -> float:
+## Fração concluída da transição atual, derivada dos dois contadores inteiros da sessão.
+## Mora aqui, e não em `GameSession`, porque o domínio não fala em float (invariante 1).
+static func transition_progress(session: GameSession) -> float:
 	if session.transition_ticks_total <= 0:
 		return 1.0
-	return float(session.transition_elapsed_ticks()) / float(session.transition_ticks_total)
+	return clampf(
+		1.0 - float(session.transition_ticks_left) / float(session.transition_ticks_total),
+		0.0,
+		1.0,
+	)
 
 
 ## Encena a passagem a partir do progresso **já confirmado** pela sessão. Não mede tempo, não
@@ -292,12 +320,13 @@ func _label(
 ) -> Label:
 	var label := Label.new()
 	label.name = node_name
-	label.position = node_position
-	label.size = node_size
 	label.horizontal_alignment = alignment
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", Color("d9f7ff"))
 	parent.add_child(label)
+	# Resolver o tema antes do retângulo evita manter os 23 px mínimos da fonte padrão.
+	label.position = node_position
+	label.size = node_size
 	return label

@@ -2,18 +2,19 @@
   "mcpServers": {
     "godot-ai": {
       "type": "stdio",
-      "command": "/opt/homebrew/bin/uvx",
+      "command": "python3",
       "args": [
-        "--link-mode",
-        "copy",
-        "--from",
-        "godot-ai==3.2.4",
-        "godot-ai",
-        "attach",
-        "--port",
-        "8000",
-        "--ws-port",
-        "9500"
+        "-B",
+        "tools/mcp/godot_mcp.py"
+      ],
+      "env": {}
+    },
+    "blender": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "-B",
+        "tools/mcp/blender_mcp.py"
       ],
       "env": {}
     }

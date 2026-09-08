@@ -74,8 +74,19 @@ var _round_title_label: Label
 var _status_label: Label
 var _objective_fill: ColorRect
 var _shield_fill: ColorRect
+var _phase_segments: Array[ColorRect] = []
+var _threat_segments: Array[ColorRect] = []
+var _threat_index: int = 0
+var _boss_phase: int = 0
+var _actor_count: int = 0
+var _beacon_count: int = 0
+var _beacons_captured: int = 0
+var _effect_ticks := PackedInt32Array()
 var _flash_message: String = ""
 var _flash_ticks: int = 0
+## Causa da última morte **observada**, ou `-1` enquanto nenhuma foi. Não é um flash com prazo
+## próprio: quem lhe dá duração é a fase DYING do domínio. Ver `_status_text`.
+var _death_reason: int = -1
 var _shown_permille: int = -1
 var _counter_delay: int = 0
 var _shown_score: int = -1
@@ -134,6 +145,17 @@ func _ready() -> void:
 		"Status", Vector2(STATUS_X, BOTTOM_TEXT_Y), Vector2(STATUS_WIDTH, TEXT_HEIGHT),
 		HORIZONTAL_ALIGNMENT_RIGHT, SECONDARY_FONT_SIZE)
 	_status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	# A área livre sob setor/score comporta instrumentos discretos de fase e pressão.
+	# Permanecem na banda superior: nenhum pixel adicional cobre o campo.
+	for index in 3:
+		_phase_segments.append(_add_bar(
+			"BossPhase%d" % index, Vector2(ROUND_X + float(index) * 7.0, TRACK_Y),
+			Vector2(5.0, TRACK_HEIGHT), TRACK_COLOR))
+	var pressure_step := SCORE_WIDTH / float(ThreatProfile.LADDER_SIZE)
+	for index in ThreatProfile.LADDER_SIZE:
+		_threat_segments.append(_add_bar(
+			"ThreatLevel%d" % index, Vector2(SCORE_X + float(index) * pressure_step, TRACK_Y),
+			Vector2(pressure_step - 0.6, TRACK_HEIGHT), TRACK_COLOR))
 
 
 ## `source` pode ser uma sessão M2 ou a simulação G1, preservando integrações existentes.
@@ -164,8 +186,11 @@ func sync(source: Variant, paused: bool, events: Array[GameEvent]) -> void:
 	_score_label.text = "S %06d" % _shown_score
 	_percent_label.text = "%04.1f/%02d" % [_shown_permille / 10.0, target_percent]
 	_vitals_label.text = "L×%d  E%02d" % [simulation.lives, _shield_seconds(simulation)]
+	if simulation.items_enabled() and simulation.beacons.count > 0:
+		_vitals_label.text += "  B%d/%d" % [simulation.beacons.captured_count(), simulation.beacons.count]
 	_round_title_label.text = visual.display_name if visual != null else "SETOR ATIVO"
 	_status_label.text = _status_text(simulation, session, paused)
+	_sync_threat_instruments(simulation, visual)
 
 	var objective_ratio := clampf(float(_shown_permille) / float(target), 0.0, 1.0)
 	_objective_fill.size.x = roundf(OBJECTIVE_WIDTH * objective_ratio)
@@ -253,15 +278,49 @@ func _capture_flash(events: Array[GameEvent]) -> void:
 				_flash_message = "CAPTURA +%d" % event.data.get("filled_delta", 0)
 				_flash_ticks = 75
 			GameEvent.Kind.PLAYER_DIED:
-				var reason: int = event.data.get("reason", GameSimulation.DeathReason.BOSS_CONTACT)
-				if reason == GameSimulation.DeathReason.SHIELD_EXPIRED:
-					_flash_message = "ESCUDO ESGOTADO · REENTRADA"
-				else:
-					_flash_message = "CONTATO! · REENTRADA"
-				_flash_ticks = 45
+				_death_reason = event.data.get("reason", GameSimulation.DeathReason.BOSS_CONTACT)
+				# A morte não entra na fila de flashes: ela tem fase própria no domínio e a linha
+				# de estado passa a ser dela até à reentrada. Zerar o prazo pendente impede que um
+				# "CAPTURA +n" ou um "ESCUDO CRÍTICO" anterior reapareça do outro lado da morte,
+				# anunciando um estado que o jogador já não tem.
+				_flash_ticks = 0
+				_flash_message = ""
+			GameEvent.Kind.PLAYER_RESPAWNED:
+				# A causa deixa de existir no mesmo tick em que o jogador recupera o controlo.
+				_death_reason = -1
 			GameEvent.Kind.SHIELD_CRITICAL:
 				_flash_message = "ESCUDO CRÍTICO"
 				_flash_ticks = 120
+			GameEvent.Kind.DART_ARMED:
+				_flash_message = "DARDO ARMADO · DESVIE"
+				_flash_ticks = 30
+			GameEvent.Kind.TRAIL_CUT:
+				_flash_message = "TRILHA CORTADA · CONTINUE!"
+				_flash_ticks = 75
+			GameEvent.Kind.EMBER_IGNITED:
+				_flash_message = "BRASA NA TRILHA · AVANCE"
+				_flash_ticks = 60
+			GameEvent.Kind.WALKER_EXTINGUISHED:
+				_flash_message = "VAGALUME CONTIDO +%d" % event.data.get("points", 0)
+				_flash_ticks = 60
+			GameEvent.Kind.BOSS_PHASE_CHANGED:
+				_flash_message = "NÚCLEO · FASE %d" % (int(event.data.get("phase", 0)) + 1)
+				_flash_ticks = 100
+			GameEvent.Kind.BOSS_CORNERED:
+				_flash_message = "NÚCLEO EM FÚRIA"
+				_flash_ticks = 75
+			GameEvent.Kind.OVERTIME_STARTED:
+				_flash_message = "PRESSÃO MÁXIMA · AVANCE"
+				_flash_ticks = 100
+			GameEvent.Kind.BEACON_CAPTURED:
+				_flash_message = "BALIZA ×%d  +%d" % [event.data.get("chain", 1), event.data.get("points", 0)]
+				_flash_ticks = 90
+			GameEvent.Kind.ITEM_STARTED:
+				_flash_message = "%s ATIVO" % _item_name(int(event.data.get("item", 0)))
+				_flash_ticks = 75
+			GameEvent.Kind.BOSS_SEALED:
+				_flash_message = "NÚCLEO SELADO"
+				_flash_ticks = 100
 
 
 func _status_text(simulation: GameSimulation, session: GameSession, paused: bool) -> String:
@@ -283,8 +342,20 @@ func _status_text(simulation: GameSimulation, session: GameSession, paused: bool
 		GameSimulation.Phase.GAME_OVER:
 			return "FIM DE JOGO · ENTER"
 		GameSimulation.Phase.DYING:
-			if _flash_ticks > 0:
-				return _flash_message
+			# A causa da morte dura exatamente a fase que o domínio abriu para ela
+			# (`rules.death_ticks`), não um prazo próprio do HUD. Antes eram 45 ticks fixos: com o
+			# `death_ticks` padrão (60) a causa sumia nos últimos 15 quadros da sequência, e com
+			# qualquer `death_ticks` abaixo de 45 ela sobrevivia à reentrada e cobria a linha do
+			# jogo vivo. Contato e escudo esgotado são erros diferentes e pedem correções
+			# diferentes: o nome do erro tem de durar o tempo em que o jogador está a olhar para
+			# ele, e acabar quando ele volta a ter o controlo.
+			# Defendido por `tests/unit/death_status_duration_test.gd`.
+			if _death_reason == GameSimulation.DeathReason.SHIELD_EXPIRED:
+				return "ESCUDO ESGOTADO · REENTRADA"
+			if _death_reason >= 0:
+				return "CONTATO! · REENTRADA"
+			# Ninguém observou o evento — a fase foi vista já a decorrer. O HUD não inventa uma
+			# causa que não lhe foi confirmada (invariante 6).
 			return "REENTRADA EM CURSO"
 	if _flash_ticks > 0:
 		return _flash_message
@@ -294,7 +365,61 @@ func _status_text(simulation: GameSimulation, session: GameSession, paused: bool
 		if TrailExposure.is_warning(TrailExposure.of_simulation(simulation)):
 			return "EXPOSTO · VOLTE À BORDA"
 		return "FECHE NA BORDA"
+	if simulation.items_enabled():
+		var effects := _effect_status(simulation)
+		if not effects.is_empty():
+			return effects
+	if simulation.threat_enabled():
+		if simulation.director.calm_ticks > 0:
+			return "TRÉGUA · TRACE A PRÓXIMA ROTA"
+		return "FASE %d · PRESSÃO %d" % [simulation.boss.phase + 1, simulation.director.threat_index + 1]
 	return "DESENHE · ESPAÇO/Z"
+
+
+func _sync_threat_instruments(simulation: GameSimulation, visual: RoundVisualDefinition) -> void:
+	_threat_index = simulation.director.threat_index
+	_boss_phase = simulation.boss.phase
+	_actor_count = simulation.pools.alive_total()
+	_beacon_count = simulation.beacons.count
+	_beacons_captured = simulation.beacons.captured_count()
+	_effect_ticks = simulation.effects.remaining.duplicate()
+	var accent := visual.accent_color if visual != null else ACCENT_COLOR
+	for index in _phase_segments.size():
+		_phase_segments[index].visible = simulation.threat_enabled()
+		_phase_segments[index].color = accent if index <= _boss_phase else TRACK_COLOR
+	for index in _threat_segments.size():
+		_threat_segments[index].visible = simulation.threat_enabled()
+		_threat_segments[index].color = (
+			DANGER_COLOR if _threat_index >= 3 else WARNING_COLOR
+		) if index <= _threat_index else TRACK_COLOR
+	_status_label.add_theme_color_override("font_color", (
+		DANGER_COLOR if simulation.trail_active and simulation.pools.alive_embers() > 0
+		else HUD_COLOR
+	))
+
+
+func presentation_state() -> Dictionary:
+	return {
+		"phase": _boss_phase, "pressure": _threat_index, "minor_actors": _actor_count,
+		"beacons": _beacon_count, "beacons_captured": _beacons_captured, "effects": _effect_ticks.duplicate(),
+	}
+
+
+func _effect_status(simulation: GameSimulation) -> String:
+	var labels := PackedStringArray()
+	for kind in [ItemProfile.Kind.VELOCITY, ItemProfile.Kind.STASIS, ItemProfile.Kind.SHIELD_FREEZE]:
+		if simulation.effects.active(kind):
+			labels.append("%s %ds" % [_item_name(kind), ceili(simulation.effects.remaining[kind] / 60.0)])
+	return " · ".join(labels)
+
+
+func _item_name(kind: int) -> String:
+	match kind:
+		ItemProfile.Kind.VELOCITY: return "IMPULSO"
+		ItemProfile.Kind.STASIS: return "ESTASE"
+		ItemProfile.Kind.SHIELD_FREEZE: return "ESCUDO"
+		ItemProfile.Kind.PURGE: return "PURGA"
+	return "ITEM"
 
 
 func _apply_visual(visual: RoundVisualDefinition) -> void:

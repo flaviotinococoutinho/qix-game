@@ -1,14 +1,14 @@
 [gd_resource type="Resource" script_class="RoundContent" format=3]
 
-[ext_resource type="Resource" path="res://content/rounds/definitions/round_01_abyssal_relay.tres" id="1_idl4o"]
-[ext_resource type="Resource" path="res://content/rules/standard.tres" id="2_55i0b"]
-[ext_resource type="Script" path="res://game/rules/round_content.gd" id="3_q7sns"]
-[ext_resource type="Resource" path="res://content/visuals/round_01_abyssal_relay.tres" id="4_x86nn"]
+[ext_resource type="Resource" path="res://content/rounds/definitions/round_01_abyssal_relay.tres" id="1_mue3c"]
+[ext_resource type="Resource" path="res://content/rules/standard.tres" id="2_emnwq"]
+[ext_resource type="Script" path="res://game/rules/round_content.gd" id="3_f1i1f"]
+[ext_resource type="Resource" path="res://content/visuals/round_01_abyssal_relay.tres" id="4_lrj4t"]
 
 [resource]
-script = ExtResource("3_q7sns")
+script = ExtResource("3_f1i1f")
 round_id = &"abyssal_relay"
-rules = ExtResource("2_55i0b")
-round_definition = ExtResource("1_idl4o")
+rules = ExtResource("2_emnwq")
+round_definition = ExtResource("1_mue3c")
 seed_value = 1482031771
-visual = ExtResource("4_x86nn")
+visual = ExtResource("4_lrj4t")

@@ -30,6 +30,34 @@ const CONSUMER_EXTENSIONS := [".gd", ".tscn", ".tres", ".gdshader", ".cfg"]
 
 const STATES := ["dependencia", "ferramenta", "a-remover"]
 
+## O fecho da tabela é uma frase com dois números **derivados** dela: quantas pastas continuam
+## `a-remover` e quantas cenas somam. Derivado escrito à mão é o que envelhece primeiro — cada
+## remoção da ADR-0010 recalcula a frase inteira, e duas remoções abertas ao mesmo tempo chegam
+## com totais que se contradizem (medido em 2026-09-07: três PRs abertos escreviam "~7,9 MB / 59
+## cenas", "~9,3 MB / 71 cenas" e "~8,8 MB / 82 cenas" para a mesma linha). Resolver esse conflito
+## por `--ours`, `--theirs` ou união deixa um total que não descreve árvore nenhuma, e nada ficava
+## vermelho. Daqui em diante, fica.
+## `(?m)` porque a frase é uma linha no meio do arquivo: sem ele o `^` do PCRE2 ancora no início
+## do documento inteiro e a busca nunca casa.
+const TOTALS_ROW := "(?m)^Somadas, as ([a-zç]+) pastas `a-remover` ocupam ~[0-9,.]+ MB e declaram ([0-9]+) cenas"
+
+## O fecho do outro extremo: executadas as sete remoções, não resta pasta condenada e a frase no
+## plural passa a mentir. Medido em 2026-09-07, ao integrar as sete: a guarda acima, escrita
+## quando havia seis, ficava **vermelha exatamente no estado que a ADR-0010 pediu** — o `NUMERALS`
+## começa em `duas` e o regex exige o plural. Uma guarda derivada que proíbe o seu próprio fim é a
+## mesma falha de acoplamento que o #69 tem na matriz de teste, e não a de números desatualizados.
+const EMPTY_TOTALS_ROW := "(?m)^Nenhuma pasta `a-remover` resta"
+
+## Só as formas que a frase pode assumir enquanto restar mais de uma pasta. Zero tem frase própria
+## (`EMPTY_TOTALS_ROW`, acima) e é o estado de chegada da ADR-0010. **Uma** continua sem forma: o
+## plural deixa de servir, `NUMERALS` começa em `duas`, e o teste falha a pedir a reescrita em vez
+## de aceitar em silêncio uma concordância errada. Isso só é alcançável mesclando as sete remoções
+## uma a uma — a integração vai de sete a zero de um golpe e nunca passa por aqui. Quem mesclar a
+## sexta escreve a frase no singular e acrescenta a forma que usou.
+const NUMERALS := {
+	"duas": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6, "sete": 7,
+}
+
 
 func test_every_addon_folder_has_a_manifest_line_and_vice_versa() -> void:
 	var declared := _manifest()
@@ -84,7 +112,11 @@ func test_addons_marked_for_removal_have_no_consumer_left() -> void:
 	for folder in declared:
 		if declared[folder] == "a-remover":
 			doomed.append(folder)
-	ok(not doomed.is_empty() or declared.is_empty(), "inventário sem nenhuma pasta condenada")
+	# A asserção aqui é que o manifesto **foi lido**, não que ainda haja pasta condenada: com as
+	# sete remoções da ADR-0010 executadas, `doomed` vazio é o estado de chegada da decisão, não
+	# um parser que devolveu nada. Escrita como `not doomed.is_empty()`, a guarda proibia
+	# exatamente o fim que a ADR pediu.
+	ok(not declared.is_empty(), "addons/README.md não rendeu nenhuma linha de inventário")
 	var citations := _citations(doomed)
 	for folder in doomed:
 		var cited: PackedStringArray = citations[folder]
@@ -132,6 +164,101 @@ func test_addons_marked_for_removal_stay_out_of_every_export_preset() -> void:
 					+ "uma pasta condenada não pode vazar para um build enquanto espera a remoção."
 				) % [folder, i + 1],
 			)
+
+
+## O fecho da tabela conta pastas e cenas. Os dois números saem do disco, não da prosa.
+##
+## Os megabytes ficam **de fora de propósito**: o número da tabela foi medido com contagem por
+## blocos, e o mesmo conteúdo dá 6,8 MB somando o tamanho dos arquivos e 16 MB somando blocos
+## neste checkout. Nenhuma das duas leituras é errada, e uma guarda que exigisse uma delas ficaria
+## vermelha conforme o sistema de arquivos de quem roda. Contagem de pasta e de cena não tem essa
+## ambiguidade: é a mesma em qualquer máquina, e é o que a frase promete ao leitor.
+func test_removal_totals_match_the_folders_on_disk() -> void:
+	var declared := _manifest()
+	var doomed := PackedStringArray()
+	for folder in declared:
+		if declared[folder] == "a-remover":
+			doomed.append(folder)
+
+	var scenes := 0
+	for folder in doomed:
+		scenes += _count_scenes(ADDONS_DIR + "/" + folder)
+
+	var manifest := _read(MANIFEST)
+	var m := RegEx.create_from_string(TOTALS_ROW).search(manifest)
+
+	# Zero pastas condenadas é o estado de chegada da ADR-0010, e a frase de fecho no plural deixa
+	# de descrever coisa nenhuma. Aqui a guarda inverte-se: exige a frase de encerramento e recusa
+	# um plural sobrevivente, para que a última remoção não deixe para trás um total que já não
+	# soma nada. Os números históricos dessa frase não são deriváveis do disco — as pastas não
+	# estão lá —, por isso o que se confere é a declaração de vazio, não a aritmética.
+	if doomed.is_empty():
+		ok(
+			RegEx.create_from_string(EMPTY_TOTALS_ROW).search(manifest) != null,
+			(
+				"nenhuma pasta continua `a-remover`, mas addons/README.md não declara o fecho da "
+				+ "ADR-0010 (`Nenhuma pasta `a-remover` resta`). Escreva-o: o leitor tem de "
+				+ "distinguir 'a decisão acabou' de 'alguém apagou a linha'."
+			),
+		)
+		ok(
+			m == null,
+			(
+				"addons/README.md ainda promete `as %s pastas a-remover`, mas nenhuma resta. "
+				+ "A última remoção atualizou a tabela e esqueceu o fecho."
+			) % [m.get_string(1) if m != null else ""],
+		)
+		return
+
+	ok(
+		m != null,
+		(
+			"addons/README.md não tem a frase de fecho no formato esperado (`Somadas, as <numeral> "
+			+ "pastas `a-remover` ocupam ~<n> MB e declaram <n> cenas`). Restam %d pasta(s) e %d "
+			+ "cena(s): reescreva a frase mantendo os dois números conferíveis."
+		) % [doomed.size(), scenes],
+	)
+	if m == null:
+		return
+
+	var numeral := m.get_string(1)
+	ok(
+		NUMERALS.has(numeral),
+		(
+			"addons/README.md diz `as %s pastas a-remover`, numeral que a guarda não conhece. "
+			+ "Restam %d pasta(s) — se o plural deixou de servir, reescreva a frase."
+		) % [numeral, doomed.size()],
+	)
+	if NUMERALS.has(numeral):
+		ok(
+			int(NUMERALS[numeral]) == doomed.size(),
+			(
+				"addons/README.md diz `as %s pastas a-remover` (%d), mas a tabela declara %d. "
+				+ "Uma remoção da ADR-0010 atualizou a tabela e esqueceu o fecho."
+			) % [numeral, int(NUMERALS[numeral]), doomed.size()],
+		)
+
+	ok(
+		m.get_string(2).to_int() == scenes,
+		(
+			"addons/README.md promete %s cenas nas pastas `a-remover`, mas o disco tem %d. "
+			+ "Ver ADR-0010: o fecho da tabela é derivado, e derivado desatualizado mente sem "
+			+ "que nada fique vermelho."
+		) % [m.get_string(2), scenes],
+	)
+
+
+## Cenas declaradas sob um caminho, recursivamente.
+func _count_scenes(dir: String) -> int:
+	if not DirAccess.dir_exists_absolute(dir):
+		return 0
+	var total := 0
+	for sub in DirAccess.get_directories_at(dir):
+		total += _count_scenes(dir + "/" + String(sub))
+	for f in DirAccess.get_files_at(dir):
+		if String(f).ends_with(".tscn"):
+			total += 1
+	return total
 
 
 ## Lê a tabela de inventário. Chave: nome da pasta; valor: estado declarado.

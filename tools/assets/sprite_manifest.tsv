@@ -1,0 +1,18 @@
+# slug	size	prompt
+player_drone	27x27	the player's cartographer drone: a compact luminous cross-shaped survey drone, pale gold core, four short cyan arms with white tips; must read clearly when shown at 9x9 pixels.
+nucleus_abyssal	45x45	the Nucleo, a hostile unstable energy-core boss for the ocean-abyss sector: a rotating diamond of dark teal crystal with a red-magenta fissure core and four thin cyan tendrils; menacing, geometric, readable silhouette.
+nucleus_aurora	45x45	the same Nucleo boss family, forge variant: a molten diamond with a dark iron shell, amber cracks and a magenta-white core, four short tendrils; menacing, geometric, readable silhouette.
+nucleus_verdant	45x45	the same Nucleo boss family, organic variant: a seed-pod shaped diamond in lime green with coral veins and a white-hot core, four thorn-like tendrils; menacing, readable silhouette.
+vagalume	15x15	a corrupted boundary lantern enemy (a firefly-beacon): tiny dark navy lantern body, white-hot core, two cyan spark wings; must read at 5x5 pixels.
+dardo	15x15	a boss-fired dart projectile pointing to the RIGHT: a thin bright magenta-white bolt with a short cyan tail; must read at 5x5 pixels.
+brasa	12x12	an ember spark that burns along a drawn line: a white-hot pixel core with an orange-gold halo and two tiny sparks; must read at 4x4 pixels.
+baliza	21x21	a dormant cartographer's beacon marker: a small octagonal survey instrument in dark teal with a cyan ring and a pale gold lens in the middle; must read at 7x7 pixels.
+item_anchor	18x18	flat HUD icon: a glowing stabilizer/anchor glyph in electric cyan with a white core, high contrast, simple shapes.
+item_stasis	18x18	flat HUD icon: a frozen hourglass glyph in pale gold with a cyan outline, high contrast, simple shapes.
+item_impulse	18x18	flat HUD icon: a double chevron speed glyph in white-cyan, high contrast, simple shapes.
+item_lumen	18x18	flat HUD icon: a radiant burst/pulse glyph in magenta-white, high contrast, simple shapes.
+emblem_abyssal	64x64	sector emblem crest: an abstract cartographic sigil for an abyssal relay station, concentric arcs and a signal spike, cyan and turquoise on dark navy, painterly-pixel hybrid, no text.
+emblem_aurora	64x64	sector emblem crest: an abstract cartographic sigil for an auroral foundry, angular forge shapes and a rising arc, amber and magenta on dark navy, painterly-pixel hybrid, no text.
+emblem_verdant	64x64	sector emblem crest: an abstract cartographic sigil for a verdant singularity, a collapsing seed spiral, lime green and coral on dark navy, painterly-pixel hybrid, no text.
+emblem_umbral	64x64	sector emblem crest: an abstract cartographic sigil for an umbral drift, an eclipsed disc with amber rim on indigo, painterly-pixel hybrid, no text.
+emblem_ferrous	64x64	sector emblem crest: an abstract cartographic sigil for a ferrous choir, six vertical pipes like an organ inside a ring, copper and grey-green on dark navy, painterly-pixel hybrid, no text.
