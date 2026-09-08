@@ -1,10 +1,15 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-08 · commit `6d23de4` · inspeção Git e integração local em andamento
-> **Alcance:** fila observada de **32 PRs abertas, #59–#90**, `main` em `6136ebb`.
-> Atlas Vivo (`0c63665`) e Godot AI 4.0.2 (`6d23de4`) estão preservados em commits locais.
-> A branch `integrate/atlas-mcp-20260908` recebe o bundle #78 (`3c9724f`) e deltas úteis.
-> Suíte, renderer/export da composição final e merges no GitHub estão **PENDENTES** nesta edição.
+> **Verificado em** 2026-09-08 · commit `3f2d96e` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** medido às 05:35Z. A integração descrita abaixo **mesclou**, e este cabeçalho foi
+> reescrito contra o estado pós-merge, medido — não inferido: `origin/main` está em `3f2d96e`
+> (não `6136ebb`), a **fila está em 0 PRs abertos** (não 32), o bundle #78 (`3c9724f`) está
+> **integralmente contido**
+> em `main` (`git rev-list --left-right --count` → `40	0`), e a suíte, que a edição anterior
+> declarava **PENDENTE**, corre **verde**: `run_tests.gd` → **404 testes, 19009 asserções, 0
+> falhas**. Evidência em `docs/loop/runs/2026-09-08T053500Z.md`.
+> **Não reverificado nesta passagem:** renderer/export da composição final, mérito visual, áudio
+> físico e Android real — continuam sem validação, como antes.
 
 O usuário autorizou explicitamente nesta sessão a modernização, auditoria, revisão, correções,
 integração e merges das PRs. Esta execução cumpre esse escopo amplo: a regra rotineira de um
@@ -18,6 +23,13 @@ intenções, decisões e evidências por árvore. O #78 contém integralmente 20
 próprio. Dos 12 restantes, #83 tem um passo CI de índice Python a portar; #90 exige adaptar
 os testes/intenção ao touch Atlas. Os demais resíduos são sobretudo documentais ou equivalentes.
 Consultar o GitHub antes de agir: o snapshot datado não é um contador automático.
+
+**Estado posterior, medido em 05:35Z:** a integração acima mesclou e **todos** esses resíduos
+entraram — a fila está em 0 e `main` (`3f2d96e`) contém o #78 por inteiro. O parágrafo acima
+descreve o momento em que foi escrito, não o de agora; é histórico, não uma lista de pendências.
+Ele é a ilustração exata do aviso que fecha o próprio parágrafo, e da razão pela qual esta run
+existiu: às 02:01Z o P0 anterior ainda anunciava "fila em 0, escolha qualquer item" com 30 PRs
+abertos, e uma execução inteira se gastou a redescobrir isso.
 
 ## Histórico preservado e entrega Atlas
 
@@ -107,21 +119,24 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 
 ### P0 — integração e capacidade de revisão
 
-- [~] **Concluir integração Atlas + bundle #78 e fila #59–#90, autorizada pelo usuário.**
-  Branch isolada `integrate/atlas-mcp-20260908`, com Atlas e plugin preservados antes do merge.
-  Resolver conflitos por contrato, portar resíduos úteis (#83/#90 e relatos), validar a árvore
-  final e realizar a integração GitHub autorizada. Não usar `theirs` global, force-push ou
-  aprovação fictícia. *Pronto:* commit/PR final, checks e evidências ligados ao SHA, merges
-  efetivos registrados e PRs substituídas reconciliadas. Até lá o estado permanece `[~]`.
-- [~] **Decidir a cadência do loop (#85, ADR-0013 em Proposta).** A recomendação de branch
-  diária não foi aceita automaticamente. Agendamento externo não foi alterado.
-  *Pronto:* decisão do mantenedor registrada e scheduler coerente com ela.
+- [x] **Concluir integração Atlas + bundle #78 e fila #59–#90, autorizada pelo usuário.**
+  ✅ **Mesclado em 2026-09-08T05:33Z.** `main` está em `3f2d96e` (merge do #92), a fila está em
+  **0 PRs abertos** e o bundle #78 está integralmente contido em `main`. Os dois critérios de
+  pronto que o loop consegue medir sozinho foram medidos contra o GitHub e contra a árvore:
+  merges efetivos registrados, e a suíte que ficara pendente corre **verde — 404 testes, 19009
+  asserções, 0 falhas** (`docs/loop/runs/2026-09-08T053500Z.md`). Continua **por verificar** o
+  renderer/export da composição final, que precisa de sessão com editor.
+- [ ] **Decidir a cadência do loop (ADR-0013, em Proposta).** O #85 mesclou, então já não há PR a
+  esperar: o que falta é **decisão humana**, e por isso o item volta a `[ ]` em vez de `[x]`. A
+  recomendação de branch diária não foi aceita automaticamente e o agendamento externo continua
+  como estava — o loop segue a 1 PR/h. *Pronto:* decisão do mantenedor registrada na ADR e
+  scheduler coerente com ela.
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
-- [~] **Unificar relatórios da fila (#71).** `merge_queue_report.sh --order` substitui
-  `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
-  relatório de superfície, cuja pergunta é diferente. *Pronto:* mudança integrada e CI verde.
+- [x] **Unificar relatórios da fila (#71).** ✅ mesclado: `merge_queue_report.sh --order` substitui
+  `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. O relatório de
+  superfície ficou, porque a pergunta dele é outra. Integrado e com a suíte verde em `3f2d96e`.
 
 **Lições preservadas:** #55 integrou #20–#54 em `34634d0` e #56 reconciliou esse estado;
 35 PRs exigiram quatro esforços, dois superados. A incompatibilidade #25×#50 era semântica:
