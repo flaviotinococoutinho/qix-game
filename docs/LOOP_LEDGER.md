@@ -4,6 +4,12 @@
 > **Alcance:** esta revisão do cabeçalho fecha o item de direção do #74 e ajusta o backlog; a fila
 > foi conferida no GitHub às 06:00Z e estava em **zero PRs abertos**. Tudo abaixo desta linha é
 > histórico preservado, medido nos commits e ambientes que cada bloco declara — não foi reexecutado aqui.
+> **Revisão de 2026-09-08T22:00Z** (mesmo ambiente, head `859f4e4` desta branch): corrigido o
+> inventário composto #98+#99 que esta PR publicava — `414` casos medidos às 11:00Z, **416** hoje —
+> e reescrita a instrução para derivar em vez de copiar. A fila tinha **cinco** PRs abertas nessa
+> conferência (#98–#102), acima dos tetos das regras 7 e 8. Alcance: só os dois números e a redação
+> ao redor; nada de `game/`, `ui/`, `app/` ou `content/` foi tocado, e nenhum outro bloco histórico
+> foi reverificado.
 > A integração de `3f2d96e` continua sendo a fonte do estado da fila descrito a seguir.
 > **Alcance da integração:** as **33 PRs de origem, #59–#91**, foram incorporadas pela [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92).
 > Merge efetivo em 2026-09-08T05:33:34Z; as 33 PRs constavam como MERGED e a fila estava vazia na conferência às 05:33:37Z.
@@ -83,8 +89,13 @@ ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamen
 9. **Não reande a sonda de composição.** Quatro execuções (08:00Z, 09:00Z, 11:00Z, 12:00Z) mediram
    a mesma composição #98 × #99 e publicaram quatro totais de asserções diferentes — 20262, 20256,
    20265, 20272 — porque as guardas de documento assertam por linha varrida e o total **depende do
-   texto da própria resolução**. A sonda não converge e o número não é transferível: só
-   `76 arquivos · 414 casos` sobrevive à mudança de redação. Uma execução que encontre o teto
+   texto da própria resolução**. A sonda não converge e o número não é transferível: só o
+   inventário derivado — arquivos `*_test.gd` e funções `test_*` — sobrevive à mudança de redação.
+   **Mas derive-o, não o copie.** Esta regra publicava `76 arquivos · 414 casos`; era a verdade da
+   sonda de 11:00Z e envelheceu sozinha quando o **#99** ganhou dois casos às 16:05Z. Um literal de
+   inventário é evidência datada como qualquer outra: quem for mesclar recalcula
+   `casos(A) + casos(B) − casos(main)` sobre os heads do momento e confere com o runner.
+   Uma execução que encontre o teto
    atingido **escala ao mantenedor** — a fila só anda com um merge, que o loop não pode dar — e
    registra isso no relato, em vez de gastar a hora remedindo o que já está medido.
 
@@ -244,10 +255,15 @@ para o inventário da **árvore final**, não somar números copiados das descri
   **Revisão de 11:00Z** (`docs/loop/runs/2026-09-08T110042Z.md`): a prosa da matriz dizia
   `6 casos` onde a aritmética dá **7** (411 − 404, e sete funções `test_*` no arquivo) — corrigido.
   E esta PR **conflita** com a **#99** em `LOOP_LEDGER.md` e `TEST_MATRIX.md`: as duas declaram
-  `75 arquivos`, contando só a própria guarda. Compostas, a árvore tem **76 arquivos · 414 casos**,
-  medidos numa sonda local em Linux headless, 2026-09-08. Quem mesclar o **segundo** precisa
-  reconciliar o ledger à mão, escrever esse inventário e **reexecutar** a suíte para a contagem de
-  asserções: somar as duas ou copiar o número da sonda plantaria evidência falsa.
+  `75 arquivos`, contando só a própria guarda. Compostas, a árvore tem **76 arquivos · 416 casos**,
+  derivados em 2026-09-08T22:00Z sobre os heads `859f4e4` (#98) e `735ed50` (#99), em Linux
+  headless: `411 + 409 − 404`, confirmado contando os arquivos e as funções `test_*` da árvore
+  mesclada. **Recalcule antes de usar.** A revisão de 22:00Z encontrou aqui `414`, medido às
+  11:00Z e já falso desde 16:05Z, quando o #99 cresceu — ver
+  `docs/loop/runs/2026-09-08T220000Z.md`. Quem mesclar o **segundo** precisa
+  reconciliar o ledger à mão, derivar o inventário dos heads que estiver mesclando e **reexecutar**
+  a suíte para a contagem de asserções: somar as duas ou copiar o número da sonda planta evidência
+  falsa, e um inventário literal com data velha planta a mesma coisa mais devagar.
 - [x] **Documentação da integração reconciliada (#65, #76, #77, #82, #84, via #92).** Decisões de arte referenciadas,
   geometria atual distinguida de tempos históricos, disponibilidade de Git corrigida,
   seções e chaves de tabela reconciliadas. Guardas e inspeção da integração passaram; a dívida
