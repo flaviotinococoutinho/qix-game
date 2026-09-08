@@ -62,3 +62,7 @@ addons/phantom_camera/
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
+
+# Bytecode derivado de Python, em qualquer profundidade.
+__pycache__/
+*.py[cod]
