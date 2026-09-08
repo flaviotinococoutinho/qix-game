@@ -227,6 +227,13 @@ para o inventário da **árvore final**, não somar números copiados das descri
   **O que continua sem guarda, de propósito:** um `Variant` nunca anotado, ou um objeto de
   apresentação recebido por parâmetro sem tipo, atravessa as três varreduras. É semântica, não
   sintaxe — só revisão e teste de comportamento alcançam.
+  **Revisão de 11:00Z** (`docs/loop/runs/2026-09-08T110042Z.md`): a prosa da matriz dizia
+  `6 casos` onde a aritmética dá **7** (411 − 404, e sete funções `test_*` no arquivo) — corrigido.
+  E esta PR **conflita** com a **#99** em `LOOP_LEDGER.md` e `TEST_MATRIX.md`: as duas declaram
+  `75 arquivos`, contando só a própria guarda. Compostas, a árvore tem **76 arquivos · 414 casos**,
+  medidos numa sonda local em Linux headless, 2026-09-08. Quem mesclar o **segundo** precisa
+  reconciliar o ledger à mão, escrever esse inventário e **reexecutar** a suíte para a contagem de
+  asserções: somar as duas ou copiar o número da sonda plantaria evidência falsa.
 - [x] **Documentação da integração reconciliada (#65, #76, #77, #82, #84, via #92).** Decisões de arte referenciadas,
   geometria atual distinguida de tempos históricos, disponibilidade de Git corrigida,
   seções e chaves de tabela reconciliadas. Guardas e inspeção da integração passaram; a dívida

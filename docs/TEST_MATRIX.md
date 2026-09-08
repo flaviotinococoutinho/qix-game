@@ -14,7 +14,7 @@ python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --is
 Resultado da suíte integrada: **411 testes, 20251 asserções, 0 falhas** — árvore de `5318d0a`
 mais a guarda de direção deste PR, em Linux headless; resultados de outras branches não são
 intercambiáveis. Os 404 testes / 19009 asserções medidos em `ecc6a23` (macOS) continuam sendo o
-registro daquela execução: a diferença são os **6 casos** de `domain_direction_guard_test.gd`.
+registro daquela execução: a diferença são os **7 casos** de `domain_direction_guard_test.gd`.
 
 **Inventário da suíte (derivado, não digitado):** 75 arquivos de teste · 411 casos `test_*`.
 
