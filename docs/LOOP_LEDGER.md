@@ -73,6 +73,20 @@ ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamen
    da execução, sem abrir outro PR redundante. Origem: #53 e o censo de posse de 2026-09-06.
    O limite operacional é dois PRs do loop em andamento; com o limite atingido, priorize revisão
    e correção dos existentes, não a geração de uma nova mudança sobre os mesmos arquivos.
+8. **Um só PR do loop que toque testes, enquanto a matriz declarar inventário global.**
+   Medido em 2026-09-08T14:00Z sobre o head do #98: `docs/TEST_MATRIX.md` carrega uma linha de
+   inventário derivado (`75 arquivos · 411 casos`) e **três** afirmações `N testes, M asserções,
+   K falhas` que `test_matrix_inventory_test.gd` obriga a repetirem os mesmos números. Qualquer PR
+   que acrescente ou altere um caso reescreve essas mesmas quatro linhas do mesmo arquivo, e é
+   isso que faz duas PRs do loop colidirem **por construção**, não por azar. O teto de dois da
+   regra 7 vale para PRs que não tocam a suíte; para os que tocam, o teto é **um**.
+9. **Não reande a sonda de composição.** Quatro execuções (08:00Z, 09:00Z, 11:00Z, 12:00Z) mediram
+   a mesma composição #98 × #99 e publicaram quatro totais de asserções diferentes — 20262, 20256,
+   20265, 20272 — porque as guardas de documento assertam por linha varrida e o total **depende do
+   texto da própria resolução**. A sonda não converge e o número não é transferível: só
+   `76 arquivos · 414 casos` sobrevive à mudança de redação. Uma execução que encontre o teto
+   atingido **escala ao mantenedor** — a fila só anda com um merge, que o loop não pode dar — e
+   registra isso no relato, em vez de gastar a hora remedindo o que já está medido.
 
 ### Legenda do backlog (convenção de #34)
 
