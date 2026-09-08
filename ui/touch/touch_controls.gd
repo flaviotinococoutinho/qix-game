@@ -150,14 +150,36 @@ func _release(index: int) -> bool:
 	return true
 
 
-func _update_direction() -> void:
-	var delta := _stick_position - _stick_origin
+## Eixo do polegar, com a mesma trava que o stick analógico ganhou em #38.
+##
+## O deslocamento é normalizado por `STICK_RADIUS` e entregue a
+## `GameInputAdapter.resolve_analog_direction`: os dois canais passam a usar uma regra só, e
+## `ANALOG_AXIS_SWITCH_MARGIN` significa o mesmo ângulo nos dois. O comprimento é limitado a 1.0
+## porque um stick físico também para no fim de curso — sem o limite, um arrasto longo encolheria
+## a margem até zero e a trava desapareceria justamente onde o dedo já saiu da moldura.
+##
+## Por que o polegar precisa disto **mais** que o stick: `InputEventScreenDrag` chega a cada
+## quadro enquanto o dedo estiver em campo, e o centroide de contato em vidro oscila ~1,5 px sem
+## que o jogador mexa. Medido antes desta mudança, um polegar *parado* a 45° trocava de eixo em
+## **60 de 60 quadros**. Com `draw` apertado isso não é tremor cosmético: cada troca é um canto
+## novo na trilha confirmada, e comprimento de trilha é a moeda que `TrailExposure` lê para
+## acelerar o pulso e nomear o aviso no HUD. O jogador pagava exposição por um gesto que não fez.
+##
+## A zona morta continua em pixels e é medida antes da trava: soltar para o centro zera a direção
+## como antes. Ela também garante que virar continua possível — `STICK_DEAD_ZONE / STICK_RADIUS`
+## (0,262) é maior que a margem (0,18), então mesmo o menor deslocamento válido ainda alcança o
+## eixo perpendicular.
+static func resolve_touch_direction(delta: Vector2, current_direction: int) -> int:
 	if delta.length() < STICK_DEAD_ZONE:
-		_direction = MoveIntent.Dir.NONE
-	elif absf(delta.x) > absf(delta.y):
-		_direction = MoveIntent.Dir.RIGHT if delta.x > 0.0 else MoveIntent.Dir.LEFT
-	else:
-		_direction = MoveIntent.Dir.DOWN if delta.y > 0.0 else MoveIntent.Dir.UP
+		return MoveIntent.Dir.NONE
+	return GameInputAdapter.resolve_analog_direction(
+		(delta / STICK_RADIUS).limit_length(1.0),
+		current_direction,
+	)
+
+
+func _update_direction() -> void:
+	_direction = resolve_touch_direction(_stick_position - _stick_origin, _direction)
 
 
 func _layout_size() -> Vector2:

@@ -1,5 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
+> **Verificado em** 2026-09-08 · commit `ca74578` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** esta passagem conferiu **duas** coisas contra o estado real e mais nada: a fila
+> (**30 PRs abertos**, #60–#89, medida às 03:02Z — o "0" de 2026-09-06 venceu, ver P0) e o item de
+> toque que ela entregou. O restante do backlog **não** foi reconferido item a item. O parágrafo
+> abaixo é o alcance da verificação de 2026-09-06, mantido como registro histórico.
+>
 > **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
 > **Alcance:** conferido **depois** da mescla do #55, que integrou #20–#54. Recontados contra o
 > estado real: a fila (0 PRs abertos, medida às 19:42Z) e as duas marcas `[~]` cujos PRs já
@@ -92,9 +98,15 @@ Itens sem critério de pronto não entram aqui.
       (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila sem serem mesclados.
       *Pronto (era):* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
 
-      **A fila está vazia pela primeira vez desde 2026-09-04.** A próxima execução é a primeira em
+      **⚠️ Esse "0" venceu.** Medido em 2026-09-08T03:02Z contra o GitHub: a fila voltou a **30 PRs
+      abertos** (#60–#89), e `main` continua em `ca74578`. A frase abaixo, escrita em 2026-09-06,
+      valia por poucas horas e desde então induz cada execução a acreditar que pode escolher
+      qualquer item sem colidir. **Confira a fila você mesmo antes de escolher; não confie nesta
+      linha.** O censo de posse por arquivo está em #88 e #89 — não abra um terceiro.
+
+      ~~A fila está vazia pela primeira vez desde 2026-09-04. A próxima execução é a primeira em
       ~40 h que pode escolher qualquer item sem colidir com trabalho em voo. Escolha do backlog,
-      não outra medição de fila: não há fila para medir.
+      não outra medição de fila: não há fila para medir.~~
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
@@ -263,6 +275,30 @@ O que continua aberto:
       comentários corrigidos também foram preservados, e a sonda faz parte do CI.
       **Aprovação estética continua humana.**
 
+- [x] **O polegar não tinha a trava de eixo que o stick analógico tem desde #38.** ✅ entregue por
+      `ai/loop-20260908T030236Z`. `ui/touch/touch_controls.gd` ainda usava `absf(x) > absf(y)` cru —
+      a expressão que o #38 condenou com números — enquanto o vidro manda `InputEventScreenDrag` a
+      **cada quadro** e o centroide de um polegar oscila ~1,5 px parado. Medido em `ca74578`: um
+      polegar imóvel a 45° trocava de eixo em **60 de 60 quadros**, e com `draw` apertado cada troca
+      é um canto novo que `TrailExposure` cobra como exposição. Corrigido reusando
+      `GameInputAdapter.resolve_analog_direction` (uma regra, dois canais), com o deslocamento
+      normalizado por `STICK_RADIUS` e limitado a 1.0. 60 → 0 trocas. Rota de captura byte-a-byte
+      idêntica: invariante 8 medido, não argumentado. `tests/unit/touch_axis_lock_test.gd` defende
+      os oito casos. Detalhe em `docs/loop/runs/2026-09-08T030236Z.md`.
+
+- [ ] **A entrada de toque e a analógica divergem na histerese de *magnitude*.** Sobra da correção
+      acima, que só unificou o eixo. O analógico tem dois limiares (`ANALOG_PRESS_THRESHOLD` 0,42 /
+      `ANALOG_RELEASE_THRESHOLD` 0,28); o toque tem uma `STICK_DEAD_ZONE` única de 11 px, então um
+      polegar pousado exatamente na borda da zona morta pisca entre direção e `NONE` com o mesmo
+      tremor de ~1,5 px que a trava de eixo agora absorve. Não foi corrigido junto porque era escopo
+      além do item. *Pronto:* uma sonda mede o pisca na borda, e ou o toque ganha os dois limiares,
+      ou está escrito por que uma zona só basta em vidro.
+
+- [ ] **[requer sessão humana] Calibrar `ANALOG_AXIS_SWITCH_MARGIN` para vidro.** A trava do
+      polegar herdou 0,18 do gamepad — uma regra só é melhor que duas divergentes, mas 0,18 foi
+      medida contra a deflexão de um potenciômetro, não contra um polegar. Vai junto da calibração
+      do #38. *Pronto:* alguém virou com o polegar e disse se a trava prende ou solta demais.
+
 - [ ] **[requer sessão humana] Calibrar a curva de exposição.** `TrailExposure` usa piso 8 px (o mesmo
       `new_segment_slow_px` do domínio) e teto geométrico `(w+h)/4` = 127 px no campo de produção.
       Justificáveis no papel, nunca vistos em jogo.
@@ -301,6 +337,13 @@ Ruído esperado, **não** regressão — não gaste uma execução investigando:
 - **`exclude_filter` de `guide_examples/**` e `samples/**` fica em `export_presets.cfg` mesmo com
   as pastas podadas.** Um checkout que rebaixe os addons pela AssetLib recria as pastas em disco, e
   o filtro cobre um caminho que o `.gitignore` não cobre. Não "limpe" isso.
+- **O ref local `main` de um checkout de nuvem pode estar velho, e isso corrompe todo mapa de
+  posse.** Medido em 2026-09-08T03:02Z: `main` apontava para `74c173a` (4 de setembro) enquanto
+  `origin/main` estava em `ca74578`. Com a base errada, `git diff main...origin/<ramo>` mostrava
+  **todos** os arquivos tocados por **todos** os 30 ramos — o mapa de arquivos sem dono ficava
+  uniformemente inútil, e de um jeito que *parece* um achado ("a fila inteira colide em tudo") em
+  vez de parecer um erro. Meça sempre contra `origin/main`, ou faça `git fetch origin main:main`
+  antes. `tools/loop/unclaimed_surface.sh` usa a mesma família de comando e merece a mesma auditoria.
 - **Integrar a fila é barato; reconciliar o ledger não.** Medido em 04:57Z: os 22 merges de
   #20–#41 produziram **zero** conflitos de código — o único arquivo conflitante, em 20 dos 22, é
   `docs/LOOP_LEDGER.md`. O custo real da drenagem é reescrever o backlog à mão, porque `--ours`
