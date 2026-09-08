@@ -2,7 +2,7 @@
 
 > **Verificado em** 2026-09-08 · commit `6d23de4` · Godot 4.7.2-stable Mono, macOS headless
 > **Alcance:** primeira execução da reconciliação Atlas + #78; correções em andamento, ainda sem merge no GitHub.
-> **Resultado:** 393 testes, 18769 asserções, 8 falhas. O inventário abaixo é conferido pelo runner.
+> **Resultado:** 393 testes, 18859 asserções, 1 falhas. O inventário abaixo é conferido pelo runner.
 > Exportação, assinatura, Android físico e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
@@ -11,7 +11,7 @@
 python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Primeira execução da integração (será substituída pela medição final): **393 testes, 18769 asserções, 8 falhas** — árvore preparada sobre
+Primeira execução da integração (será substituída pela medição final): **393 testes, 18859 asserções, 1 falhas** — árvore preparada sobre
 `ca745780`; resultados de outras branches não são intercambiáveis.
 
 **Inventário da suíte (derivado, não digitado):** 73 arquivos de teste · 393 casos `test_*`.
@@ -70,7 +70,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 393 testes, 18769 asserções, 8 falhas, sem warning do jogo sobre a árvore que integra #56–#77 em `34634d0`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
+| log final da suíte | 393 testes, 18859 asserções, 1 falhas; medição intermediária da integração em 2026-09-08, pendente de rodada final |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo
