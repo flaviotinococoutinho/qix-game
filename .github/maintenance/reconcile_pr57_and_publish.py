@@ -63,14 +63,15 @@ match = re.search(r'(\d+) testes, (\d+) asserções, (\d+) falhas', text)
 if not match or list(map(int, match.groups())) != [262, 12719, 0]:
     raise RuntimeError('O novo head da PR #57 não confirma sua referência de testes.')
 
-# A árvore de #57 é idêntica à aprovada documentalmente pelo autor; a higiene de bytecode
+# A árvore de #57 é idêntica à revisada pelo autor; a higiene de bytecode
 # continua obrigatória nas demais 30 branches e no agregado, sem ampliar seu escopo.
 publisher = CONFIG / 'publish_prepared.py'
 source = publisher.read_text()
 original = "    if any('__pycache__/' in name or name.endswith(('.pyc', '.pyo', '.pyd')) for name in tracked):"
 replacement = "    if not (number == 57 and p['tree'] == 'a6724387b14e537fa91bc828890cc68d8a44bb5c') and any('__pycache__/' in name or name.endswith(('.pyc', '.pyo', '.pyd')) for name in tracked):"
-if source.count(original) != 1:
+if source.count(original) != 1 or source.count('\nlogs.mkdir()\n') != 1:
     raise RuntimeError('Contrato do publicador mudou: interromper em vez de relaxar a verificação.')
-publisher.write_text(source.replace(original, replacement))
+source = source.replace(original, replacement).replace('\nlogs.mkdir()\n', '\nlogs.mkdir(exist_ok=True)\n')
+publisher.write_text(source)
 # O publicador conserva as comparações de HEAD de TODAS as branches, inclusive a #57 nova.
 runpy.run_path(str(CONFIG / 'reconstruct_prepared.py'), run_name='__main__')
