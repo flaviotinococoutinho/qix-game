@@ -132,11 +132,26 @@ Itens sem critério de pronto não entram aqui.
       alcance): nenhum dos quatro correu a suíte sobre a fila **inteira**.
       *Pronto:* a fila em ≤ 2 PRs abertos. Evidência em `docs/loop/runs/2026-09-07T220117Z.md`.
 
-      **Aviso caro, pago nesta branch:** a reconciliação de base do próprio #86 apagou este item e
-      truncou o ledger de 330 para 178 linhas — **o backlog inteiro, P0 a P3**. Passou na suíte e
-      passou na CI: *nenhuma guarda protege o conteúdo deste arquivo*. É a demonstração literal do
-      aviso de "Ao resolver conflito de documentação" acima. Quem reconciliar este arquivo,
-      confira a contagem de linhas contra `main` antes de empurrar.
+- [ ] **28 dos PRs abertos reescrevem o backlog inteiro deste arquivo, e a CI não vê — medido às
+      01:20Z de 2026-09-08.** Achado ao reparar o próprio #86, cuja reconciliação de base apagou a
+      entrada acima e levou o ledger de 330 para 178 linhas. Medido depois em toda a fila, contra a
+      **merge-base de cada branch** (a contagem de linhas sozinha não prova nada: uma branch cortada
+      de um ledger mais curto não trunca — o git faz 3-way merge):
+
+      **28 branches removem 193 linhas e acrescentam ~95**; só #56, #57, #78 e o #86 corrigido não
+      o fazem. Simulado o merge de uma delas em `main` com resolução ingénua: as quatro secções
+      `### P0`–`### P3` **sobrevivem**, e é isso que engana — mas **22 dos 23 itens nomeados são
+      substituídos**, e some a secção **"Notas de ambiente"** inteira. Vão-se, entre outros,
+      `BOUNDARY`×`TRAIL`, as sete remoções da ADR-0010, a cor do cursor, o speed-up e o canal
+      sonoro da exposição. A suíte fica **verde**: `doc_freshness_header_test.gd` prova que o
+      cabeçalho existe, não que o corpo sobreviveu.
+
+      → Enquanto se drena, **resolver este arquivo sempre com `--ours` sobre `main`** e reaplicar à
+      mão a entrada de cada PR, como manda "Ao resolver conflito de documentação". Conferir
+      `grep -c '^- \[' docs/LOOP_LEDGER.md` contra `main` antes de empurrar.
+      *Pronto:* ou uma guarda recusa um ledger que perca itens de backlog em relação a `main`, ou
+      esta linha vira convenção escrita no protocolo. Evidência em
+      `docs/loop/runs/2026-09-07T220117Z.md`.
 
 - [ ] **A cadência do loop excede a cadência de revisão, e isso é problema de projeto, não de
       execução.** Medido quatro vezes (#31, #36, #40 e esta run): o loop produz 1 PR/h e a revisão
