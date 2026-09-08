@@ -49,9 +49,11 @@ samples/
 # .github/workflows/verificacao.yml, e quem o roda localmente para reproduzir o
 # portão ganha __pycache__/ com os .pyc de headless_gate. São derivados do
 # .py ao lado, nunca fonte da verdade.
-__pycache__/
-*.pyc
 
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
+
+# Bytecode derivado de Python, em qualquer profundidade.
+__pycache__/
+*.py[cod]
