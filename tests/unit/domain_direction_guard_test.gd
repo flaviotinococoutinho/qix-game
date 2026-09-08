@@ -51,6 +51,15 @@ const DOMAIN_DIRS: Array[String] = [
 ## `presentation_purity_test.gd`: se as duas divergirem, uma camada fica sem seta guardada em
 ## algum dos dois sentidos — por isso `test_the_two_direction_guards_agree_on_what_presentation_is`
 ## confronta as duas em vez de as deixar envelhecer em paralelo.
+## Pastas que a guarda irmã trata como domínio e esta **não** varre, cada uma com o motivo escrito.
+## Declarar a diferença é o que a torna uma decisão em vez de um esquecimento:
+## `test_the_guard_covers_every_domain_file_the_sibling_declares` recusa qualquer pasta que a irmã
+## guarde e esta ignore sem constar aqui.
+const DOMAIN_DIRS_EXCLUDED_ON_PURPOSE: Dictionary = {
+	"res://game/rules":
+	"hospeda apresentação por decisão de conteúdo (RoundVisualDefinition); o preço dessa exceção é cobrado por rules_presentation_exception_test.gd",
+}
+
 const PRESENTATION_DIRS: Array[String] = [
 	"res://game/board",
 	"res://game/player",
@@ -223,6 +232,70 @@ func test_the_two_direction_guards_agree_on_what_presentation_is() -> void:
 		ok(DirAccess.dir_exists_absolute(dir), "pasta de apresentação declarada e ausente: %s" % dir)
 
 
+## O lado do **domínio** precisa do mesmo confronto que o lado da apresentação já tem acima.
+## A invariante 1 admite domínio fora de `game/simulation/` e `game/session/` desde que declarado
+## em `DOMAIN_FILES` da guarda irmã. Enquanto esta guarda varria só as suas duas pastas, um arquivo
+## assim ficava com a **pureza guardada e a direção livre** — e a guarda cruzada da irmã não o
+## apanhava, porque ela conhece duas guardas e esta é a terceira. Medido antes de escrever a
+## correção: `game/campaign_ledger.gd`, declarado nas duas listas e contendo `var _hud: QixGameHud`
+## e um `Color`, atravessava a suíte inteira **verde** (410 testes, 20252 asserções, 0 falhas).
+func test_the_guard_covers_every_domain_file_the_sibling_declares() -> void:
+	var sibling := load(DOMAIN_GUARD)
+	ok(sibling != null, "a guarda irmã precisa carregar: %s" % DOMAIN_GUARD)
+	if sibling == null:
+		return
+
+	for dir in sibling.DOMAIN_DIRS:
+		ok(
+			DOMAIN_DIRS.has(dir) or DOMAIN_DIRS_EXCLUDED_ON_PURPOSE.has(dir),
+			(
+				"%s é domínio para domain_purity_test.gd e não é varrido aqui. Ou entra em "
+				+ "DOMAIN_DIRS, ou o motivo de ficar fora vai escrito em "
+				+ "DOMAIN_DIRS_EXCLUDED_ON_PURPOSE."
+			) % dir,
+		)
+	for dir in DOMAIN_DIRS_EXCLUDED_ON_PURPOSE:
+		var reason: String = DOMAIN_DIRS_EXCLUDED_ON_PURPOSE[dir]
+		ok(reason.length() >= 20, "%s excluído sem motivo escrito" % dir)
+		ok(not DOMAIN_DIRS.has(dir), "%s não pode ser varrido e excluído ao mesmo tempo" % dir)
+		ok(
+			sibling.DOMAIN_DIRS.has(dir),
+			"%s excluído de uma varredura que a irmã também não faz — exclusão órfã" % dir,
+		)
+
+	var covered := _domain_files()
+	for path in sibling.DOMAIN_FILES:
+		ok(
+			covered.has(path),
+			(
+				"%s está em DOMAIN_FILES e escapa desta varredura: pureza guardada, direção "
+				+ "livre. A invariante 1 admite domínio fora das pastas — não admite domínio "
+				+ "fora das guardas."
+			) % path,
+		)
+
+	# `DOMAIN_FILES` está vazio hoje: a taxonomia Atlas trouxe o controller do chefe para dentro
+	# da pasta (#92). O laço acima, portanto, não afirma nada — e um teste que passa por lista
+	# vazia é o modo de falha que este arquivo inteiro existe para evitar. A fusão é exercida
+	# aqui com um caminho real e conhecido: o que importa é que um caminho declarado **entre**.
+	var merged := _merge_declared(PackedStringArray(["res://app/bootstrap.gd"]))
+	ok(
+		merged.has("res://app/bootstrap.gd"),
+		"a fusão largou um caminho declarado: DOMAIN_FILES continuaria fora da varredura",
+	)
+	# E que declarar um caminho que as pastas já trazem não o conte duas vezes: a fusão precisa
+	# ser idempotente, ou mover um arquivo para dentro da pasta sem o tirar de `DOMAIN_FILES`
+	# passaria a varrê-lo em dobro e a inflar as asserções sem guardar nada a mais.
+	var scanned := _merge_declared(PackedStringArray())
+	ok(not scanned.is_empty(), "a varredura das pastas veio vazia — a fusão não mediria nada")
+	if not scanned.is_empty():
+		eq(
+			_merge_declared(PackedStringArray([scanned[0]])).size(),
+			scanned.size(),
+			"a fusão duplicou um caminho que a varredura das pastas já trazia",
+		)
+
+
 ## Uma varredura que não sabe acusar nada é um teste que passa para sempre sem olhar. Os trechos
 ## abaixo **têm** de ser acusados; os de baixo, não. A violação plantada que o backlog pedia é a
 ## primeira: uma dependência de apresentação **que não é o visual**, dentro de `game/session/`.
@@ -294,10 +367,34 @@ func _presentation_class_names() -> PackedStringArray:
 
 
 func _domain_files() -> PackedStringArray:
+	return _merge_declared(_sibling_domain_files())
+
+
+## A varredura das pastas mais os caminhos declarados fora delas. Separado de `_domain_files()`
+## para poder ser exercido com um caminho conhecido: hoje `DOMAIN_FILES` está vazio, e um laço
+## sobre lista vazia prova exatamente nada.
+func _merge_declared(declared: PackedStringArray) -> PackedStringArray:
 	var out := PackedStringArray()
 	for dir in DOMAIN_DIRS:
 		out.append_array(_gd_files_at(dir))
+	for path in declared:
+		if not out.has(path):
+			out.append(path)
 	out.sort()
+	return out
+
+
+## As exceções que a guarda irmã declara em `DOMAIN_FILES`: domínio que mora fora das pastas, como
+## a invariante 1 permite desde que esteja listado. Ler a lista dela — em vez de manter uma cópia —
+## é o que impede um arquivo de ter a pureza guardada e a direção livre.
+func _sibling_domain_files() -> PackedStringArray:
+	var out := PackedStringArray()
+	var sibling := load(DOMAIN_GUARD)
+	if sibling == null:
+		return out
+	for path in sibling.DOMAIN_FILES:
+		if FileAccess.file_exists(path):
+			out.append(path)
 	return out
 
 

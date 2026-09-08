@@ -2,7 +2,7 @@
 
 > **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, **Linux headless** (build não-Mono, sandbox de nuvem), com a guarda de direção deste PR aplicada sobre esse commit
 > **Alcance:** suíte explícita do projeto e rota M2. A reconciliação Atlas + 33 heads (#59–#91) permanece incorporada; ela foi medida em `ecc6a23`, macOS headless, e **não** foi reexecutada aqui.
-> **Resultado:** 410 testes, 20241 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
+> **Resultado:** 411 testes, 20251 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
 > Exportação, assinatura, Android físico, GPU real e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
@@ -11,12 +11,12 @@
 python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado da suíte integrada: **410 testes, 20241 asserções, 0 falhas** — árvore de `5318d0a`
+Resultado da suíte integrada: **411 testes, 20251 asserções, 0 falhas** — árvore de `5318d0a`
 mais a guarda de direção deste PR, em Linux headless; resultados de outras branches não são
 intercambiáveis. Os 404 testes / 19009 asserções medidos em `ecc6a23` (macOS) continuam sendo o
 registro daquela execução: a diferença são os **6 casos** de `domain_direction_guard_test.gd`.
 
-**Inventário da suíte (derivado, não digitado):** 75 arquivos de teste · 410 casos `test_*`.
+**Inventário da suíte (derivado, não digitado):** 75 arquivos de teste · 411 casos `test_*`.
 
 A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
 de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
@@ -72,7 +72,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 410 testes, 20241 asserções, 0 falhas; Linux headless em 2026-09-08, runner explícito com inspeção de diagnósticos |
+| log final da suíte | 411 testes, 20251 asserções, 0 falhas; Linux headless em 2026-09-08, runner explícito com inspeção de diagnósticos |
 | guarda de direção domínio→apresentação | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-08 em Linux headless: `var _hud: QixGameHud` em `game/session/game_session.gd`, `var _tint := Color("ff00ff")` em `game/simulation/game_simulation.gd` e `extends Node` em `game/session/round_start_state.gd`. **as mesmas duas primeiras mutações deixam a suíte anterior inteiramente verde** — zero falhas em 404 casos e 19013 asserções, sem esta guarda no disco — e é essa a medida do buraco que ela fecha |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 

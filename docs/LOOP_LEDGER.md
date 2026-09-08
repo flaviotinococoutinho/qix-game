@@ -213,6 +213,17 @@ para o inventário da **árvore final**, não somar números copiados das descri
   duplicação (um nome já acusado por `domain_purity_test.gd` fica vermelho aqui — foi assim que
   `Tween` ficou de fora) e a divergência de `PRESENTATION_DIRS` entre as duas guardas de direção.
   Medição das três mutações plantadas em `docs/loop/runs/2026-09-08T060505Z.md`.
+  **Buraco encontrado e fechado na revisão de 10:00Z** (`docs/loop/runs/2026-09-08T100000Z.md`):
+  a guarda varria duas pastas digitadas e **não lia `DOMAIN_FILES`** da guarda irmã — a lista que
+  a invariante 1 usa para admitir domínio fora das pastas. Um arquivo declarado nas duas listas
+  como manda o contrato, contendo `var _hud: QixGameHud` e um `Color`, atravessava a suíte inteira
+  **verde** (410 testes, 20252 asserções, 0 falhas): pureza guardada, direção livre. A guarda
+  cruzada da irmã não o apanhava porque conhece duas guardas, e esta é a terceira. Agora
+  `_domain_files()` funde as pastas com `DOMAIN_FILES`, e
+  `test_the_guard_covers_every_domain_file_the_sibling_declares` faz pelo lado do domínio o
+  confronto que já existia pelo lado da apresentação: `game/rules/` só fica fora por constar em
+  `DOMAIN_DIRS_EXCLUDED_ON_PURPOSE` com motivo escrito. **Lição:** confrontar uma ponta das duas
+  guardas e não a outra é meia seta guardada — e o lado não conferido é o que ninguém olha.
   **O que continua sem guarda, de propósito:** um `Variant` nunca anotado, ou um objeto de
   apresentação recebido por parâmetro sem tipo, atravessa as três varreduras. É semântica, não
   sintaxe — só revisão e teste de comportamento alcançam.
