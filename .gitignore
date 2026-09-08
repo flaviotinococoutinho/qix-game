@@ -49,11 +49,10 @@ samples/
 # `python3 -m unittest discover -s tools/ci`. Quem reproduz o CI localmente —
 # que é o que este projeto pede antes de qualquer "passa" — gera o cache no
 # mesmo comando. É artefato reproduzível, como `.godot/`, não fonte da verdade.
+# Sem barra inicial, as duas regras valem em qualquer profundidade.
+__pycache__/
+*.py[cod]
 
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
-
-# Bytecode derivado de Python, em qualquer profundidade.
-__pycache__/
-*.py[cod]

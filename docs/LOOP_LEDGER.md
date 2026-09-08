@@ -6,6 +6,9 @@
 > Cada PR preserva seu escopo de código; #78 é o candidato de integração do conjunto.
 > Números de teste pertencem à árvore de cada PR e às evidências da preparação, nunca à fila.
 > Mérito visual, escuta, Android físico e exportação/assinatura não foram validados.
+> **Adendo de 2026-09-08 (branch do #74, não reverificação da fila):** repescado um item de P2
+> que a condensação desta reconciliação perdeu — o `game/session/` sem guarda de direção. Nada
+> mais deste documento foi reverificado nesta data; a fila continua a ser a do snapshot abaixo.
 
 **Snapshot da preparação:** 30 PRs abertas, #57–#86; `main` em `ca745780`.
 Nenhuma aprovação formal ou merge é inferido de suíte verde. A revisão pela mesma conta autora
@@ -136,6 +139,14 @@ para o inventário da **árvore final**, não somar números copiados das descri
   apesar da pasta; a guarda e o contrato precisam identificá-lo explicitamente.
 - [~] **Exceção visual em regras (#74).** `RoundVisualDefinition` admite cores; isso não
   autoriza outros Resources de domínio a ler `float` ou consumir a apresentação.
+- [ ] **`game/session/` não está sob guarda de direção.** Achado medido no #74 e repescado aqui:
+  a reconciliação condensou o item do visual e perdeu esta segunda metade. `presentation_purity`
+  não varre `game/session/`, e `domain_purity` varre-o **por símbolo do mundo real**, não por
+  direção de chamada — então a sessão pode ler apresentação sem nenhuma guarda ficar vermelha.
+  Medido: `var _palette := content.visual` em `GameSession._start_current_round` passava com
+  262 testes e 0 falhas. O #74 fecha **só** o caso do visual, por varredura nominal.
+  *Pronto:* ou `game/session/` está sob uma guarda de direção, ou está escrito por que não
+  precisa, com a lista do que foi levantado. Evidência: `docs/loop/runs/2026-09-07T100000Z.md`.
 - [~] **Documentação coerente (#65, #76, #77, #82, #84).** Decisões de arte referenciadas,
   geometria atual distinguida de tempos históricos, disponibilidade de Git corrigida,
   seções e chaves de tabela sem contradição. *Pronto:* guardas e inspeção da integração verdes.
