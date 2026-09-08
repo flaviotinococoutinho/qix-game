@@ -180,6 +180,10 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [~] **Exceção visual em regras (#74).** `RoundVisualDefinition` admite cores; isso não
   autoriza outros Resources de domínio a ler `float` ou consumir a apresentação. A costura
   RoundContent também é declarada; serializadores são derivados do grafo real, sem count=2.
+- [ ] **Guarda de direção em `game/session/` (#74).** Pureza nominal de símbolos não prova
+  que a sessão nunca lê apresentação. O achado histórico está em
+  `docs/loop/runs/2026-09-07T100000Z.md`; ampliar a prova de dependências com uma mutação
+  que leia `content.visual`, sem misturar esse trabalho à alteração de lifecycle.
 - [~] **Documentação coerente (#65, #76, #77, #82, #84).** Decisões de arte referenciadas,
   geometria atual distinguida de tempos históricos, disponibilidade de Git corrigida,
   seções e chaves de tabela sem contradição. *Pronto:* guardas e inspeção da integração verdes.
