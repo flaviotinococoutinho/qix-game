@@ -171,6 +171,20 @@ descritor nativo Fennara ausente, preservando os scripts runtime. Não tratar `E
 como ruído aceitável: o gate deve reprovar diagnósticos inesperados mesmo com exit code zero.
 Essa modalidade **não valida a extensão nativa**, render GPU, alto-falantes, Android ou assinatura.
 
+Duas armadilhas medidas no #79, ambas invisíveis para quem roda só `run_tests.gd`:
+
+- **Suíte verde não é gate verde.** O CI reprovou com `engine_errors=3` e a suíte a 265 testes e
+  0 falhas: um `QixGameHud` criado num teste e **não libertado** leva as `Label` filhas consigo, e
+  o TextServer reporta `ShapedTextDataAdvanced`/`FontAdvanced` vazados à saída. Regra: todo teste
+  que instancia nó de UI chama `free()` **em todos os caminhos**, inclusive o último do método.
+  Reproduza o gate antes de empurrar — ele recusa checkout cujo `.godot/extension_list.cfg` já
+  registou a fennara, então clone limpo:
+  `git clone --local --no-hardlinks -b <branch> <repo> /tmp/fresh && python3 /tmp/fresh/tools/ci/headless_gate.py --godot "$G" --project /tmp/fresh --logs /tmp/gate --isolate-missing-editor-extension`
+- **`git add -A` depois de rodar os testes Python do gate versiona bytecode.**
+  `python3 -m unittest discover -s tools/ci` cria `tools/ci/__pycache__/`, e foi assim que o #79
+  acrescentou dois `.pyc` sem perceber. O `.gitignore` do #83 fecha isto; até ele mesclar, prefira
+  `git add` por caminho e confira `git status` antes de fechar o commit.
+
 ## Histórico
 
 Relatos originais: `docs/loop/runs/`. Os commits originais das PRs são mantidos como ancestrais.
