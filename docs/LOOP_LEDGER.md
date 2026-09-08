@@ -1,12 +1,15 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-06 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** conferido **depois** da mescla do #55, que integrou #20–#54. Recontados contra o
-> estado real: a fila (0 PRs abertos, medida às 19:42Z) e as duas marcas `[~]` cujos PRs já
-> mesclaram. As evidências de execução ficam no workflow Verificação e em seu `manifest.json`,
-> vinculado ao commit e à árvore testados; registros anteriores são históricos, não contagens
-> atuais. O resto do backlog **não** foi reconferido item a item nesta passagem.
-> Mérito visual, áudio físico e Android real continuam sem validação nesta sessão.
+> **Verificado em** 2026-09-08 · commit `ca74578` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** nesta passagem (2026-09-08T02:01Z) reverifiquei **só a topologia da fila e o verde
+> das duas árvores**: contagem de PRs abertos (30), quais estão contidos no ramo do #78,
+> `run_tests.gd` e `verify_m2_capture_route.gd` em `main` (`ca74578`) e no head do #78
+> (`3c9724f`), e o merge de teste dos 10 ramos de fora. Evidência em
+> `docs/loop/runs/2026-09-08T020126Z.md`. **O resto deste documento é de 2026-09-06** (commit
+> `34634d0`, conferido depois da mescla do #55, que integrou #20–#54) e **não** foi reconferido
+> item a item — em particular, o backlog abaixo lista como livres itens que hoje têm PR aberto;
+> confira a fila antes de escolher. Mérito visual, áudio físico e Android real continuam sem
+> validação nesta sessão.
 
 
 Um agente de nuvem roda de hora em hora e **começa sem contexto**. Este arquivo é a única
@@ -92,9 +95,26 @@ Itens sem critério de pronto não entram aqui.
       (16 PRs) e o #42 (22 PRs) nasceram e envelheceram na própria fila sem serem mesclados.
       *Pronto (era):* `main` além de `cba520a` e a fila em ≤ 2 PRs abertos.
 
-      **A fila está vazia pela primeira vez desde 2026-09-04.** A próxima execução é a primeira em
-      ~40 h que pode escolher qualquer item sem colidir com trabalho em voo. Escolha do backlog,
-      não outra medição de fila: não há fila para medir.
+      **⚠️ Este parágrafo caducou em horas — leia a nota de 2026-09-08 abaixo antes de agir nele.**
+      Dizia que a fila estava vazia e que se podia escolher qualquer item sem colidir. Em
+      2026-09-08T02:01Z a fila está em **30 PRs abertos** e quase todo item deste backlog tem dono.
+
+      **A fila de 30 é um merge e três restos, não trinta integrações.** Medido em
+      `docs/loop/runs/2026-09-08T020126Z.md`, com a suíte corrida, não por nomes de arquivo:
+      o ramo do **#78** (`ai/loop-20260907T140000Z`) é ***fast-forward* de `main`** (`main` é
+      ancestral dele, 0 commits do lado de `main`), **já contém 20 dos 30 PRs abertos** — cinco
+      deles abertos *depois* do #78 — e está **verde**: 309 testes / 14838 asserções / 0 falhas, e
+      `verify_m2_capture_route.gd` com `errors: []` em 17,9 → 82,5 %. Linha de base em `main`:
+      262 testes / 12719 asserções / 0 falhas. Dos 10 PRs de fora, **sete não acrescentam um único
+      arquivo fora de `docs/`**; só #67 (`addons_manifest_test.gd`), #74 e #83 (`.gitignore`,
+      `verificacao.yml`) trazem código. Todo conflito medido é de escrituração.
+
+      **Isto supera o achado do #80** ("o #78 fica vermelho contra o #79"): contra o head de hoje o
+      #79 mescla limpo e a suíte fica verde — o código do #79 já está dentro do #78. O #80 mediu um
+      head anterior.
+
+      *Próximo ato, e é humano:* mesclar o #78. Enquanto ele não mesclar, #61, #65, #75 e #81 —
+      toda a camada de experiência entregue nesta fila — continuam invisíveis para o jogador.
 
       **O #48 e o #50 pediram que não se abrisse outra integração — "o gargalo é a mão humana,
       não a medição". Estavam certos quanto ao gargalo e errados quanto ao custo de não medir.**
