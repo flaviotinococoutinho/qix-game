@@ -55,7 +55,8 @@ da suíte. O gate completo usado no GitHub vive em `tools/ci/headless_gate.py`.
 `tools/assets/build_lumen_models.py` define a geometria original. A biblioteca editável
 fica em `tools/assets/source/lumen_actor_library.blend`; seis GLBs entram no palco do jogo.
 `tools/assets/blender_mcp_job.py` executa jobs com recibo, hashes, timeout e verificação do
-artefato esperado. Um retorno de sucesso textual não pode esconder saída não zero do Blender.
+artefato esperado. No POSIX, timeout/interrupção encerram o grupo do job antes da falha;
+no Windows, o fallback encerra somente o processo direto. Um retorno de sucesso textual não pode esconder saída não zero do Blender.
 
 O verificador GLB confere bytes, SHA, triângulos, acessores, índices e hierarquia. Seus limites
 são independentes dos números declarados pelo próprio asset. Ele cobre o subconjunto estático
@@ -68,7 +69,7 @@ ainda não usa a transação de conteúdo WAL do jogo.
 
 ## Evidência da reconciliação
 
-O [relato de setembro/08](loop/runs/2026-09-08T-mcp-github-integration.md) registra os 32 heads
+O [relato de setembro/08](loop/runs/2026-09-08T-mcp-github-integration.md) registra os 33 heads
 de PRs auditados, resolução por intenção, preservação do Atlas e resultados executados.
 [TEST_MATRIX](TEST_MATRIX.md) contém o inventário atual da suíte; [ATLAS_VIVO](ATLAS_VIVO.md)
 explica os atores, autoria, controles e apresentação 2.5D.

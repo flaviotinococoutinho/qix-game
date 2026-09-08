@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "completed_utc": "2026-09-08T05:15:26.934810+00:00",
+  "status": "passed",
+  "doctor": {
+    "status": "ready",
+    "expected_version": "4.0.2",
+    "plugin_version": "4.0.2",
+    "endpoint": "http://127.0.0.1:8001",
+    "expected_ws_port": 9501,
+    "projects": [
+      {
+        "name": "qix-game",
+        "project_path": "/Users/flaviocoutinho/development/qiqix/qix-game/",
+        "plugin_version": "4.0.2",
+        "godot_version": "4.7.2-stable (official)",
+        "readiness": "ready",
+        "play_state": "stopped"
+      }
+    ],
+    "issues": [],
+    "tests_validated": false,
+    "plugin_port_settings_scope": "global_editor_settings",
+    "plugin_port_settings": [
+      "godot_ai/http_port",
+      "godot_ai/ws_port"
+    ],
+    "server": {
+      "name": "godot-ai",
+      "server_version": "4.0.2",
+      "ws_port": 9501,
+      "owner_type": "attach",
+      "active_lease_count": 0
+    }
+  },
+  "operations": [
+    {
+      "tool": "editor_state",
+      "arguments": {
+        "session_id": "qix-game@637fb8e4f11db80c"
+      },
+      "isError": false
+    },
+    {
+      "tool": "scene_get_hierarchy",
+      "arguments": {
+        "session_id": "qix-game@637fb8e4f11db80c",
+        "depth": 2,
+        "limit": 30
+      },
+      "isError": false
+    },
+    {
+      "tool": "resource_manage",
+      "arguments": {
+        "session_id": "qix-game@637fb8e4f11db80c",
+        "op": "load",
+        "params": {
+          "path": "res://assets/models/lumen/surveyor.glb"
+        }
+      },
+      "isError": false
+    },
+    {
+      "tool": "resource_manage",
+      "arguments": {
+        "session_id": "qix-game@637fb8e4f11db80c",
+        "op": "load",
+        "params": {
+          "path": "res://assets/models/lumen/core.glb"
+        }
+      },
+      "isError": false
+    },
+    {
+      "tool": "resource_manage",
+      "arguments": {
+        "session_id": "qix-game@637fb8e4f11db80c",
+        "op": "load",
+        "params": {
+          "path": "res://assets/models/lumen/walker.glb"
+        }
+      },
+      "isError": false
+    },
+    {
+      "tool": "resource_manage",
+      "arguments": {
+        "session_id": "qix-game@637fb8e4f11db80c",
+        "op": "load",
+        "params": {
+          "path": "res://assets/models/lumen/dart.glb"
+        }
+      },
+      "isError": false
+    },
+    {
+      "tool": "resource_manage",
+      "arguments": {
+        "session_id": "qix-game@637fb8e4f11db80c",
+        "op": "load",
+        "params": {
+          "path": "res://assets/models/lumen/ember.glb"
+        }
+      },
+      "isError": false
+    },
+    {
+      "tool": "resource_manage",
+      "arguments": {
+        "session_id": "qix-game@637fb8e4f11db80c",
+        "op": "load",
+        "params": {
+          "path": "res://assets/models/lumen/beacon.glb"
+        }
+      },
+      "isError": false
+    }
+  ],
+  "scope": "editor_readonly_not_gameplay"
+}

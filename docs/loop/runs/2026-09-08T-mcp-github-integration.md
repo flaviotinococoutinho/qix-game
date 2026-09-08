@@ -1,8 +1,8 @@
 # Integração GitHub, MCP e Atlas Vivo — 2026-09-08
 
 > **Verificado em** 2026-09-08 · inspeção de Git/GitHub e resolução local por ownership
-> **Alcance:** snapshot das 32 PRs abertas #59–#90 e composição local Atlas + #78.
-> Validação executável final, merges no GitHub e publicação estão **PENDENTES** nesta edição.
+> **Alcance:** snapshot inicial das 32 PRs #59–#90, ampliado com #91 durante a execução.
+> Composição local e QA executável concluídos; publicação e merge são registrados no PR de integração.
 
 ## Pedido e autorização
 
@@ -130,19 +130,55 @@ não anexos publicados; a tabela acima conserva as identidades/intenção necess
 O JSON registra, por arquivo, blobs, presença no bundle e comparação com o worktree anterior
 à integração. Esses campos de comparação local não descrevem o worktree após as resoluções.
 
-## Validação e conclusão a preencher pelo coordenador
+## Validação da composição local
 
 | Etapa | Estado desta edição | Evidência final |
 |---|---|---|
-| Resolução integral do merge | PENDENTE | SHA/árvore final e git diff --check |
-| Import e suíte da composição | PENDENTE | comando, log completo e inventário derivado |
-| Testes Python e passo CI de índice #83 | PENDENTE | workflow e logs |
-| Campanha ativa/replays v4 | PENDENTE | suíte integrada com chefes, ameaças e itens |
-| Renderer 2.5D e fallback | PENDENTE | probe real, captura e checksum |
-| Export/MCP/runtime após plugin 4.0.2 | PENDENTE | manifest, smokes e limites por ambiente |
-| Commit/PR final | PENDENTE | SHA e URL |
-| Merges e encerramento de PRs substituídas | PENDENTE | números, SHAs e links reais |
-| Publicação/distribuição comercial | PENDENTE | não inferir de export QA nem de merge |
+| Resolução integral do merge | CONCLUÍDA | 33 heads ancestrais da integração; PR91 chegou durante o trabalho e foi incorporada em `ecc6a23` |
+| Suíte explícita do projeto | PASSOU | 404 testes, 19.009 asserções, zero falhas, zero erros de engine; JSON novo e validado |
+| Testes Python | PASSARAM | 27 CI + 21 Godot MCP + 28 Blender/assets + 16 parser/perfil = 92; índice sem bytecode |
+| Campanha ativa/replays v4 | PASSOU NA SUÍTE | boss_active_campaign_playthrough e goldens v4 preservados; M2 separado também passou |
+| Renderer 2.5D e fallback | PASSOU | 20 asserções, seis modelos carregados, captura real de 17,9%, baliza ativa e checksum preservado; evidência versionada em docs/evidence/2026-09-08 |
+| Godot AI MCP | READY | plugin/servidor4.0.2, sessão QIX exata, oito leituras finais de editor/cena/seis GLBs sem erro |
+| Blender MCP | PASSOU | discovery26tools + job real com .blend novo verificado; seis GLBs:5.084triângulos/361.000bytes |
+| Aplicativo macOS de QA | RUNTIME VALIDADO | arm64 ad-hoc, codesign estrito, 900/900 ticks com áudio real; resultado vinculado ao código anterior ao PR91, reexport final registrado no PR |
+| Import/export CLI local Mono | LIMITAÇÃO REGISTRADA | geração de recursos/pacote termina, mas teardown registra ERROR de EditorSettings Android; não classificado como gate verde |
+| CI e merge GitHub | ACOMPANHAR PR DE INTEGRAÇÃO | checks executam a composição Linux exata; o resultado e merge SHA são registrados no PR |
+| Distribuição comercial | FORA DESTE ACEITE | não inferir de build ad-hoc nem de merge |
+
+## PR91, revisão independente e correções adicionais
+
+A PR [#91](https://github.com/flaviotinococoutinho/qix-game/pull/91), head
+`25327ed694a60ee6dd36355a4164627886483ad9`, surgiu após o snapshot inicial. Remove o booleano
+redundante de arquivamento e verifica que cada passo cria no máximo um registro, somente a
+partir de PLAYING. A integração acrescentou provas de que ambas as rotas de teste chegam ao
+terminal previsto e arquivam todas as tentativas, evitando um falso verde por rota incompleta.
+O relato original permanece em `2026-09-08T040000Z.md`.
+
+A revisão independente encontrou dois defeitos reais na combinação:
+
+- Pausar → desligar/religar som → retomar deixava a música parada. Corrigido o início do stream
+  parado na retomada; a música apenas suspensa preserva sua posição. Regressões cobrem os três
+  caminhos de pausa, carregamento durante pausa e som mantido desabilitado.
+- O timeout do wrapper Blender deixava um processo descendente gravar depois do recibo de
+  falha. O limite POSIX agora encerra o grupo do job em timeout/SIGTERM; regressões reais tentam
+  gravar o artefato tardio e confirmam sua ausência. O fallback Windows é explicitamente menor.
+
+## Recuperação MCP e alcance das alterações de cliente
+
+Godot AI estava com plugin4.0.2 e servidor3.2.4 em8000/9500. Foram adotadas8001/9501 para a
+conexão atual; somente as duas EditorSettings de porta foram alteradas, com backup e preservação
+das cenas abertas. O Retry oficial da migração resolveu um timeout do probe Claude e repinou
+somente a entrada godot-ai em seis configurações globais reconhecidas. As configurações de
+projeto com wrappers e a entrada Blender foram preservadas. O vendor foi conferido contra o
+manifesto oficial assinado:283arquivos, zero divergências/extras. Procedimento e rollback:
+[godot_recovery.md](../../../tools/mcp/godot_recovery.md).
+
+O import CLI concorrente encontrou o LSP ocupado; `--lsp-port 0` removeu essa colisão. A engine
+Mono local ainda registra uma falha de encerramento do exporter Android depois de destruir
+EditorSettings. Recovery mode acrescentou erro do HotReloadAssemblyWatcher e foi rejeitado
+como solução. O gate mantém esses erros/panics fatais; importação e modelo foram verificados
+no editor conectado e no renderer, e o CI Linux verifica sua própria execução limpa.
 
 Reexecutar sobre a árvore final. Não atualizar números dourados só para passar; explicar
 qualquer mudança deliberada no contrato de regras. Ao concluir, atualizar esta tabela e o ledger

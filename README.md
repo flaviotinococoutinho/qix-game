@@ -28,7 +28,8 @@ mais abaixo são **históricos da apresentação 2D de 2026-09-03**, não certif
 
 ## Abrir, executar, testar
 
-Build macOS desta entrega: `build/modernization/Lumen Atlas Vivo.app`.
+Build macOS da integração: `build/integration-20260908/Lumen Atlas Integrado.app`.
+O comando abaixo reconstrói o pacote de QA na pasta `build/modernization/`.
 Reconstrução local com assinatura verificada: `bash tools/shipping/build_atlas_macos_local.sh`.
 
 ```bash

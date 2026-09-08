@@ -5,9 +5,11 @@ import contextlib
 import io
 import json
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -111,6 +113,59 @@ class BlenderPipelineTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("__BLMCP_ERROR__", result.stdout)
         self.assertIn("timed out", result.stdout)
+
+    def _assert_guard_reaps_descendants(self, interrupt):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            late = root / "late-artifact"
+            ready = root / "process-group"
+            child = root / "child.py"
+            child.write_text("import pathlib,time\ntime.sleep(1.2)\npathlib.Path("
+                + repr(str(late)) + ").write_text('late mutation')\n")
+            fake = root / "fake-blender"
+            fake.write_text(f"#!{sys.executable}\nimport os,pathlib,subprocess,sys,time\n"
+                + "subprocess.Popen([sys.executable,'-B'," + repr(str(child))
+                + "],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n"
+                + "pathlib.Path(" + repr(str(ready)) + ").write_text(str(os.getpgrp()))\n"
+                + "time.sleep(5)\n")
+            fake.chmod(0o700)
+            proc = subprocess.Popen([sys.executable, "-B", str(GUARD)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                start_new_session=True, env={**os.environ,
+                    "PYTHONDONTWRITEBYTECODE": "1", "QIX_BLENDER_EXECUTABLE": str(fake),
+                    "QIX_BLENDER_CLI_TIMEOUT": "10" if interrupt else "0.5"})
+            try:
+                deadline = time.monotonic() + 2
+                while not ready.exists() and proc.poll() is None and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertTrue(ready.exists(), "fixture deve iniciar o descendente")
+                if interrupt:
+                    proc.send_signal(signal.SIGTERM)
+                stdout, _stderr = proc.communicate(timeout=3)
+                self.assertEqual(proc.returncode, 1)
+                self.assertIn("__BLMCP_ERROR__", stdout)
+                self.assertFalse(late.exists(), "nenhum artefato no momento da falha")
+                time.sleep(1.3)
+                self.assertFalse(late.exists(), "descendente não pode gravar após falha do guard")
+            finally:
+                # Também limpa os processos quando executado contra a implementação defeituosa.
+                groups = {proc.pid}
+                if ready.exists():
+                    groups.add(int(ready.read_text()))
+                for group in groups:
+                    try:
+                        os.killpg(group, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                proc.communicate(timeout=3)
+
+    @unittest.skipUnless(os.name == "posix", "process groups são o contrato POSIX")
+    def test_guard_timeout_prevents_late_descendant_artifact(self):
+        self._assert_guard_reaps_descendants(interrupt=False)
+
+    @unittest.skipUnless(os.name == "posix", "process groups são o contrato POSIX")
+    def test_guard_interruption_prevents_late_descendant_artifact(self):
+        self._assert_guard_reaps_descendants(interrupt=True)
 
     def test_unconfirmed_or_empty_result_is_not_success(self):
         module = job_module()
