@@ -1,33 +1,29 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-05 · commit `cba520a` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** `tests/run_tests.gd` reexecutado (174 testes, 11.837 asserções, 0 falhas) e
-> `tools/verify_m2_capture_route.gd` reexecutado (rota fecha em 825‰, `errors` vazio). Os
-> testes Python do parser Metal HUD e o run de shipping não foram reexecutados.
-
-Última validação automatizada: **2026-09-03**, Godot
-**4.7.2-stable.mono.official** em macOS. Run de shipping:
-`20260903T065739Z-65912`, `runner_status=complete`, `runner_exit=0`, `overall_exit=0`.
+> **Verificado em** 2026-09-07 · commit `4513772` · Godot 4.7.2-stable, Linux headless
+> **Alcance:** preparação da PR #81 sobre `ca745780`, com resultados vinculados à árvore nos logs do gate.
+> **Resultado:** 266 testes, 13273 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
+> Exportação, assinatura, Android físico e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
 
 ```bash
-cd /Users/flaviocoutinho/development/qiqix/qix-game
-/Applications/Godot_mono.app/Contents/MacOS/Godot \
-  --headless --audio-driver Dummy \
-  --path /Users/flaviocoutinho/development/qiqix/qix-game \
-  --script res://tests/run_tests.gd
+python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado atual: **174 testes, 11.837 asserções, 0 falhas e nenhum warning do jogo** — medido em
-**2026-09-05** sobre `cba520a` (a integração dos 18 PRs do loop), Godot **4.7.2-stable.official**,
-build Linux headless não-mono, em sandbox de nuvem sem editor e sem `libfennara`. Na mesma
-execução, `tools/verify_m2_capture_route.gd` fechou com `errors` vazio e a rota em 825‰.
+Resultado atual: **266 testes, 13273 asserções, 0 falhas** — árvore preparada sobre
+`ca745780`; resultados de outras branches não são intercambiáveis.
 
-Os números de shipping mais abaixo continuam sendo os do run de macOS de **2026-09-03**: export,
-assinatura e QA de dispositivo não rodam na nuvem, então essa evidência **não** foi refeita. Os
-testes Python do parser Metal HUD (**10/10**) e o subconjunto direcionado da transação de conteúdo
-(**22 testes, 353 asserções**) também são daquele run e não foram reexecutados aqui.
+**Inventário da suíte (derivado, não digitado):** 50 arquivos de teste · 266 casos `test_*`.
+
+A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
+de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
+Os logs retêm diagnósticos e o código de saída. A extensão nativa opcional ausente é isolada
+explicitamente pelo gate; seus scripts runtime permanecem. Isso não é QA da extensão nativa.
+
+As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09-03**,
+`20260903T065739Z-65912`; não foram substituídas por testes headless. A tabela de cobertura
+é descritiva, e o inventário autoritativo continua sendo a descoberta de testes desta árvore.
 
 ## Cobertura automatizada
 
@@ -73,7 +69,7 @@ testes Python do parser Metal HUD (**10/10**) e o subconjunto direcionado da tra
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 174 testes, 11.837 asserções, 0 falhas, sem warning do jogo sobre `cba520a`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
+| log final da suíte | 266 testes, 13273 asserções, 0 falhas, sem warning do jogo sobre `cba520a`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo
