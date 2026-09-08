@@ -1,0 +1,54 @@
+name: Fotografia final dos heads preparados
+on:
+  push:
+    branches: [maintenance/prepare-prs-57-86-20260908]
+    paths: [.github/workflows/snapshot-final-concorrencia.yml]
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: qix-preparacao-evidencias-34174939113
+          run-id: 34174939113
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/original-evidence
+      - name: Captura deltas sem sobrescrever trabalho concorrente
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          import json, os, pathlib, subprocess, urllib.request
+          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'final-snapshot'
+          out.mkdir()
+          report = json.loads((out.parent / 'original-evidence/publication.json').read_text())
+          def api(path):
+              req = urllib.request.Request('https://api.github.com/repos/flaviotinococoutinho/qix-game' + path, headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json'})
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+          changes = []
+          for p in report['prs']:
+              info = api('/pulls/' + str(p['pr']))
+              current = info['head']['sha']
+              subprocess.run(['git', 'fetch', '--no-tags', 'origin', 'refs/pull/' + str(p['pr']) + '/head'], check=True, stdout=subprocess.DEVNULL)
+              item = {'pr': p['pr'], 'old': p['checkpoint'], 'current': current, 'draft': info['draft'], 'mergeable': info['mergeable'], 'tree': subprocess.check_output(['git', 'rev-parse', current + '^{tree}'], text=True).strip()}
+              if current != p['checkpoint']:
+                  subprocess.run(['git', 'merge-base', '--is-ancestor', p['checkpoint'], current], check=True)
+                  item['files'] = subprocess.check_output(['git', 'diff', '--name-only', p['checkpoint'], current], text=True).splitlines()
+                  patch = subprocess.check_output(['git', 'diff', p['checkpoint'], current], text=True)
+                  (out / ('pr-' + str(p['pr']) + '.patch')).write_text(patch)
+              changes.append(item)
+          (out / 'snapshot.json').write_text(json.dumps(changes, indent=2))
+          print(json.dumps(changes))
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qix-final-snapshot
+          path: ${{ runner.temp }}/final-snapshot
+          retention-days: 1
