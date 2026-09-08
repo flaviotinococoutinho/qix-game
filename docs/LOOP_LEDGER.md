@@ -1,23 +1,33 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-08 · commit `6d23de4` · inspeção Git e integração local em andamento
-> **Alcance:** fila observada de **32 PRs abertas, #59–#90**, `main` em `6136ebb`.
-> Atlas Vivo (`0c63665`) e Godot AI 4.0.2 (`6d23de4`) estão preservados em commits locais.
-> A branch `integrate/atlas-mcp-20260908` recebe o bundle #78 (`3c9724f`) e deltas úteis.
-> Suíte, renderer/export da composição final e merges no GitHub estão **PENDENTES** nesta edição.
+> **Verificado em** 2026-09-08 · commit `3f2d96e` · integração concluída em `main`
+> **Alcance:** as **33 PRs de origem, #59–#91**, foram incorporadas pela [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92).
+> Merge efetivo em 2026-09-08T05:33:34Z; as 33 PRs constavam como MERGED e a fila estava vazia na conferência às 05:33:37Z.
+> Atlas Vivo (`0c63665`), Godot AI 4.0.2 (`6d23de4`), bundle #78 e resíduos foram preservados por ancestralidade.
+> O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324) passou no head `9d02d6f`; a composição validada está incorporada em `main`.
+> O [CI pós-merge 34191087087](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34191087087) também passou em `3f2d96e`.
 
 O usuário autorizou explicitamente nesta sessão a modernização, auditoria, revisão, correções,
-integração e merges das PRs. Esta execução cumpre esse escopo amplo: a regra rotineira de um
+integração e merges das PRs. Esta execução cumpriu esse escopo amplo: a regra rotineira de um
 item por loop não exige uma segunda autorização para o trabalho já solicitado. As mutações Git,
-a validação executável e a integração no GitHub são centralizadas pelo agente coordenador.
-Autorização e revisão técnica não são afirmações de que um merge já aconteceu; a mesma conta
-autora também não pode simular aprovação independente.
+a validação executável e a integração no GitHub foram centralizadas pelo agente coordenador.
+O merge acima foi conferido no GitHub; autorização e revisão técnica, por si sós, não o
+comprovariam. A mesma conta autora também não pode simular aprovação independente.
 
-O [relato desta integração](loop/runs/2026-09-08T-mcp-github-integration.md) registra os 32 heads,
-intenções, decisões e evidências por árvore. O #78 contém integralmente 20 heads, contando o
-próprio. Dos 12 restantes, #83 tem um passo CI de índice Python a portar; #90 exige adaptar
-os testes/intenção ao touch Atlas. Os demais resíduos são sobretudo documentais ou equivalentes.
-Consultar o GitHub antes de agir: o snapshot datado não é um contador automático.
+O [relato desta integração](loop/runs/2026-09-08T-mcp-github-integration.md) preserva o snapshot
+inicial de 32 heads (#59–#90), suas intenções e decisões, e a incorporação posterior do #91,
+totalizando 33 PRs de origem. No snapshot inicial, #78 continha integralmente 20 heads,
+contando o próprio. Os 12 resíduos foram reconciliados: o passo CI do índice Python de #83
+foi portado e as regressões de #90 foram adaptadas ao touch Atlas, preservando os relatos.
+O #91 removeu a guarda redundante de arquivamento sem mudar a máquina de fases.
+Consultar o GitHub antes de agir: a fila vazia acima é uma observação datada, não um contador automático.
+
+O CI Linux registrou 404 testes do jogo, 19.009 asserções, zero falhas e 92 testes Python
+no head `9d02d6f`, árvore `528244e11304dfed4a15d977c4ad014dd2828d87`.
+O manifesto confirma `tested_head=true` e `source_unchanged=true`. O reexport macOS arm64 desse
+head passou em codesign estrito e executou 900/900 ticks em 17,259 s, sem erro observado.
+Renderer, MCP e limites do import/export Mono estão discriminados no relato; merge e QA
+ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamento humano.
 
 ## Histórico preservado e entrega Atlas
 
@@ -107,86 +117,91 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 
 ### P0 — integração e capacidade de revisão
 
-- [~] **Concluir integração Atlas + bundle #78 e fila #59–#90, autorizada pelo usuário.**
-  Branch isolada `integrate/atlas-mcp-20260908`, com Atlas e plugin preservados antes do merge.
-  Resolver conflitos por contrato, portar resíduos úteis (#83/#90 e relatos), validar a árvore
-  final e realizar a integração GitHub autorizada. Não usar `theirs` global, force-push ou
-  aprovação fictícia. *Pronto:* commit/PR final, checks e evidências ligados ao SHA, merges
-  efetivos registrados e PRs substituídas reconciliadas. Até lá o estado permanece `[~]`.
-- [~] **Decidir a cadência do loop (#85, ADR-0013 em Proposta).** A recomendação de branch
-  diária não foi aceita automaticamente. Agendamento externo não foi alterado.
+- [x] **Integração Atlas + bundle #78 e fila #59–#91, autorizada pelo usuário.**
+  A PR #92 foi mesclada em `3f2d96e25f42b8833e53099cce55619f25ec59c5`, preservando os
+  33 heads de origem, Atlas e plugin. Resíduos, contratos, testes e documentação foram
+  reconciliados na branch isolada, com checks e evidências ligados ao head `9d02d6f`.
+  As 33 PRs de origem constam como MERGED; a conferência de fechamento encontrou zero PRs abertas.
+- [ ] **Decidir a cadência do loop (#85, ADR-0013 em Proposta).** A PR da proposta foi
+  mesclada via #92, mas a recomendação de branch diária não foi aceita automaticamente.
+  O item volta a livre porque nenhum PR aberto o reivindica; agendamento externo não foi alterado.
   *Pronto:* decisão do mantenedor registrada e scheduler coerente com ela.
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
-- [~] **Unificar relatórios da fila (#71).** `merge_queue_report.sh --order` substitui
+- [x] **Unificar relatórios da fila (#71, via #92).** `merge_queue_report.sh --order` substitui
   `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
-  relatório de superfície, cuja pergunta é diferente. *Pronto:* mudança integrada e CI verde.
+  relatório de superfície, cuja pergunta é diferente. Mudança integrada e CI verde no head `9d02d6f`.
 
 **Lições preservadas:** #55 integrou #20–#54 em `34634d0` e #56 reconciliou esse estado;
 35 PRs exigiram quatro esforços, dois superados. A incompatibilidade #25×#50 era semântica:
 um PR removeu `GameSession.transition_progress()` e outro ainda o chamava. Já o #67 precisa
 aceitar o estado final legítimo da ADR-0010: zero pastas `a-remover`. #78 contém essa resolução.
-**Portada para o próprio #67 em 2026-09-08**, para que a guarda não dependa da ordem de merge:
-o head do #67 traz agora `EMPTY_TOTALS_ROW` e a correção de `not doomed.is_empty()` idênticas às
+**Portada para o próprio #67 em 2026-09-08**, para que a guarda não dependesse da ordem de merge:
+o head auditado do #67 já trazia `EMPTY_TOTALS_ROW` e a correção de `not doomed.is_empty()` idênticas às
 do #78, medidas nos dois sentidos (as sete removidas com o fecho escrito ficam **verdes**; com o
 plural sobrevivente ficam **vermelhas**). A guarda deixou de proibir o seu próprio fim. Continua
-sem forma o caso de **uma** pasta restante, alcançável só mesclando as sete uma a uma — está dito
-no comentário de `NUMERALS`, e quem mesclar a sexta escreve o singular.
+sem forma, no helper histórico `NUMERALS`, o caso de **uma** pasta restante, que seria alcançado
+mesclando as sete uma a uma. A integração entregou o caso zero de uma vez; não há sexta remoção
+pendente nem motivo para restaurar pastas só para exercitar esse estado intermediário.
 As medições #76, #80 e #86 demonstraram outro acoplamento: a guarda #69 exige atualizar a matriz
 para o inventário da **árvore final**, não somar números copiados das descrições dos PRs.
 
 ### P1 — higiene estrutural e evidência
 
-- [~] **Sete remoções da ADR-0010 (#60, #62, #63, #64, #66, #72, #73).** Respectivamente:
+- [x] **Sete remoções da ADR-0010 (#60, #62, #63, #64, #66, #72, #73, via #92).** Respectivamente:
   `curved_lines_2d`, `phantom_camera`, `guide`, `GDDraw`, `yard`, `softbody2d`, `curve2collision`.
   #78 consolida a tabela de addons, as contagens, os filtros de export e o caso zero do #67.
   Não remover os filtros de export só porque a pasta saiu: uma reinstalação local pode recriá-la.
-  *Pronto:* ausência das sete pastas na integração, manifesto coerente e guardas verdes.
-- [~] **Matriz vinculada à árvore (#69; composição observada em #80 e #86).** A descoberta
-  de testes varre diretórios. *Pronto:* contagem e inventário derivado conferem com o runner
-  em cada branch e no #78. Shipping histórico continua identificado como histórico.
-- [~] **Não versionar bytecode Python (#83).** Regras globais `__pycache__/` e `*.py[cod]`,
+  As sete pastas estão ausentes na integração, com manifesto coerente e guardas verdes.
+- [x] **Matriz vinculada à árvore (#69; composição observada em #80 e #86, via #92).**
+  A descoberta de testes varre diretórios. Contagem e inventário derivados conferem com o
+  runner da composição validada; consultar TEST_MATRIX, sem somar os inventários históricos
+  dos PRs. Shipping histórico continua identificado como histórico.
+- [x] **Não versionar bytecode Python (#83, via #92).** Regras globais `__pycache__/` e `*.py[cod]`,
   remoção do bytecode já rastreado inclusive o acrescentado por #79. A guarda textual não
-  consulta o índice Git: conferir também `git ls-files`. *Pronto:* ambos os exames verdes.
+  consulta o índice Git: conferir também `git ls-files`. Ambos os exames passaram na composição.
   **Os dois exames existem desde 2026-09-08:** a guarda em GDScript prova a regra, e o passo
   «Bytecode de Python fora do índice» de `verificacao.yml` prova o índice com `git ls-files` —
   é ele que apanha o bytecode que #79 traz, porque `.gitignore` não expulsa arquivo já rastreado.
 
-- [ ] **Cobrir o parser Metal HUD no gate (#83).** O workflow inspecionado descobre testes
-  Python em tools/ci, enquanto `tools/profile/test_parse_metal_hud.py` tem regressões próprias
-  ampliadas pelo Atlas. *Pronto:* executar essas regressões na CI ou registrar uma exclusão
-  fundamentada junto ao workflow; não confundir validação manual com cobertura contínua.
+- [x] **Cobrir o parser Metal HUD no gate (#83, via #92).** O passo «Regressões MCP, assets
+  e parser Metal» de `verificacao.yml` executa a descoberta Python em `tools/profile`,
+  incluindo `test_parse_metal_hud.py`. O CI do head `9d02d6f` passou com essas regressões;
+  a cobertura contínua do parser não prova desempenho GPU em hardware alvo.
 
 ### P2 — integridade de contexto e contratos
 
 - [x] **Contrato de `session.records` (#49, via #55).** Só tentativas realmente terminadas
   geram registros; forçar uma fase não equivale a executar a transição.
-- [ ] **Decidir `GameSession._current_archived` (#58).** O achado havia sido perdido numa
-  reconciliação. A máquina de fases já limita o arquivamento; trocar a guarda por `false`
-  não era distinguido pela suíte histórica. *Pronto:* remover a redundância ou acrescentar
-  um caso legítimo que exercite sua função, sem mudar silenciosamente a máquina de fases.
-- [~] **Integrar o contrato de VELOCITY do Atlas.** O item já é produtor real de aceleração,
+- [x] **Resolver `GameSession._current_archived` (#58, entregue por #91 via #92).** O achado
+  perdido na reconciliação foi resolvido removendo o booleano redundante. A máquina de fases
+  continua responsável pelo arquivamento. A regressão exige no máximo um registro por passo,
+  apenas a partir de PLAYING, e confirma os terminais e todas as tentativas de vitória/derrota.
+- [x] **Integrar o contrato de VELOCITY do Atlas (via #92).** O item já é produtor real de aceleração,
   com timer inteiro e piso de velocidade normal no início do segmento. A flag explícita
   `speedup_active` permanece no checksum, sem duplicar o timer. A guarda antiga de regras
   inertes foi adaptada: isolamento sem itens e captura de produção com passo rápido/replay.
-  *Pronto:* regressão na composição final e publicação do contrato v4 em main.
-- [~] **Pausa e ciclo de vida do áudio (#70).** Música e vozes usam guarda coerente;
+  Regressão passou na composição final e o contrato v4 está publicado em main.
+- [x] **Pausa e ciclo de vida do áudio (#70, via #92).** Música e vozes usam guarda coerente;
   shutdown solta a pausa. A liberação de vozes deve continuar zerando prazos e rodízio,
-  inclusive ao desabilitar áudio, sem depender de shutdown. *Pronto:* regressões verdes.
-- [~] **Cobertura de pureza do boss (#68).** O controller agora está em
+  inclusive ao desabilitar áudio, sem depender de shutdown. Regressões verdes incluem pausar,
+  desligar/religar som e retomar, preservando a posição de música apenas suspensa.
+- [x] **Cobertura de pureza do boss (#68, via #92).** O controller agora está em
   `game/simulation/enemies/boss_behavior_controller.gd`, coberto pela pasta de domínio.
-  Preservar o scanner ampliado e remover exceções do caminho antigo nas duas guardas.
-- [~] **Exceção visual em regras (#74).** `RoundVisualDefinition` admite cores; isso não
+  O scanner ampliado foi preservado e as exceções do caminho antigo foram removidas das guardas.
+- [x] **Exceção visual em regras (#74, via #92).** `RoundVisualDefinition` admite cores; isso não
   autoriza outros Resources de domínio a ler `float` ou consumir a apresentação. A costura
   RoundContent também é declarada; serializadores são derivados do grafo real, sem count=2.
-- [ ] **Guarda de direção em `game/session/` (#74).** Pureza nominal de símbolos não prova
-  que a sessão nunca lê apresentação. O achado histórico está em
-  `docs/loop/runs/2026-09-07T100000Z.md`; ampliar a prova de dependências com uma mutação
-  que leia `content.visual`, sem misturar esse trabalho à alteração de lifecycle.
-- [~] **Documentação coerente (#65, #76, #77, #82, #84).** Decisões de arte referenciadas,
+- [ ] **Guarda geral de direção em `game/session/` (#74).** O acesso a `content.visual`
+  já é recusado pela guarda integrada de regras/apresentação. O achado ainda aberto em
+  `docs/loop/runs/2026-09-07T100000Z.md` é mais amplo: quais outras dependências de apresentação
+  podem ser lidas pela sessão sem a guarda nominal perceber? *Pronto:* ampliar a prova de
+  direção com uma violação plantada dessa outra dependência, preservando a cobertura do visual.
+- [x] **Documentação da integração reconciliada (#65, #76, #77, #82, #84, via #92).** Decisões de arte referenciadas,
   geometria atual distinguida de tempos históricos, disponibilidade de Git corrigida,
-  seções e chaves de tabela sem contradição. *Pronto:* guardas e inspeção da integração verdes.
+  seções e chaves de tabela reconciliadas. Guardas e inspeção da integração passaram; a dívida
+  específica de contagens históricas em linhas isoladas continua no item abaixo.
   **A guarda textual de contradição foi medida e recusada — não a construa.** O #82 rodou a
   heurística de «duas linhas de tabela com a mesma primeira coluna» sobre 5.020 arquivos `.md`
   (árvore + 79 branches): ela pega o erro do #21 (31 branches com 11.547 vs 11.515 asserções na
@@ -200,7 +215,9 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [ ] **Procedência da licença raiz (#73).** Preservar o aviso de `IMPLEMENTATION_STATUS`:
   não substituir titularidade ou licença sem decisão do mantenedor e verificação de direitos.
 - [ ] **Contagem de outro ambiente parece atual fora da matriz (#69).** `IMPLEMENTATION_STATUS.md`
-  e `SHIPPING_PASS.md` citam **134 testes, 11.489 asserções** do run de macOS de 2026-09-03. O
+  passou a separar a evidência Atlas dos registros históricos e a apontar para TEST_MATRIX.
+  `SHIPPING_PASS.md` ainda cita **134 testes, 11.489 asserções** do run de macOS de 2026-09-03
+  sem repetir a data e o ambiente na própria linha da tabela. O
   número é verdadeiro **por ser histórico**, e por isso a guarda de inventário do #69 não o
   alcança: forçá-lo a bater com a árvore de hoje falsificaria evidência que a nuvem não reproduz.
   O risco é de leitura — nada **na linha** avisa que aquilo é outro ambiente e outra data.
@@ -213,23 +230,26 @@ Já estão em `main` via #55: envelopes por cue, contorno da ameaça (ADR-0011),
 háptica de exposição, âncora flutuante do toque, proa do cursor, foco de captura, trava do eixo
 analógico, fase contínua da trilha e cadência de transição. Isso não equivale a aprovação estética.
 
-- [~] **Contorno próprio do cursor (#75, ADR-0012).** Testar geometria e contraste sem
-  contaminar o checksum. Validação visual continua pendente após a integração.
-- [~] **Cue sonoro de exposição (#61).** Som e háptica leem a mesma aresta confirmada;
+- [x] **Contorno próprio do cursor (#75, ADR-0012, via #92).** Geometria e contraste
+  automatizados preservados para o cursor Atlas sem contaminar o checksum. A aprovação
+  humana da leitura em movimento continua no item de QA abaixo.
+- [x] **Cue sonoro de exposição (#61, via #92).** Som e háptica leem a mesma aresta confirmada;
   a prioridade do aviso não deve encobrir captura ou morte. Escuta física permanece pendente.
-- [~] **Causa da morte no HUD (#79).** Duração segue a fase DYING e não um prazo fixo;
+- [x] **Causa da morte no HUD (#79, via #92).** Duração segue a fase DYING e não um prazo fixo;
   a mensagem termina na reentrada, inclusive com duração de morte curta ou longa.
-- [~] **Âncora da direção da ameaça (#87).** Preservar a intenção de aderir à silhueta real,
-  adaptando a prova aos corpos/pás/GLBs Atlas. Não restaurar enemy_view antigo para satisfazer
-  expectativas do losango; testar rumos e direção nula sem alterar o domínio.
-- [~] **Distribuição das marcas de captura (#81).** Evitar ressonância dos passos modulares
-  em focos usuais; preservar contenção, repetibilidade e isolamento da apresentação.
+- [x] **Âncora da direção da ameaça (#87, via #92).** Intenção de aderir à silhueta real
+  preservada, com a prova adaptada aos corpos/pás/GLBs Atlas. Rumos e direção nula são
+  testados sem alterar o domínio nem restaurar o enemy_view antigo para satisfazer o losango.
+- [x] **Distribuição das marcas de captura (#81, via #92).** A sequência integrada evita
+  ressonância dos passos modulares em focos usuais e preserva contenção, repetibilidade
+  e isolamento da apresentação.
 - [x] **Geometria real do HUD (#52, via #55).** A sonda executa frames; medir Label apenas
   em `_initialize()` não reproduz sua geometria final.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
   *Pronto:* decisão visual, catracas atualizadas e confirmação numa tela, sem piorar legibilidade.
-- [~] **Toque estável (#90).** Portar regressões de jitter/arrasto sem perder floating stick,
-  histerese de entrada/saída, margem angular e flick do Atlas. Publicação ainda pendente.
+- [x] **Toque estável (#90, via #92).** Regressões de jitter/arrasto integradas e verdes,
+  preservando floating stick, histerese de entrada/saída, margem angular e flick do Atlas.
+  Ergonomia em dispositivo real continua no item de QA humana.
 - [ ] **QA humana de controles, áudio e composição.** Calibrar margem analógica, toque,
   exposição, pulso, contornos, foco e proa com jogo real. Teste headless não cobre esse mérito.
 

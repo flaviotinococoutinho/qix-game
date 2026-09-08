@@ -1,0 +1,6 @@
+{
+  "source_commit": "9d02d6fcea6a70791a906720e7defbb46860b00b",
+  "exit_code": 0,
+  "elapsed_seconds": 17.259,
+  "log": "Godot Engine v4.7.2.stable.mono.official.ed1daf0bf - https://godotengine.org\nOpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M2\n\nQIX_SHIPPING_AUDIO_SMOKE_START requested_ticks=900 physics_ticks_per_second=60\nQIX_SHIPPING_AUDIO_SMOKE_COMPLETE requested_ticks=900 completed_ticks=900 physics_ticks_per_second=60\n"
+}

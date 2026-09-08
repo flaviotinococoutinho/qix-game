@@ -1,8 +1,8 @@
 # Integração GitHub, MCP e Atlas Vivo — 2026-09-08
 
-> **Verificado em** 2026-09-08 · inspeção de Git/GitHub e resolução local por ownership
+> **Verificado em** 2026-09-08 · commit `3f2d96e` · GitHub, CI Linux, editor e runtime macOS
 > **Alcance:** snapshot inicial das 32 PRs #59–#90, ampliado com #91 durante a execução.
-> Composição local e QA executável concluídos; publicação e merge são registrados no PR de integração.
+> **Concluído:** PR #92 mesclada; todas as 33 PRs #59–#91 constam MERGED; fila aberta zerada em 05:33:37Z.
 
 ## Pedido e autorização
 
@@ -37,8 +37,8 @@ O estado observado das PRs era OPEN/CONFLICTING; isso não prevê o resultado ap
 
 ## Inventário de intenção e decisão
 
-As decisões abaixo indicam o que preservar/adaptar na composição. Até atualizar a seção de
-conclusão com SHA/links reais, nenhuma linha afirma que a respectiva PR já foi mesclada.
+As decisões abaixo preservam a análise feita antes do merge. A seção de conclusão registra
+o resultado efetivo, com SHA, checks e recibo individual de estado das 33 PRs.
 
 | PR | Head SHA auditado | Intenção | Decisão de integração |
 |---|---|---|---|
@@ -141,9 +141,9 @@ O JSON registra, por arquivo, blobs, presença no bundle e comparação com o wo
 | Renderer 2.5D e fallback | PASSOU | 20 asserções, seis modelos carregados, captura real de 17,9%, baliza ativa e checksum preservado; evidência versionada em docs/evidence/2026-09-08 |
 | Godot AI MCP | READY | plugin/servidor4.0.2, sessão QIX exata, oito leituras finais de editor/cena/seis GLBs sem erro |
 | Blender MCP | PASSOU | discovery26tools + job real com .blend novo verificado; seis GLBs:5.084triângulos/361.000bytes |
-| Aplicativo macOS de QA | RUNTIME VALIDADO | arm64 ad-hoc, codesign estrito, 900/900 ticks com áudio real; resultado vinculado ao código anterior ao PR91, reexport final registrado no PR |
+| Aplicativo macOS de QA | RUNTIME VALIDADO | reexport do head `9d02d6f`, arm64 ad-hoc, codesign estrito; 900/900 ticks com áudio real em 17,259 s, saída zero e sem erro de engine |
 | Import/export CLI local Mono | LIMITAÇÃO REGISTRADA | geração de recursos/pacote termina, mas teardown registra ERROR de EditorSettings Android; não classificado como gate verde |
-| CI e merge GitHub | ACOMPANHAR PR DE INTEGRAÇÃO | checks executam a composição Linux exata; o resultado e merge SHA são registrados no PR |
+| CI e merge GitHub | CONCLUÍDOS | CI 34190696324 passou na mesma árvore; PR #92 mesclada em `3f2d96e`, todas as 33 PRs MERGED |
 | Distribuição comercial | FORA DESTE ACEITE | não inferir de build ad-hoc nem de merge |
 
 ## PR91, revisão independente e correções adicionais
@@ -180,6 +180,38 @@ EditorSettings. Recovery mode acrescentou erro do HotReloadAssemblyWatcher e foi
 como solução. O gate mantém esses erros/panics fatais; importação e modelo foram verificados
 no editor conectado e no renderer, e o CI Linux verifica sua própria execução limpa.
 
-Reexecutar sobre a árvore final. Não atualizar números dourados só para passar; explicar
-qualquer mudança deliberada no contrato de regras. Ao concluir, atualizar esta tabela e o ledger
-com os fatos realizados, mantendo a data e o alcance das evidências anteriores.
+## Conclusão no GitHub
+
+A [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92) foi mesclada pela interface
+Chrome do GitHub em **2026-09-08 05:33:34 UTC**, com merge commit
+`3f2d96e25f42b8833e53099cce55619f25ec59c5`. O head revisado foi
+`9d02d6fcea6a70791a906720e7defbb46860b00b`; o histórico foi preservado por merge commit.
+A API confirmou todas as **33 PRs #59–#91 em MERGED** às 05:33:36–37Z e nenhuma PR aberta.
+O [recibo do GitHub](../../evidence/2026-09-08/github-merge.json) conserva os estados,
+heads e horários individuais. A ancestralidade de cada head foi reconferida contra origin/main.
+
+O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324)
+passou com Godot 4.7.2 standard no Linux. O checkout de pull_request usa o merge provisório
+`4b5c5b7b22be94c8b36780cb1fab40168ba30113`; sua árvore
+`528244e11304dfed4a15d977c4ad014dd2828d87` é idêntica à árvore do head `9d02d6f`.
+O [manifesto CI](../../evidence/2026-09-08/ci-manifest.json) registra `tested_head=true`,
+`source_unchanged=true`, worktree limpo antes/depois e zero erros em import, suíte, M2 e HUD.
+A suíte executou 404 testes e 19.009 asserções; as regressões Python somam 92 testes.
+O [CI pós-merge da main 34191087087](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34191087087)
+também terminou com sucesso, agora no merge commit efetivo `3f2d96e`.
+
+A main local foi atualizada por fast-forward para `3f2d96e`, preservando a branch de integração
+e o backup anterior. Este fechamento documental é posterior ao merge: reconcilia o ledger,
+publica os recibos e mantém pendências de decisão humana separadas de mudanças já entregues.
+Seu próprio PR registra os checks e a publicação desse fechamento.
+
+O [recibo do aplicativo final](../../evidence/2026-09-08/native-runtime.json) corresponde à
+reexportação de `9d02d6f`, depois da integração da PR91. O aplicativo de QA está em
+`build/integration-20260908/Lumen Atlas Integrado.app`. A assinatura nativa ad-hoc foi refeita
+e verificada depois de reduzir o binário a arm64. O smoke de áudio iniciou e concluiu 900 ticks
+a 60 ticks/s, com saída zero, sem diagnósticos fatais. Esse pacote é de QA local; o resultado
+não substitui notarização nem revisão humana de desafio e mix de som.
+
+Para novas mudanças, repetir apenas as verificações pertinentes e os gates exigidos sobre
+a nova árvore. Os resultados desta seção são históricos vinculados aos SHAs acima; não
+atualizar números dourados sem explicar uma mudança deliberada no contrato de regras.
