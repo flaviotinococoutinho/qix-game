@@ -13,7 +13,7 @@ A identidade visual “Lumen Cartography” combina cartografia bioluminescente,
 territorial R8, ícone original e três cenários: Abyssal Relay, Aurora Foundry e Verdant
 Singularity. Consulte `assets/ASSET-PROVENANCE.md` antes de distribuir.
 
-## Atlas Vivo — implementação local de 2026-09-07
+## Atlas Vivo — integração de 2026-09-08
 
 O jogo ganhou palco ortográfico com seis modelos 3D originais feitos pelo MCP do Blender,
 HUD em resolução nativa, atores com identidade e ciclo de vida, diretor de ameaça, balizas,
@@ -21,6 +21,7 @@ quatro efeitos temporários e bônus de conclusão. A campanha tem rotas verific
 menores e itens ativos. Regras/replays estão na versão 4; gravações antigas são incompatíveis.
 
 Leia [Atlas Vivo](docs/ATLAS_VIVO.md) para autoria, limites e próximos marcos de produção.
+[Integração MCP](docs/MCP_INTEGRATION.md) descreve os launchers, diagnóstico e testes Godot/Blender.
 Fontes editáveis e hashes estão em `tools/assets/source/` e `assets/models/lumen/`.
 Os relatórios da nova implementação ficam em `build/modernization/`; os números de shipping
 mais abaixo são **históricos da apresentação 2D de 2026-09-03**, não certificam esta versão.

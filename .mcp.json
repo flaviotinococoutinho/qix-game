@@ -2,33 +2,19 @@
   "mcpServers": {
     "godot-ai": {
       "type": "stdio",
-      "command": "/opt/homebrew/bin/uvx",
+      "command": "python3",
       "args": [
-        "--isolated",
-        "--no-config",
-        "--no-env-file",
-        "--no-sources",
-        "--no-build",
-        "--index-strategy",
-        "first-index",
-        "--keyring-provider",
-        "disabled",
-        "--index",
-        "https://pypi.org/simple",
-        "--default-index",
-        "https://pypi.org/simple",
-        "--find-links",
-        "https://pypi.org/simple/godot-ai/",
-        "--link-mode",
-        "copy",
-        "--from",
-        "godot-ai==4.0.2",
-        "godot-ai",
-        "attach",
-        "--port",
-        "8000",
-        "--ws-port",
-        "9500"
+        "-B",
+        "tools/mcp/godot_mcp.py"
+      ],
+      "env": {}
+    },
+    "blender": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "-B",
+        "tools/mcp/blender_mcp.py"
       ],
       "env": {}
     }

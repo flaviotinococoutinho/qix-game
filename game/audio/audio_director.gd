@@ -48,8 +48,7 @@ var _paused_music := false
 
 func _ready() -> void:
 	ensure_ready()
-	if enabled and not _paused and runtime_allows_playback() and _music.stream != null and not _music.playing:
-		_music.play()
+	_start_loaded_music_if_stopped()
 
 
 func _exit_tree() -> void:
@@ -60,7 +59,7 @@ func _exit_tree() -> void:
 ## AudioStreamPlaybackWAV sobrevivendo ao teardown de builds e smoke tests.
 func shutdown() -> void:
 	if is_instance_valid(_music):
-		_music.stop()
+		_stop_music()
 		_music.stream = null
 		_music.stream_paused = false
 	for voice in _voices:
@@ -167,6 +166,7 @@ static func exposure_cue_survives(event_cues: Array[StringName]) -> bool:
 ## retomar roubaria a voz do `death` — exatamente o corte que `select_voice`
 ## existe para impedir. O mesmo vale para o estrangulamento de `trail`.
 func apply_pause(paused: bool, now_msec: int) -> void:
+	var resuming := not paused and _paused
 	if paused and not _paused:
 		_pause_started_msec = now_msec
 	elif not paused and _paused:
@@ -193,6 +193,12 @@ func apply_pause(paused: bool, now_msec: int) -> void:
 			_set_player_paused(voice, paused)
 			commanded += 1
 	_paused_voices = commanded if paused else 0
+	# M pode desligar e religar a música enquanto P mantém a pausa. stop() encerra o
+	# playback: stream_paused=false não cria outro. A mesma situação ocorre quando uma
+	# rodada carrega música durante a pausa. Retomar precisa iniciar esse stream parado,
+	# preservando a posição dos playbacks que apenas receberam suspensão.
+	if resuming:
+		_start_loaded_music_if_stopped()
 
 
 ## Instante que a mixagem considera "agora": o relógio real quando o jogo corre,
@@ -208,8 +214,30 @@ func play_round_music(round_index: int) -> void:
 	if not _music_cache.has(round_index):
 		_music_cache[round_index] = QixProceduralAudioLibrary.music_for_round(round_index)
 	_music.stream = _music_cache[round_index]
-	if enabled and not _paused and runtime_allows_playback() and _music.is_inside_tree():
+	if enabled and not _paused:
+		_play_music()
+
+
+func _start_loaded_music_if_stopped() -> void:
+	if enabled and not _paused and is_instance_valid(_music) \
+			and _music.stream != null and not _music_is_playing():
+		_play_music()
+
+
+## Fronteiras de playback: testes substituem o dispositivo sem substituir a política
+## de pausa/ativação, e o caminho real continua respeitando árvore e modo headless.
+func _music_is_playing() -> bool:
+	return is_instance_valid(_music) and _music.playing
+
+
+func _play_music() -> void:
+	if runtime_allows_playback() and is_instance_valid(_music) and _music.is_inside_tree():
 		_music.play()
+
+
+func _stop_music() -> void:
+	if is_instance_valid(_music):
+		_music.stop()
 
 
 func play_cue(cue_name: StringName) -> void:
@@ -317,12 +345,12 @@ func set_enabled(value: bool) -> void:
 	enabled = value
 	if not value:
 		if _music != null:
-			_music.stop()
+			_stop_music()
 		for voice in _voices:
 			voice.stop()
 		_release_all_voices()
-	elif not _paused and runtime_allows_playback() and _music != null and _music.stream != null and _music.is_inside_tree():
-		_music.play()
+	elif not _paused and _music != null and _music.stream != null:
+		_play_music()
 
 
 func presentation_state() -> Dictionary:

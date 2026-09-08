@@ -1,8 +1,8 @@
 # TEST_MATRIX
 
 > **Verificado em** 2026-09-08 · commit `6d23de4` · Godot 4.7.2-stable Mono, macOS headless
-> **Alcance:** primeira execução da reconciliação Atlas + #78; correções em andamento, ainda sem merge no GitHub.
-> **Resultado:** 393 testes, 18859 asserções, 1 falhas. O inventário abaixo é conferido pelo runner.
+> **Alcance:** reconciliação Atlas + todos os 32 heads de PRs, Godot AI 4.0.2 e pipeline Blender; suíte explícita do projeto.
+> **Resultado:** 403 testes, 18969 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
 > Exportação, assinatura, Android físico e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
@@ -11,10 +11,10 @@
 python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Primeira execução da integração (será substituída pela medição final): **393 testes, 18859 asserções, 1 falhas** — árvore preparada sobre
-`ca745780`; resultados de outras branches não são intercambiáveis.
+Resultado da suíte integrada: **403 testes, 18969 asserções, 0 falhas** — árvore preparada sobre
+`972fd4c`; resultados de outras branches não são intercambiáveis.
 
-**Inventário da suíte (derivado, não digitado):** 73 arquivos de teste · 393 casos `test_*`.
+**Inventário da suíte (derivado, não digitado):** 74 arquivos de teste · 403 casos `test_*`.
 
 A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
 de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
@@ -52,7 +52,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | invariantes 1 e 4 | varredura estática de `game/simulation`, `game/rules` e `game/session` por símbolo do mundo real (acaso global, relógio, `Input`, `Tween`, física, `await`, `_process`); o próprio scanner é validado contra amostras positivas e negativas, de modo que ele não pode passar sem olhar |
 | invariante 10 | SHA-256 de todo arquivo de mídia de `assets`, `game`, `ui`, `app`, `content`, `tools`, `tests` e `reference` conferido contra `assets/ASSET-PROVENANCE.md`; hash declarado sem arquivo correspondente é recusado como órfão salvo em linha `(removido)`; arquivo marcado `(removido)` não pode reaparecer; a checagem é exercitada contra bytes de controle não declarados e o padrão da tabela é validado numa linha sintética, para que uma reformatação não a transforme em laço vazio |
 
-## Verificação de engine, gameplay e conteúdo
+## Evidências históricas de engine, gameplay e conteúdo
 
 | Verificação | Resultado |
 |---|---|
@@ -70,12 +70,12 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 393 testes, 18859 asserções, 1 falhas; medição intermediária da integração em 2026-09-08, pendente de rodada final |
+| log final da suíte | 403 testes, 18969 asserções, 0 falhas; runner explícito com JSON e inspeção de diagnósticos em 2026-09-08 |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
-## Matriz do shipping externo
+## Matriz histórica do shipping externo — setembro/03
 
-| Verificação | Estado atual | Evidência/limite |
+| Verificação | Estado naquela execução | Evidência/limite |
 |---|---|---|
 | runner canônico | **passou** | run `20260903T065739Z-65912`, `runner_status=complete`, `runner_exit=0`, `overall_exit=0` |
 | export macOS ad-hoc | **passou** | bundle atual 101.199.872 bytes, arm64; payload e `codesign --verify --deep --strict` verdes |

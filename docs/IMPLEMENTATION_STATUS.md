@@ -1,149 +1,99 @@
-# IMPLEMENTATION_STATUS
+# IMPLEMENTATION_STATUS — Atlas Vivo integrado localmente
 
-> **Verificado em** 2026-09-07 · commit `ca745780` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** preparação integrada #57–#86 no #78. Acesso Git conferido; licença e seu aviso
-> preservados após a remoção do addon. Suíte e rota são registradas nas evidências por árvore.
-> Shipping de 2026-09-03 permanece histórico: nenhuma nova validação de assinatura, GPU ou aparelho.
+> **Verificado em** 2026-09-08 · commit `e8307d1` · revisão de código e documentação da integração local
+> **Alcance:** Atlas Vivo, bundle remoto #78 e atualização MCP preservados na árvore de integração.
+> A suíte final, a composição com os resíduos da fila e as ações no GitHub ainda estão em andamento.
+> Nenhuma aprovação de release, aparelho físico ou publicação é inferida deste registro.
 
-## Gate atual
+## Estado atual
 
-**M2 / G2 — VERDE. Shipping candidate técnico — VERDE. Release/hardware — ÂMBAR**
-(2026-09-03).
+O projeto combina o domínio determinístico do Atlas, campanha ativa com atores/itens e palco
+2.5D com as melhorias remotas de contraste, entrada, feedback e guardas. A integração está sendo
+validada pelo coordenador. O inventário e os resultados correntes pertencem a
+[TEST_MATRIX.md](TEST_MATRIX.md) e ao
+[relato de integração](loop/runs/2026-09-08T-mcp-github-integration.md), vinculados à árvore testada;
+números de branches anteriores não são somados nem apresentados como resultado final.
 
-A campanha, a revelação territorial e as transições estão jogáveis. O shipping pass de código
-está integrado; suíte, exports locais, smoke e probes terminaram verdes. Isso forma um candidate
-técnico local, mas não torna correto chamar o jogo de “AAA” nem fechar o gate de publicação:
-hardware real, audição crítica, playthrough por uma pessoa, soak, distribuição e questões legais
-continuam pendentes.
+O jogo é uma base jogável de produção. O repertório completo de Volfied, produção artística AAA,
+calibração humana e distribuição comercial continuam abertos. A
+[ADR-0014](decisions/ADR-0014-atlas-lifecycle-depth-stage.md) define a evolução Atlas;
+[PROJECT_CONTRACT.md](PROJECT_CONTRACT.md) define o ownership e as fronteiras atuais.
 
-## Entregue
+## Implementação presente
 
-- `GameSession` encadeia `ROUND_INTRO → PLAYING → ROUND_CLEAR → próxima rodada`, além de
-  `GAME_OVER` e `CAMPAIGN_COMPLETE`, sem avançar uma simulação já encerrada.
-- A campanha `lumen_cartography` possui três `RoundContent` autoráveis. Regras, geometria,
-  seed, comportamento do boss e visual são Resources separados; cada rodada mantém alvo de
-  80% e progride escudo, ameaça e recompensa.
-- O boss usa três perfis determinísticos autoráveis: `WANDER`, `PURSUIT` com jitter limitado
-  e pulso de 115%, e `SWEEP` com pulso de 125%. O perfil integra o hash canônico das regras,
-  replay e checksum; a apresentação pode lê-lo sem mutar o domínio.
-- Score e vidas atravessam a transição; board, shield, tick e replay reiniciam para a nova
-  rodada. Cada tentativa arquivada retém checksum e replay próprios.
-- O replay valida versão, seed, hash de regras/geometria e checksum inicial antes de aceitar
-  qualquer mutação.
-- `BoardView` envia diretamente os bytes do `BoardState` como máscara `R8`, reutiliza a
-  `ImageTexture` e revela o fundo original somente onde o estado é `CLAIMED`.
-- Abyssal Relay, Aurora Foundry e Verdant Singularity formam a direção original “Lumen
-  Cartography”; fontes, derivados e a revisão rejeitada estão documentados no manifesto de
-  assets.
-- Áudio original é sintetizado em PCM no runtime: um loop por rodada, cues de gameplay,
-  oito vozes de SFX e buses separados `Qix Master`, `Qix Music` e `Qix SFX`, com limiter e
-  volumes autoráveis. Pausa suspende a música e o teardown libera playback/streams. Cada loop
-  inclui um guard frame para o bug de acesso one-past-end do Godot 4.7.2
-  ([#119778](https://github.com/godotengine/godot/issues/119778)). Runtime headless não abre
-  playback; em builds gráficas, os argumentos que silenciam probes são aceitos somente com a
-  feature `shipping_qa`, evitando o leak de teardown conhecido
-  ([#76745](https://github.com/godotengine/godot/issues/76745)) sem silenciar o jogo normal.
-- Háptica observa eventos confirmados, coalesce o pulso de maior prioridade por tick e envia
-  rumble ao gamepad e vibração handheld quando a plataforma oferece suporte.
-- Teclado/InputMap, D-pad, analógico esquerdo com histerese e overlay touch multitouch convergem
-  para o mesmo `MoveIntent` cardinal antes do domínio. Stick, botões e edges são isolados por
-  gamepad; desconexão limpa somente aquele device. A arbitragem drena no mesmo tick Start/A que
-  chegaram tanto pelo InputMap quanto pelo evento cru, impedindo pausa ou confirmação duplicada.
-  A/X desenham, A confirma e Start pausa; touch fornece stick, `DRAW` e pausa.
-- HUD, transições, feedback audiovisual e controles são observadores: nenhum relógio de
-  apresentação ou estado de dispositivo entra no RNG, replay ou checksum.
-- O gerador de campanha monta 16 Resources e os entrega a uma transação WAL v3 persistente. Um
-  lock interprocessual por listener loopback serializa geradores cooperantes; payloads/backups
-  têm tamanho e SHA-256, e o SHA-256 canônico do manifest é repetido em cada record do journal
-  append-only. A máquina de estados completa, a promoção por rename adjacente, o rollback reverso,
-  o recovery prévio, a verificação terminal dos targets e a restauração do cache falham fechados
-  diante de metadado, sequência ou bytes divergentes.
-- Presets de QA macOS arm64 e Android arm64, probes de frame pacing/GPU e framebuffer e um
-  runner reproduzível vivem em `export_presets.cfg` e `tools/shipping/`.
-- O ícone original está configurado no projeto e nos pacotes de QA.
+| Área | Comportamento implementado | Fonte principal |
+|---|---|---|
+| Território | movimento em grade, trilha vulnerável, fechamento e captura por plano confirmado | `game/simulation/board/`, `game/simulation/player/` |
+| Campanha | três setores, carry de score/vidas, intro/clear/derrota/conclusão e um replay por tentativa | `game/session/`, `content/campaigns/`, `content/rounds/` |
+| Chefe | WANDER/PURSUIT/SWEEP, fases por área, perseguição de trilha e confinamento | `BossBehaviorProfile`, `BossState`, `BossMotion`, `BossBehaviorController` |
+| Atores menores | vagalumes de fronteira, dardos e brasas de trilha; identidades por spawn e pools limitados | `MinorActorPools`, `WalkerRules`, `DartRules`, `EmberRules` |
+| Lifecycle e justiça | DESPAWNED/WARMUP/ACTIVE/DORMANT/DYING; aviso antes de letalidade, graça de respawn e dissipação | `ActorLifecycle`, `ThreatProfile`, regras de cada ator |
+| Diretor | pressão por território/tempo, agenda determinística e respiro após captura | `game/simulation/director/` |
+| Objetivos e efeitos | balizas capturadas por CLAIMED, cadeia de pontos, VELOCITY/STASIS/SHIELD_FREEZE/PURGE | `game/simulation/objectives/`, `ItemProfile`, `EffectTimers` |
+| Conclusão | TARGET/SINGLE_FILL/SEALED, escada de bônus e recompensa sem morte | `ScoreLedger`, `BonusLadder`, `GameSimulation` |
+| Replay | RULES_VERSION 4, schema 1; compatibilidade validada antes de reproduzir; dourados com os três perfis | `game/simulation/replay/`, testes de replay/campanha |
+| Palco | SubViewport tático, câmera ortográfica, seis GLBs originais e fallback plano | `app/stage/depth_stage.gd`, `assets/models/lumen/` |
+| Leitura tática | célula de contato, silhuetas/contornos 2D, previews e estados continuam observáveis com modelos ligados | views player/boss/minor, `ui/debug/actor_trace_overlay.gd` |
+| Revelação | máscara R8 reutilizada; somente CLAIMED revela o fundo original | `BoardView`, `board_reveal.gdshader` |
+| Feedback | PCM procedural, cues de atores/objetivos, oito vozes priorizadas, exposição compartilhada com háptica | `QixAudioDirector`, `QixProceduralAudioLibrary`, `QixFeedbackHub` |
+| Entrada | teclado, D-pad/analógico por device, touch flutuante, histerese, flick, dedup de pausa/confirmação | `GameInputAdapter`, `QixTouchControls` |
+| Conteúdo | geração transacional de Resources, WAL/journal, lock, promoção, rollback e recovery | `CampaignContentTransaction`, `tools/build_campaign_content.gd` |
+| Ferramental | atualização Godot AI 4.0.2 preservada; Fennara, Blender e ferramentas GitHub na integração | plugin, manifesto de modelos e relato por SHA |
 
-## Evidências atuais
+Apresentação observa estado e eventos confirmados. Nem câmera, escala, malha, pulso, áudio,
+dispositivo ou relógio de frame decide colisão/captura. A dissipação visual após a vitória não
+continua mutando a simulação que a sessão já arquivou.
 
-- Runner headless com áudio dummy sobre `34634d0`, em Godot 4.7.2-stable (não-mono) Linux:
-  **262 testes, 12.719 asserções, 0 falhas** em 6.446 ms, medido em 2026-09-07.
-  Esta contagem **muda a cada teste acrescentado** e por isso envelhece sozinha: quem precisar
-  do número corrente roda `tests/run_tests.gd` e lê a última linha, em vez de confiar nesta.
-  O run de shipping de 2026-09-03 registrou 134 testes / 11.489 asserções para a suíte daquela
-  árvore; esse par pertence ao instantâneo em `docs/SHIPPING_PASS.md`, não ao estado atual.
-- O runner final `20260903T065739Z-65912` terminou `overall_exit=0` e estado `complete`.
-  O bundle macOS arm64 ad-hoc tem 101.199.872 bytes; export, thinning, payload, smoke, frame
-  pacing, Metal HUD, framebuffer, `codesign` e varredura de leaks passaram.
-- O smoke gráfico de áudio macOS concluiu **900/900 callbacks físicos a 60 Hz**, em 17 segundos
-  de parede, com driver normal, saída 0 e sem atingir o watchdog de 30 segundos.
-- O APK Android ad-hoc tem 40.486.376 bytes e SHA-256
-  `db61015cfc6bea849ec41fad6907e1c0af625d8c38866c2e38bc68306c6411e2`;
-  export, archive, payload, assinatura, instalação e launch passaram. O próprio runner iniciou e
-  selecionou exatamente `emulator-5554`, observou a main loop após 13 segundos e confirmou o
-  mesmo processo vivo por mais 30 segundos, com screenshot e logscan verdes. Esse smoke normal
-  exerceu o áudio.
-- A rota determinística com boss ativo conclui as três rodadas sem mortes usando somente
-  intents públicos. Progressão: R1 `17,9 → 35,8 → 49,3 → 71,7 → 86,9%`; R2
-  `55,6 → 80,8%`; R3 `35,8 → 64,5 → 82,4%`. Score acumulado após cada rodada:
-  `13.190`, `23.960`, `36.290`; os três replays arquivados reconstruíram os checksums finais.
-  Essa é uma rota automatizada humanamente executável, não um playthrough humano.
-- A rota M2 isolada continua reproduzindo cinco capturas até 82,5% e a transição R1 → R2;
-  nela o boss é imobilizado deliberadamente para isolar território e transição.
-- O framebuffer test do pacote macOS passou sobre o pipeline final
-  `BoardState → R8 → shader → SubViewport framebuffer`: `CLAIMED` revelou o pixel esperado do
-  fundo e `FREE`, `BOUNDARY` e `TRAIL` permaneceram cobertos. Relatório e PNG estão em
-  `build/shipping/reports/macos-framebuffer.*`; foram 17 asserções e nenhuma falha.
-- O microbenchmark headless do board mantém upload R8 de 63.675 bytes por refresh, contra
-  254.700 bytes do caminho RGBA8 sintético. Ele mede CPU/preparação, não GPU.
-- O profiling do candidate macOS mediu 600 frames em gameplay `PLAYING`: frame p95 18,331 ms,
-  p99 20,041 ms e máximo 75,433 ms. O Apple Metal HUD forneceu 1.380 pares válidos, com GPU p95
-  0,23 ms, p99 0,29 ms e máximo 0,40 ms; linhas malformadas, métricas órfãs e stalls acima de
-  150 ms ficaram todos em zero.
-- O gerador oficial concluiu **16 staged / 16 committed**. A transação v3 possui **22 testes e
-  353 asserções** para commit/rollback, integridade/autorização, máquina de estados, lock entre
-  processos, interrupção abrupta, cache, recovery e targets terminais.
+F2 alterna 2.5D/plano; F3 mostra diagnóstico de autoria; F4 reduz movimento do palco; M alterna
+som. Esses controles não alteram o contrato de replay. Godot AI e Fennara são ferramental,
+não dependências para as regras da partida; o payload exportado precisa ser conferido após
+atualizações dos plugins.
 
-Detalhes, comandos e limites estão em `docs/SHIPPING_PASS.md`, `docs/TEST_MATRIX.md` e
-`docs/PERFORMANCE.md`.
+## Evidência corrente e registros históricos
 
-## Riscos e pendências abertas
+| Registro | Árvore/época e alcance | Como usar |
+|---|---|---|
+| Integração de setembro/08 | composição Atlas + remoto + MCP, ainda em validação | consultar TEST_MATRIX e relato por SHA; não afirmar final verde antes do fechamento |
+| Atlas local anterior | evolução sobre `a1afb90`, preservada em `0c63665`; testes, campanha ativa, renderer e export QA locais | [ATLAS_VIVO.md](ATLAS_VIVO.md), `build/modernization/REPORT.md` e logs locais |
+| Bundle e PRs remotas | cada head auditado tem checks e evidências próprios | inventário de 32 PRs no relato; sucesso individual não certifica a composição |
+| Shipping 2D de setembro/03 | runner `20260903T065739Z-65912`, candidate QA macOS e AVD Android | [SHIPPING_PASS.md](SHIPPING_PASS.md); não certifica o palco Atlas nem a versão nova do plugin |
+| Geometria/payload | derivados do BoardState e protegidos por guarda documental | [PERFORMANCE.md](PERFORMANCE.md); independentes dos tempos de uma máquina |
 
-- Repetir o smoke Android em aparelho físico e validar lifecycle, áudio, temperatura, cutouts,
-  densidades e comportamento fora do AVD.
-- Exercitar gamepad, multitouch e rumble/vibração em hardware real. Os testes atuais usam
-  eventos sintéticos e não comprovam mapeamento específico, latência, ergonomia ou suporte do
-  dispositivo.
-- Fazer audição crítica em caixas/fones e balancear loudness, fadiga, clipping percebido,
-  transições musicais e prioridades de SFX. Áudio dummy/asserções não provam qualidade sonora.
-- Executar playthrough humano completo com o boss ativo e registrar mortes, duração, pontos de
-  frustração, acessibilidade e curva de dificuldade. A rota automatizada não substitui isso.
-- Fazer soak e perfil em aparelhos-alvo. O relatório macOS exportado é válido, mas não substitui
-  frame pacing, consumo, temperatura e throttling em dispositivos Android representativos.
-- Produzir artefatos de distribuição: assinatura Developer ID, notarização e entitlements no
-  macOS; keystore de release, AAB, Play Console e testes de loja no Android. Os pacotes atuais são
-  QA ad-hoc.
-- **Procedência da licença raiz pendente de decisão do mantenedor.** `LICENSE` (1.065 bytes,
-  SHA-256 `daf1b5152a044905…`) corresponde à licença MIT com `Copyright (c) 2026 seina369`
-  que acompanhava o addon `curve2collision` removido pela ADR-0010. A remoção do addon não
-  resolve a titularidade nem define a licença pretendida para o código original do jogo.
-  Preservar avisos de terceiros e esclarecer a licença antes de distribuição. Nenhuma alteração
-  de licença foi feita nesta preparação; isso exige decisão e verificação de direitos.
-- Termos comerciais vigentes das imagens geradas precisam ser confirmados; a proveniência
-  técnica está registrada em `assets/ASSET-PROVENANCE.md`.
-- Há pouco espaço livre no volume. O runner exige 2 GiB para export e 3 GiB antes de iniciar o
-  AVD, mas ainda é recomendável liberar margem adicional antes de repetir os dois pacotes.
-- Uma segunda instância/import pode disputar a porta fixa do daemon Fennara e emitir
-  `AddrInUse`; execute editor/import/export sequencialmente.
+A rota de campanha com chefe, diretor e itens ativos está em
+`tests/integration/boss_active_campaign_playthrough_test.gd`: exige conclusão dos três setores,
+coleta dos quatro tipos de item e reprodução dos replays. Progressões e placares de versões
+anteriores à economia Atlas permanecem históricos; os valores correntes vivem no teste e nos
+logs da árvore validada. A possibilidade de uma rota sem mortes não substitui um playthrough humano.
 
-## Próximo gate recomendado
+M2 é outra prova: desabilita explicitamente chefe/diretor/itens na fixture para isolar território
+e transição. Seu resultado não demonstra a dificuldade nem a cobertura de objetivos da campanha.
+Probes headless não ouvem áudio, não exercitam ergonomia e não medem a GPU do aparelho alvo.
 
-**Release candidate / G3:** validar controles, feedback e performance em hardware-alvo, fazer
-audição crítica, soak e playthrough humano com o chefe ativo, fechar licença, proveniência e
-repositório e então produzir artefatos assinados/notarizados, AAB e validação em loja. O runner
-local verde é pré-condição cumprida, não substituto desses gates.
+## Pendências com impacto de produto
 
-## Reconciliação Atlas Vivo e MCP — 2026-09-08
+- Concluir a validação da composição final e registrar commit/PR/checks/merges reais no relato.
+  A autorização já recebida para integração não é uma afirmação de que todas as ações terminaram.
+- Jogar os três setores em teclado, gamepad e multitouch; registrar mortes por causa, percepção
+  dos avisos, tempo, frustração e compreensão de objetivos. Calibrar por evidência humana.
+- Expandir encontros, arenas, armas/dano ao chefe e variações de campanha com contratos e rotas
+  regressivas. O elenco completo, os 16 encontros e todos os encerramentos de Volfied não estão entregues.
+- Revisar contraste em movimento, arte/animação, acessibilidade e leitura nos tamanhos reais;
+  o fallback 2D e o palco 3D precisam permanecer utilizáveis. Ver [ART_DIRECTION.md](ART_DIRECTION.md).
+- Fazer audição crítica em fones/alto-falantes e testar rumble/vibração reais. Síntese e mix
+  podem ser verificados sem dispositivo, mas isso não aprova loudness, fadiga ou qualidade sonora.
+- Perfilar picos de captura, frame pacing, memória, soak, temperatura e lifecycle em aparelhos
+  representativos. Percentil aprovado não elimina um pico caro; ver PERFORMANCE.
+- Exportar e conferir payload/MCP/runtime da composição final. Os novos GLBs e o plugin 4.0.2
+  não são certificados pelos smokes antigos da versão plana.
+- Produzir distribuição: Developer ID/notarização no macOS, keystore/AAB/Play Console no Android,
+  com seus gates reais. Pacotes locais existentes são QA ad-hoc.
+- **Procedência da licença raiz permanece pendente.** A auditoria histórica do #73 identificou
+  em LICENSE o aviso MIT `Copyright (c) 2026 seina369` que acompanhava curve2collision. Remover
+  o addon não decide a titularidade/licença do código original. Preservar avisos de terceiros
+  e obter decisão do mantenedor antes de distribuição; nenhuma licença foi alterada nesta edição.
+- Confirmar termos comerciais aplicáveis aos assets gerados. A proveniência técnica está em
+  [ASSET-PROVENANCE.md](../assets/ASSET-PROVENANCE.md); presença de hashes não é licença comercial.
 
-Esta árvore incorpora o Atlas Vivo local: simulação determinística 2D, palco 2.5D com GLBs,
-lifecycle, diretor, balizas, itens e replay v4. Preserva também contraste, feedback e
-verificações remotas. Resultados anteriores neste documento descrevem suas árvores datadas;
-a validação corrente e a autoria estão em [Atlas Vivo](ATLAS_VIVO.md).
+Antes de exports grandes, medir espaço disponível e respeitar as verificações dos scripts;
+uma observação antiga de disco cheio não descreve a capacidade atual. Editor/import/export
+precisam ser coordenados para evitar disputa pelo daemon Fennara e artefatos em uso.

@@ -14,6 +14,24 @@ class AudioPauseSpy extends QixAudioDirector:
 		super._set_player_paused(player, value)
 
 
+class MusicPlaybackSpy extends AudioPauseSpy:
+	var play_commands: int = 0
+	var stop_commands: int = 0
+	var playback_running: bool = false
+
+	func _music_is_playing() -> bool:
+		return playback_running
+
+	func _play_music() -> void:
+		play_commands += 1
+		playback_running = true
+
+	func _stop_music() -> void:
+		stop_commands += 1
+		playback_running = false
+		super._stop_music()
+
+
 func test_actor_and_objective_events_have_distinct_semantic_cues() -> void:
 	var expected := {
 		GameEvent.Kind.WALKER_SPAWNED: &"walker_spawn",
@@ -194,3 +212,56 @@ func test_full_atlas_feedback_sync_preserves_domain_checksum_and_event_payloads(
 	eq(director.presentation_state().cached_cues, 3)
 	director.shutdown()
 	director.free()
+
+
+func test_pause_mute_unmute_resume_restarts_stopped_music_through_each_entry_point() -> void:
+	for entry in ["setter", "direct", "sync"]:
+		var director := MusicPlaybackSpy.new()
+		director.play_round_music(0)
+		eq(director.play_commands, 1, "%s: música inicial" % entry)
+		director.clock_msec = 100
+		_change_music_pause(director, entry, true)  # P
+		director.set_enabled(false)                # M
+		eq(director.stop_commands, 1)
+		ok(not director.playback_running)
+		director.set_enabled(true)                 # M, ainda pausado
+		eq(director.play_commands, 1, "%s: religar durante a pausa não inicia áudio" % entry)
+		director.clock_msec = 5100
+		_change_music_pause(director, entry, false) # P
+		eq(director.play_commands, 2, "%s: retomar recria playback encerrado por mute" % entry)
+		ok(director.playback_running)
+		director.sync(null, [], false)
+		eq(director.play_commands, 2, "sync do próximo tick não reinicia música já tocando")
+		# Uma pausa comum conserva o playback e sua posição, sem começar a música de novo.
+		_change_music_pause(director, entry, true)
+		_change_music_pause(director, entry, false)
+		eq(director.play_commands, 2, "%s: pausa simples não reinicia a trilha sonora" % entry)
+		# Permanecer sem som também tem de ser respeitado ao sair da pausa.
+		_change_music_pause(director, entry, true)
+		director.set_enabled(false)
+		_change_music_pause(director, entry, false)
+		eq(director.play_commands, 2, "%s: retomar com áudio desabilitado mantém silêncio" % entry)
+		director.shutdown()
+		director.free()
+
+
+func test_music_loaded_while_paused_starts_only_after_resume() -> void:
+	var director := MusicPlaybackSpy.new()
+	var campaign := load("res://content/campaigns/main_campaign.tres") as CampaignDefinition
+	var session := GameSession.new(campaign)
+	director.ensure_ready()
+	director.apply_pause(true, 0)
+	director.sync(session, [], true)
+	ok(director.presentation_state().music_loaded)
+	eq(director.play_commands, 0, "carregar a rodada durante pausa não começa o playback")
+	director.sync(session, [], false)
+	eq(director.play_commands, 1, "sync retoma o stream carregado durante a pausa")
+	director.shutdown()
+	director.free()
+
+
+func _change_music_pause(director: MusicPlaybackSpy, entry: String, value: bool) -> void:
+	match entry:
+		"setter": director.set_paused(value)
+		"direct": director.apply_pause(value, director.clock_msec)
+		"sync": director.sync(null, [], value)
