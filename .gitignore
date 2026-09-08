@@ -61,3 +61,7 @@ addons/curved_lines_2d/
 # ── Ruído de SO / editor ─────────────────────────────────────────────────────
 .DS_Store
 *.tmp
+
+# Bytecode derivado de Python, em qualquer profundidade.
+__pycache__/
+*.py[cod]
