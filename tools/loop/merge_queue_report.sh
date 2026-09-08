@@ -22,14 +22,15 @@
 # `--order` dentro de `merge_queue_report.sh` porque o #30 está mexendo" nele, e "fundir depois
 # do #30" (`docs/loop/runs/2026-09-05T150119Z.md`). O #30 mesclou; os dois scripts passaram a
 # duplicar a enumeração da fila e a divergir na contagem. A fusão é essa dívida sendo paga.
-set -u
+set -uo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${PROJECT_ROOT}" || exit 1
 
 BASE_REF="${QIX_LOOP_BASE_REF:-origin/main}"
 GODOT_BIN="${QIX_GODOT_BIN:-godot}"
-ORDER_WORKTREE="${QIX_LOOP_ORDER_WORKTREE:-/tmp/qix-merge-order}"
+# O valor configurável é um prefixo: nunca apagar ou reutilizar o caminho recebido.
+ORDER_WORKTREE_PREFIX="${QIX_LOOP_ORDER_WORKTREE:-${TMPDIR:-/tmp}/qix-merge-order}"
 
 # O ledger é editado por *toda* execução do loop, por contrato. Conflito nele é mecânico e
 # esperado; separá-lo do resto é o que torna o relatório legível.
@@ -83,37 +84,51 @@ shared_code_files() {
 # ledger pela base (ele não participa de nenhum teste). Ecoa o caminho do worktree.
 build_worktree() {
   local dir="$1"; shift
-  rm -rf "${dir}"
-  git worktree remove --force "${dir}" 2>/dev/null
+  if [ -e "${dir}" ]; then
+    echo "recuso reutilizar diretório existente: ${dir}" >&2
+    return 1
+  fi
   git worktree add --quiet --detach "${dir}" "${BASE_REF}" || return 1
-  local p
+  local p merge_status
   for p in "$@"; do
-    git -C "${dir}" merge --no-edit --quiet "pr/${p}" >/dev/null 2>&1
+    merge_status=0
+    git -C "${dir}" merge --no-edit --quiet "pr/${p}" >/dev/null 2>&1 || merge_status=$?
     if git -C "${dir}" status --porcelain | grep -q "^UU ${LEDGER_PATH}"; then
       git -C "${dir}" checkout --ours "${LEDGER_PATH}" >/dev/null 2>&1
       git -C "${dir}" add "${LEDGER_PATH}"
     fi
-    if git -C "${dir}" status --porcelain | grep -q '^UU '; then
+    if [ -n "$(git -C "${dir}" diff --name-only --diff-filter=U)" ]; then
       echo "  conflito real (fora do ledger) ao juntar pr/${p}:" >&2
-      git -C "${dir}" status --porcelain | grep '^UU ' | sed 's/^/    /' >&2
+      git -C "${dir}" diff --name-only --diff-filter=U | sed 's/^/    /' >&2
       return 1
     fi
-    git -C "${dir}" commit --no-edit --quiet >/dev/null 2>&1
+    if git -C "${dir}" rev-parse --verify MERGE_HEAD >/dev/null 2>&1; then
+      git -C "${dir}" commit --no-edit --quiet >/dev/null 2>&1 || return 1
+    elif [ "${merge_status}" -ne 0 ]; then
+      echo "  merge falhou sem conflito resolvível: pr/${p}" >&2
+      return "${merge_status}"
+    fi
   done
+  return 0
 }
 
-cmd_verify() {
-  local dir="/tmp/qix-merge-queue-verify"
+cmd_verify() (
+  local scratch dir
+  scratch=$(mktemp -d "${TMPDIR:-/tmp}/qix-merge-verify.XXXXXX") || return 1
+  dir="${scratch}/worktree"
+  trap 'git worktree remove --force "${dir}" >/dev/null 2>&1 || :; rmdir -- "${scratch}" 2>/dev/null || :' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   echo "== Verificação: PRs $* juntos sobre ${BASE_REF} =="
   build_worktree "${dir}" "$@" || { echo "não foi possível montar a árvore combinada"; return 1; }
   if ! command -v "${GODOT_BIN}" >/dev/null 2>&1 && [ ! -x "${GODOT_BIN}" ]; then
-    echo "Godot não encontrado em '${GODOT_BIN}'; defina QIX_GODOT_BIN. Árvore montada em ${dir}."
+    echo "Godot não encontrado em '${GODOT_BIN}'; defina QIX_GODOT_BIN. Nenhuma verificação foi executada."
     return 2
   fi
   "${GODOT_BIN}" --headless --path "${dir}" --import >/dev/null 2>&1
   "${GODOT_BIN}" --headless --audio-driver Dummy --path "${dir}" \
     --script res://tests/run_tests.gd 2>&1 | grep -E '^(ok|FAIL)|testes,' | grep -vE '^ok'
-}
+)
 
 # O mapa de posse responde à pergunta que o passo 2 do protocolo do ledger faz antes de escolher
 # um item: "o arquivo que eu preciso tocar já tem dono na fila?". Sem ele a resposta custa um
@@ -175,7 +190,7 @@ cmd_claims() {
 # Resolver aqui apagaria o achado. Não resolve nada, por isso: reconciliar o ledger por união
 # automática é decisão fechada contra (`docs/LOOP_LEDGER.md`, "Ao resolver conflito de
 # documentação").
-cmd_order() {
+cmd_order() (
   fetch_pr_heads
   local prs
   # Com argumentos, testa a ordem proposta **verbatim** — inclusive um PR fora da fila, que é
@@ -184,10 +199,13 @@ cmd_order() {
   if [ "$#" -gt 0 ]; then prs="$*"; else prs="$(pr_numbers)"; fi
   [ -n "${prs// /}" ] || { echo "nenhum PR na fila"; return 0; }
 
-  rm -rf "${ORDER_WORKTREE}"
-  git worktree remove --force "${ORDER_WORKTREE}" 2>/dev/null
-  git worktree prune
-  git worktree add --quiet --detach "${ORDER_WORKTREE}" "${BASE_REF}" || return 1
+  local scratch order_worktree
+  scratch=$(mktemp -d "${ORDER_WORKTREE_PREFIX}.XXXXXX") || return 1
+  order_worktree="${scratch}/worktree"
+  trap 'git worktree remove --force "${order_worktree}" >/dev/null 2>&1 || :; rmdir -- "${scratch}" 2>/dev/null || :' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  git worktree add --quiet --detach "${order_worktree}" "${BASE_REF}" || return 1
 
   echo "== Ordem de merge sobre ${BASE_REF} =="
   echo "Fila: $(echo "${prs}" | tr '\n' ' ')"
@@ -195,14 +213,14 @@ cmd_order() {
 
   local clean=0 blocked="" pr files
   for pr in ${prs}; do
-    if git -C "${ORDER_WORKTREE}" merge --no-edit --quiet "pr/${pr}" >/dev/null 2>&1; then
+    if git -C "${order_worktree}" merge --no-edit --quiet "pr/${pr}" >/dev/null 2>&1; then
       echo "  OK        #${pr}"
       clean=$((clean + 1))
     else
-      files=$(git -C "${ORDER_WORKTREE}" diff --name-only --diff-filter=U | tr '\n' ' ')
+      files=$(git -C "${order_worktree}" diff --name-only --diff-filter=U | tr '\n' ' ')
       echo "  CONFLITO  #${pr}  em: ${files}"
       blocked="${blocked} ${pr}"
-      git -C "${ORDER_WORKTREE}" merge --abort 2>/dev/null
+      git -C "${order_worktree}" merge --abort 2>/dev/null
     fi
   done
 
@@ -216,9 +234,7 @@ cmd_order() {
     echo "  A fila inteira entra limpa."
   fi
 
-  git worktree remove --force "${ORDER_WORKTREE}" 2>/dev/null
-  git worktree prune
-}
+)
 
 cmd_report() {
   fetch_pr_heads

@@ -50,5 +50,7 @@ samples/
 
 # Bytecode do Python: `tools/ci/` tem testes que o portão roda, e rodá-los localmente
 # deixa `__pycache__/` na árvore. Binário gerado não se versiona.
+
+# Bytecode derivado de Python, em qualquer profundidade.
 __pycache__/
-*.pyc
+*.py[cod]
