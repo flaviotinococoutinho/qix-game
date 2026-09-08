@@ -42,8 +42,8 @@ func test_extra_ticks_in_the_terminal_phase_never_append_a_second_record() -> vo
 	for _tick in 4:
 		session.step(MoveIntent.none())
 	eq(session.phase, GameSession.Phase.ROUND_CLEAR, "ainda na transição")
-	# Quem garante isto é a máquina de fases, não `_current_archived`: arquivar já tirou a sessão
-	# de PLAYING, e só PLAYING arquiva. Medido — trocar o guarda por `if false:` mantém tudo verde.
+	# Quem garante isto é a máquina de fases: arquivar já tirou a sessão de PLAYING, e só PLAYING
+	# arquiva. O booleano `_current_archived` que duplicava essa regra saiu — ver o teste abaixo.
 	eq(session.records.size(), 1, "uma entrada por rodada")
 	eq(session.records[0], archived, "e é a mesma entrada, não uma cópia nova")
 
@@ -80,6 +80,37 @@ func test_records_size_counts_finished_attempts_not_visited_rounds() -> void:
 	eq(session.records.size(), 2, "campanha completa: uma entrada por rodada encerrada")
 	session.restart_campaign()
 	eq(session.records.size(), 0, "restart_campaign esvazia a lista")
+
+
+## O que o antigo `_current_archived` fingia proteger, agora medido em vez de absorvido: nenhum
+## tick pode acrescentar mais de um registro, e um registro só nasce de um tick que **começou**
+## em PLAYING. Antes, um segundo arquivamento no mesmo tick era silenciosamente descartado pelo
+## booleano; hoje ele aparece como falha aqui, que é onde um defeito da máquina de fases deve doer.
+func test_a_record_only_appears_on_a_step_that_started_in_playing() -> void:
+	var sessions: Array[GameSession] = [
+		GameSession.new(_campaign(2, 3)),
+		GameSession.new(_losing_campaign()),
+	]
+	for session: GameSession in sessions:
+		var terminal: Array[int] = [GameSession.Phase.GAME_OVER, GameSession.Phase.CAMPAIGN_COMPLETE]
+		var archived_from_playing := 0
+		for _tick in 64:
+			if terminal.has(session.phase):
+				break
+			var phase_before := session.phase
+			var before := session.records.size()
+			session.step(MoveIntent.make(MoveIntent.Dir.DOWN, true))
+			var appended := session.records.size() - before
+			ok(appended == 0 or appended == 1, "um tick arquiva no máximo uma tentativa")
+			if appended == 1:
+				eq(
+					phase_before,
+					GameSession.Phase.PLAYING,
+					"registro nasceu de um tick que não começou em PLAYING",
+				)
+				archived_from_playing += 1
+		ok(archived_from_playing > 0, "a rota precisa encerrar alguma tentativa para medir algo")
+		eq(session.records.size(), archived_from_playing, "toda entrada veio de um desses ticks")
 
 
 func _campaign(intro_ticks: int, clear_ticks: int) -> CampaignDefinition:

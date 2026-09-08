@@ -1,8 +1,9 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-07 · commit `b9b22cb` · Godot 4.7.2-stable, Linux headless
-> **Alcance:** preparação da PR #58 sobre `ca745780`, com resultados vinculados à árvore nos logs do gate.
-> **Resultado:** 262 testes, 12719 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
+> **Verificado em** 2026-09-08 · commit `6136ebb` · Godot 4.7.2-stable, Linux headless (sandbox)
+> **Alcance:** suíte e rota M2 reexecutadas nesta árvore; só a contagem e a linha do contrato de
+> `session.records` foram atualizadas. As evidências de shipping e macOS abaixo continuam históricas.
+> **Resultado:** 263 testes, 12754 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
 > Exportação, assinatura, Android físico e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
@@ -11,10 +12,10 @@
 python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado atual: **262 testes, 12719 asserções, 0 falhas** — árvore preparada sobre
-`ca745780`; resultados de outras branches não são intercambiáveis.
+Resultado atual: **263 testes, 12754 asserções, 0 falhas** — árvore sobre `6136ebb`;
+resultados de outras branches não são intercambiáveis.
 
-**Inventário da suíte (derivado, não digitado):** 49 arquivos de teste · 262 casos `test_*`.
+**Inventário da suíte (derivado, não digitado):** 49 arquivos de teste · 263 casos `test_*`.
 
 A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
 de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
@@ -69,7 +70,8 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 262 testes, 12719 asserções, 0 falhas, sem warning do jogo sobre `cba520a`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
+| contrato de `session.records` | provado por mutação em 2026-09-08: duplicar a chamada de `_archive_current_round` deixa **7 testes vermelhos**, entre eles `test_a_record_only_appears_on_a_step_that_started_in_playing`; com a árvore íntegra, 0 falhas |
+| log final da suíte | 263 testes, 12754 asserções, 0 falhas nesta árvore; 262/12719 sem warning do jogo sobre `cba520a`; parser Metal HUD 10/10 no run de macOS de 2026-09-03, não reexecutado na nuvem |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz do shipping externo

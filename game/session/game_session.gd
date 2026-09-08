@@ -18,10 +18,13 @@ var replay: ReplayLog
 ##    da simulação. Escrever `phase` de fora — pôr a sessão em `ROUND_CLEAR` num teste, por
 ##    exemplo — **não** arquiva nada: a fase é consequência do arquivamento, não a sua causa.
 ##  - Uma entrada por rodada, e quem garante isso é a máquina de fases: arquivar tira a sessão de
-##    `PLAYING` no mesmo tick, e só `PLAYING` arquiva. `_current_archived` é cinto sobre suspensório
-##    — hoje **nenhum caminho o alcança** (trocá-lo por `if false:` não derruba um teste sequer,
-##    medido em 2026-09-06). Mantido porque as duas chamadas de `_archive_current_round` são
-##    mutuamente exclusivas por construção, e isso é fácil de quebrar sem perceber.
+##    `PLAYING` no mesmo tick, e só `PLAYING` arquiva. Havia aqui um `_current_archived` de cinto
+##    sobre suspensório; nenhum caminho o alcançava (medido em 2026-09-06 e reconfirmado em
+##    2026-09-08). Um guarda inalcançável não protege: ele **esconde** o dia em que a máquina de
+##    fases quebrar, transformando um registro duplicado num silêncio. A proteção agora é a
+##    pré-condição declarada em `_archive_current_round` mais
+##    `session_records_contract_test.gd::test_a_record_only_appears_on_a_step_that_started_in_playing`,
+##    que percorre a campanha inteira e reprova o segundo registro em vez de o absorver.
 ##  - Vitória e derrota arquivam igual; `RoundRunRecord.completed` é o que as distingue.
 ##  - `restart_campaign()` esvazia a lista.
 ##
@@ -29,7 +32,6 @@ var replay: ReplayLog
 ## rodadas visitadas. Durante `ROUND_INTRO` e `PLAYING` da rodada N (1-based), vale
 ## `records.size() == N - 1`.
 var records: Array[RoundRunRecord] = []
-var _current_archived: bool = false
 
 
 func _init(definition: CampaignDefinition) -> void:
@@ -137,16 +139,17 @@ func _start_current_round(start_state: RoundStartState) -> void:
 		start_state,
 	)
 	replay = ReplayLog.start(simulation)
-	_current_archived = false
 	if campaign.intro_ticks > 0:
 		_enter_phase(Phase.ROUND_INTRO, campaign.intro_ticks)
 	else:
 		_enter_phase(Phase.PLAYING, 0)
 
 
+## Pré-condição, não conveniência: só a rodada em curso e só a partir de `PLAYING`. É esta a
+## regra que dá a "uma entrada por rodada" — declará-la aqui deixa o dia em que ela quebrar
+## barulhento, em vez de o converter num registro a mais que ninguém nota.
 func _archive_current_round(completed: bool) -> void:
-	if _current_archived:
-		return
+	assert(phase == Phase.PLAYING, "só a fase PLAYING arquiva: arquivar é o que a encerra")
 	var record := RoundRunRecord.new()
 	record.round_id = current_content().round_id
 	record.round_index = round_index
@@ -158,7 +161,6 @@ func _archive_current_round(completed: bool) -> void:
 	record.final_score = simulation.score
 	record.final_lives = simulation.lives
 	records.append(record)
-	_current_archived = true
 
 
 func _enter_phase(next_phase: int, duration_ticks: int) -> void:

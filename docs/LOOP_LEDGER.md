@@ -8,6 +8,9 @@
 > Mérito visual, escuta, Android físico e exportação/assinatura não foram validados.
 
 **Snapshot da preparação:** 30 PRs abertas, #57–#86; `main` em `ca745780`.
+**Releitura de 2026-09-08 (execução `2026-09-08T040000Z`):** #57 e #58 mesclaram; `main` está em
+`6136ebb`; a fila aberta é de **32 PRs, #59–#90**. Ou seja: a fila cresceu enquanto drenava.
+Este número é uma medição datada, não um contador — consulte o GitHub antes de agir.
 Nenhuma aprovação formal ou merge é inferido de suíte verde. A revisão pela mesma conta autora
 é recusada pelo GitHub; registrar revisão técnica não substitui a aprovação de outra identidade.
 Consultar a fila real antes de agir: este snapshot não é um contador automático.
@@ -122,10 +125,12 @@ para o inventário da **árvore final**, não somar números copiados das descri
 
 - [x] **Contrato de `session.records` (#49, via #55).** Só tentativas realmente terminadas
   geram registros; forçar uma fase não equivale a executar a transição.
-- [ ] **Decidir `GameSession._current_archived` (#58).** O achado havia sido perdido numa
-  reconciliação. A máquina de fases já limita o arquivamento; trocar a guarda por `false`
-  não era distinguido pela suíte histórica. *Pronto:* remover a redundância ou acrescentar
-  um caso legítimo que exercite sua função, sem mudar silenciosamente a máquina de fases.
+- [x] **Decidir `GameSession._current_archived` (#58).** Decidido em 2026-09-08 pela remoção:
+  o campo saiu, `_archive_current_round()` passou a declarar a pré-condição real
+  (`assert(phase == Phase.PLAYING)`) e o contrato virou medição —
+  `test_a_record_only_appears_on_a_step_that_started_in_playing` reprova o segundo registro em
+  vez de o absorver. Prova por mutação: duplicar a chamada deixa 7 testes vermelhos.
+  Ver `docs/loop/runs/2026-09-08T040000Z.md`.
 - [ ] **Decidir o speed-up reservado.** `speedup_active` não tem produtor normal; os parâmetros
   ainda afetam o hash de regras. *Pronto:* decisão explícita e testes de comportamento, ou ADR
   de remoção com avaliação de incompatibilidade de replays. Esta preparação não decide isso.
