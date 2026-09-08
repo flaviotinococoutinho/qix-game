@@ -127,6 +127,12 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 35 PRs exigiram quatro esforços, dois superados. A incompatibilidade #25×#50 era semântica:
 um PR removeu `GameSession.transition_progress()` e outro ainda o chamava. Já o #67 precisa
 aceitar o estado final legítimo da ADR-0010: zero pastas `a-remover`. #78 contém essa resolução.
+**Portada para o próprio #67 em 2026-09-08**, para que a guarda não dependa da ordem de merge:
+o head do #67 traz agora `EMPTY_TOTALS_ROW` e a correção de `not doomed.is_empty()` idênticas às
+do #78, medidas nos dois sentidos (as sete removidas com o fecho escrito ficam **verdes**; com o
+plural sobrevivente ficam **vermelhas**). A guarda deixou de proibir o seu próprio fim. Continua
+sem forma o caso de **uma** pasta restante, alcançável só mesclando as sete uma a uma — está dito
+no comentário de `NUMERALS`, e quem mesclar a sexta escreve o singular.
 As medições #76, #80 e #86 demonstraram outro acoplamento: a guarda #69 exige atualizar a matriz
 para o inventário da **árvore final**, não somar números copiados das descrições dos PRs.
 

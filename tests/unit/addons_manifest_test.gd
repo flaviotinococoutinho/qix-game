@@ -48,9 +48,12 @@ const TOTALS_ROW := "(?m)^Somadas, as ([a-zç]+) pastas `a-remover` ocupam ~[0-9
 ## mesma falha de acoplamento que o #69 tem na matriz de teste, e não a de números desatualizados.
 const EMPTY_TOTALS_ROW := "(?m)^Nenhuma pasta `a-remover` resta"
 
-## Só as formas que a frase pode assumir enquanto restar mais de uma pasta. Chegando a uma ou a
-## zero, o plural deixa de servir e a frase tem de ser reescrita — o teste falha e pede isso, em
-## vez de aceitar em silêncio uma concordância errada.
+## Só as formas que a frase pode assumir enquanto restar mais de uma pasta. Zero tem frase própria
+## (`EMPTY_TOTALS_ROW`, acima) e é o estado de chegada da ADR-0010. **Uma** continua sem forma: o
+## plural deixa de servir, `NUMERALS` começa em `duas`, e o teste falha a pedir a reescrita em vez
+## de aceitar em silêncio uma concordância errada. Isso só é alcançável mesclando as sete remoções
+## uma a uma — a integração vai de sete a zero de um golpe e nunca passa por aqui. Quem mesclar a
+## sexta escreve a frase no singular e acrescenta a forma que usou.
 const NUMERALS := {
 	"duas": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6, "sete": 7,
 }
