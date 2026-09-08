@@ -61,11 +61,18 @@ const ENVIRONMENT_TOKENS: Array[String] = [
 	"Apple M2",
 ]
 
-## Marcas de contagem derivada da árvore desta branch. "árvore" é a palavra que o projeto já usa
-## em `TEST_MATRIX.md` para essa distinção.
+## Marcas de contagem derivada da árvore desta branch. Cada marca precisa nomear **esta** árvore:
+## a palavra "árvore" sozinha não é declaração de procedência, é vocabulário corrente do projeto.
+## Aceitá-la sozinha abria a porta que esta guarda existe para fechar — uma contagem de outra
+## medição passava verde só por citar a árvore de onde veio ("naquela árvore", "na árvore Atlas
+## anterior"). Medido: com `"árvore"` na lista, a linha `134 testes, 11.489 asserções, 0 falhas
+## naquela árvore` — os números de macOS de 2026-09-03, sem ambiente nem data — atravessava a
+## suíte inteira sem uma acusação.
 const DERIVED_TOKENS: Array[String] = [
-	"árvore",
-	"derivad",
+	"desta árvore",
+	"árvore desta branch",
+	"derivada da árvore",
+	"derivado da árvore",
 ]
 
 
@@ -112,6 +119,58 @@ func test_the_rule_separates_a_stamped_line_from_a_bare_one() -> void:
 
 	var derived := bare.replace("0 falhas", "0 falhas desta árvore")
 	ok(declares_provenance(derived), "contagem derivada da árvore deveria ser aceita sem data")
+
+
+## A porta da contagem derivada precisa nomear **esta** árvore. Citar a árvore de onde o número
+## veio é o contrário de declarar procedência: é a própria doença, com a palavra certa dentro.
+func test_naming_another_tree_is_not_a_derived_claim() -> void:
+	var bare := "| suíte headless | 134 testes, 11.489 asserções, 0 falhas | %s |"
+	ok(
+		not declares_provenance(bare % "medida naquela árvore"),
+		"citar outra árvore não é declarar que o número sai desta",
+	)
+	ok(
+		not declares_provenance("- Na árvore Atlas anterior: 260 testes, 13.598 asserções"),
+		"a árvore Atlas é outra medição, de outro ambiente e outra data",
+	)
+	ok(
+		declares_provenance(bare % "árvore desta branch"),
+		"a contagem derivada desta árvore continua aceita sem data",
+	)
+	ok(
+		declares_provenance(bare % "número derivado da árvore, não digitado"),
+		"a redação que TEST_MATRIX.md já usa continua aceita",
+	)
+
+
+## O alcance é `docs/*.md` no topo, e a varredura não desce. Isso é uma decisão — `docs/loop/` e
+## `docs/decisions/` estão fora com motivo escrito no cabeçalho deste arquivo — mas até aqui era
+## uma decisão que ninguém tinha declarado: `DirAccess.get_files_at()` simplesmente não recursa,
+## então *qualquer* pasta nova de `docs/` nascia fora do alcance em silêncio. Uma pasta de
+## documento vivo criada amanhã ficaria sem guarda parecendo guardada.
+func test_every_docs_subdirectory_is_scanned_or_declared_out_of_scope() -> void:
+	var declared := {
+		"loop": "histórico append-only; cada relato é carimbado pelo próprio arquivo",
+		"decisions": "uma ADR é aceita numa data, não remedida; a guarda de cabeçalho já a cobre",
+		"evidence": "saída bruta de execução, não documento lido por humano em busca de contagem",
+		"superpowers": "especificações de sessão, datadas no nome do arquivo",
+	}
+	var found := Array(DirAccess.get_directories_at(LIVING_DOCS_DIR))
+	found.sort()
+	for name in found:
+		ok(
+			declared.has(String(name)),
+			(
+				"docs/%s/ não é varrida por esta guarda e não consta na lista de fora de propósito. "
+				+ "Se é documento vivo, o alcance precisa descer até ela; se não é, escreva aqui o "
+				+ "motivo. Ficar de fora sem motivo escrito é a meia cobertura que parece cobertura."
+			) % name,
+		)
+	for name in declared:
+		ok(
+			found.has(name),
+			"docs/%s/ consta como fora de propósito mas não existe mais — remova a entrada" % name,
+		)
 
 
 func test_prose_and_continuation_lines_stay_out_of_scope() -> void:

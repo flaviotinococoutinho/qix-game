@@ -2,7 +2,7 @@
 
 > **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, Linux headless (sandbox de nuvem)
 > **Alcance:** suíte explícita do projeto reexecutada nesta branch, sobre a base integrada (Atlas + os 33 heads #59–#91). Godot AI 4.0.2 e pipeline Blender não foram reexercitados aqui.
-> **Resultado:** 407 testes, 19029 asserções, 0 falhas na árvore desta branch. O inventário abaixo é conferido pelo runner.
+> **Resultado:** 409 testes, 19041 asserções, 0 falhas na árvore desta branch. O inventário abaixo é conferido pelo runner.
 > Exportação, assinatura, Android físico e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
@@ -11,10 +11,10 @@
 python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado da suíte integrada: **407 testes, 19029 asserções, 0 falhas** — árvore desta branch,
+Resultado da suíte integrada: **409 testes, 19041 asserções, 0 falhas** — árvore desta branch,
 sobre `5318d0a`, em Linux headless; resultados de outras branches não são intercambiáveis.
 
-**Inventário da suíte (derivado, não digitado):** 75 arquivos de teste · 407 casos `test_*`.
+**Inventário da suíte (derivado, não digitado):** 75 arquivos de teste · 409 casos `test_*`.
 
 A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
 de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
@@ -71,7 +71,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 407 testes, 19029 asserções, 0 falhas na árvore desta branch; runner explícito com JSON e inspeção de diagnósticos em 2026-09-08 |
+| log final da suíte | 409 testes, 19041 asserções, 0 falhas na árvore desta branch; runner explícito com JSON e inspeção de diagnósticos em 2026-09-08 |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz histórica do shipping externo — setembro/03

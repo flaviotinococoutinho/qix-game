@@ -41,7 +41,7 @@ ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamen
   IDs/pools, ameaças justas, balizas, quatro itens, bônus, campanha/replay v4, GLBs originais,
   palco 2.5D, F2/F3/F4 e feedback. A decisão corrente é a
   [ADR-0014](decisions/ADR-0014-atlas-lifecycle-depth-stage.md); ADR-0012 continua sendo cursor ink.
-- Na árvore Atlas anterior foram registrados 260 testes / 13.598 asserções / zero falhas e
+- Na árvore Atlas anterior, em macOS, 2026-09-07, foram registrados 260 testes / 13.598 asserções / zero falhas e
   20 verificações em renderer real. A evidência detalhada está em [ATLAS_VIVO.md](ATLAS_VIVO.md).
   Esses números não são o inventário nem o resultado da composição atual.
 - Não restaurar goldens v3 ou caminhos anteriores à taxonomia `game/simulation/{board,enemies,
@@ -231,7 +231,18 @@ para o inventário da **árvore final**, não somar números copiados das descri
   nove docs vivos, todas verdadeiras, zero falso positivo. Relato em
   `docs/loop/runs/2026-09-08T070425Z.md`.
   A guarda de inventário ficou vermelha com o arquivo novo e a matriz foi **remedida**, não
-  copiada: 407 testes / 19.029 asserções / 0 falhas na árvore desta branch, Linux headless.
+  copiada: 409 testes / 19.041 asserções / 0 falhas na árvore desta branch, Linux headless.
+  **Revisão de 2026-09-08T16:00Z, na mesma branch:** a porta da contagem derivada aceitava a
+  palavra `árvore` sozinha, e com isso `134 testes, 11.489 asserções, 0 falhas naquela árvore` —
+  os números de macOS de 2026-09-03, sem ambiente nem data — atravessava a suíte **verde**.
+  Citar a árvore de onde o número veio é o contrário de declarar procedência: é a doença, com a
+  palavra certa dentro. As marcas passaram a nomear **esta** árvore, e a linha viva da árvore
+  Atlas neste próprio arquivo — que passava pelo mesmo buraco — foi carimbada. A varredura
+  também não descia para as quatro subpastas de `docs/`, e o cabeçalho da guarda só declarava
+  duas: as quatro agora constam com motivo, e uma pasta nova fica vermelha até alguém decidir.
+  *Continua fora do alcance:* a guarda de inventário confere casos e arquivos contra a árvore,
+  mas **não** as asserções — nesta execução `19.044` passou verde antes de a medição dizer
+  `19.041`. Fechar isso mudaria o custo de todo PR que mexe em teste; é decisão do mantenedor.
 
 ### P3 — experiência e estética
 
