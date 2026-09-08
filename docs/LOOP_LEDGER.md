@@ -1,10 +1,24 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-08 · commit `6d23de4` · inspeção Git e integração local em andamento
-> **Alcance:** fila observada de **32 PRs abertas, #59–#90**, `main` em `6136ebb`.
-> Atlas Vivo (`0c63665`) e Godot AI 4.0.2 (`6d23de4`) estão preservados em commits locais.
-> A branch `integrate/atlas-mcp-20260908` recebe o bundle #78 (`3c9724f`) e deltas úteis.
-> Suíte, renderer/export da composição final e merges no GitHub estão **PENDENTES** nesta edição.
+> **Verificado em** 2026-09-08 · commit `3f2d96e` · Godot 4.7.2-stable, Linux headless (nuvem)
+> **Alcance:** a suíte e a rota M2 foram **corridas sobre a árvore integrada** e o resultado está
+> abaixo — era isto que a edição anterior deste cabeçalho declarava `PENDENTE`. A fila foi
+> remedida contra a API do GitHub às 05:35Z: **0 PRs abertos** (o #92 resolveu #59–#91), e não
+> as 32 abertas que o cabeçalho anterior observava. `main` está em `3f2d96e`, não em `6136ebb`.
+> **Continua sem verificação:** renderer/export da composição final (precisa de GPU e SDKs),
+> mérito visual, áudio físico e Android real.
+>
+> ```
+> $G --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd
+> → 404 testes, 19009 asserções, 0 falhas, 13185 ms
+> $G --headless --path . --script res://tools/verify_m2_capture_route.gd
+> → permille 179 → 358 → 493 → 780 → 825 em cinco capturas; abre a rodada 2
+> ```
+>
+> A rota bate com o contrato do `CLAUDE.md` (17,9 → 82,5 %) **depois** da mudança de taxonomia
+> para `game/simulation/{board,enemies,player,director,objectives,time,scoring,replay}`: a
+> reorganização não moveu a rota nem os checksums fixados — `replay_checksum_golden_test.gd`
+> passa nos cinco casos, incluindo `test_pinned_replays_still_reproduce_bit_exact`.
 
 O usuário autorizou explicitamente nesta sessão a modernização, auditoria, revisão, correções,
 integração e merges das PRs. Esta execução cumpre esse escopo amplo: a regra rotineira de um
