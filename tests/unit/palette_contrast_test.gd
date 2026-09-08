@@ -8,6 +8,7 @@ extends TestCase
 
 const PaletteContrast := preload("res://tools/palette_contrast.gd")
 const CAMPAIGN_PATH := "res://content/campaigns/main_campaign.tres"
+const SHADER_PATH := "res://game/board/board_reveal.gdshader"
 const EPSILON := 0.005
 
 
@@ -64,19 +65,113 @@ func test_cada_dicromacia_colapsa_o_eixo_que_lhe_cabe() -> void:
 func test_swatches_seguem_as_modulacoes_do_shader() -> void:
 	var visual := RoundVisualDefinition.new()
 	var swatches: Dictionary = PaletteContrast.rendered_swatches(visual)
-	eq(swatches["FREE"].size(), 2, "FREE tem os dois extremos da scanline")
+	# FREE cruza três modulações — scanline, poço e grade —, então são oito cantos, não dois.
+	eq(swatches["FREE"].size(), 8, "FREE cruza scanline × poço × grade")
 	eq(swatches["BOUNDARY"].size(), 2, "BOUNDARY tem os dois extremos do glint")
 	eq(swatches["TRAIL"].size(), 2, "TRAIL tem os dois extremos do pulso")
 	eq(swatches["THREAT"].size(), 1, "THREAT é desenhado sem modulação pelo EnemyView")
-	ok(
-		_close(swatches["FREE"][0].g, visual.free_color.g * 0.92),
-		"extremo escuro de FREE usa o fator 0.92 do shader",
-	)
 	ok(
 		_close(swatches["BOUNDARY"][0].g, visual.boundary_color.g * 0.86),
 		"extremo escuro de BOUNDARY usa o fator 0.86 do shader",
 	)
 	eq(swatches["TRAIL"][1], visual.trail_hot_color, "extremo quente de TRAIL é trail_hot_color")
+
+
+func test_o_envelope_de_free_cobre_os_dois_extremos_que_o_shader_desenha() -> void:
+	# O erro que este teste existe para impedir é o que a medição carregou até 2026-09-08: afirmar
+	# "como o shader desenha" enquanto se aplicava só a scanline. O canal verde basta para provar os
+	# dois cantos, porque poço e grade agem em todos os canais.
+	var visual := RoundVisualDefinition.new()
+	var green := visual.free_color.g
+	var darkest := INF
+	var brightest := -INF
+	for swatch in PaletteContrast.free_swatches(visual.free_color):
+		darkest = minf(darkest, swatch.g)
+		brightest = maxf(brightest, swatch.g)
+	var well_floor: float = (
+		PaletteContrast.FREE_WELL_BASE + PaletteContrast.FREE_WELL_SPAN * (1.0 - sqrt(0.5))
+	)
+	ok(
+		_close(darkest, green * 0.92 * well_floor),
+		"canto escuro de FREE = scanline mínima × poço do canto (%.5f)" % darkest,
+	)
+	ok(
+		_close(brightest, green + PaletteContrast.FREE_GRID_ADD.y),
+		"canto claro de FREE = cor autorada + grade saturada (%.5f)" % brightest,
+	)
+	# A direção do erro importa: um envelope que não incluísse o canto claro devolveria razões
+	# **maiores** do que o jogo entrega, que é exatamente o otimismo que se está removendo.
+	ok(brightest > green, "o canto claro precisa ser mais claro que a cor autorada")
+	ok(darkest < green * 0.92, "o canto escuro precisa ser mais escuro que só a scanline")
+
+
+func test_nenhum_numero_do_ramo_free_do_shader_fica_fora_da_medicao() -> void:
+	# Guarda de deriva, não de valor. `well` e `grade` moraram no shader por meses sem que a medição
+	# soubesse deles, porque nada obrigava alguém a reler o shader ao mexer nas constantes. Aqui cada
+	# literal do ramo FREE precisa constar da tabela abaixo com o motivo escrito — e uma entrada
+	# órfã também fica vermelha, para que a tabela não vire um cemitério de números que saíram.
+	var declared := {
+		"0.92": "piso da scanline; `PaletteContrast.FREE_SCAN[0]`",
+		"0.08": "amplitude da scanline: 0.92 + 0.08 fecha em 1.0, o topo de `FREE_SCAN`",
+		"0.5": "meio período da scanline e centro do UV/da célula da grade — geometria, não brilho",
+		"24.0": "período da grade em células lógicas — geometria, não brilho",
+		"1.0": "topo normalizado de `grid`, de `well` e da scanline",
+		"0.0": "piso do `smoothstep` da grade",
+		"0.32": "largura do traço da grade — geometria, não brilho",
+		"0.84": "base do poço; `PaletteContrast.FREE_WELL_BASE`",
+		"0.16": "amplitude do poço; `PaletteContrast.FREE_WELL_SPAN`",
+		"0.006": "grade somada no canal R; `PaletteContrast.FREE_GRID_ADD.x`",
+		"0.012": "grade somada no canal G; `PaletteContrast.FREE_GRID_ADD.y`",
+		"0.016": "grade somada no canal B; `PaletteContrast.FREE_GRID_ADD.z`",
+	}
+	var found := _free_branch_literals()
+	ok(not found.is_empty(), "o ramo FREE do shader não rendeu nenhum literal — leitura falhou?")
+	for literal in found:
+		ok(
+			declared.has(literal),
+			(
+				"o ramo FREE de board_reveal.gdshader usa %s, que a medição não conhece: "
+				+ "ou ele entra no envelope de `free_swatches`, ou entra nesta tabela com o motivo."
+			) % literal,
+		)
+	for literal in declared:
+		ok(
+			found.has(literal),
+			"%s consta como literal do ramo FREE mas sumiu do shader: entrada órfã" % literal,
+		)
+	# E os três que carregam brilho não podem só estar declarados: precisam ser os que a medição usa.
+	eq(float(PaletteContrast.FREE_SCAN[0]), 0.92, "FREE_SCAN[0] acompanha o shader")
+	eq(PaletteContrast.FREE_WELL_BASE, 0.84, "FREE_WELL_BASE acompanha o shader")
+	eq(PaletteContrast.FREE_WELL_SPAN, 0.16, "FREE_WELL_SPAN acompanha o shader")
+	eq(
+		PaletteContrast.FREE_GRID_ADD,
+		Vector3(0.006, 0.012, 0.016),
+		"FREE_GRID_ADD acompanha o shader",
+	)
+
+
+## Literais do ramo FREE, mais a linha `scan` que ele consome. Devolve as grafias como estão no
+## shader: comparar texto evita discutir formatação de `float`.
+func _free_branch_literals() -> Dictionary:
+	var source := FileAccess.get_file_as_string(SHADER_PATH)
+	if source.is_empty():
+		fail("shader ausente ou ilegível em " + SHADER_PATH)
+		return {}
+	var scan_start := source.find("float scan =")
+	var branch_start := source.find("if (state < 0.5) {")
+	var branch_end := source.find("} else if", branch_start)
+	if scan_start < 0 or branch_start < 0 or branch_end < 0:
+		fail("board_reveal.gdshader mudou de forma: ramo FREE não localizado")
+		return {}
+	var scan_line := source.substr(scan_start, source.find(";", scan_start) - scan_start)
+	var branch := source.substr(branch_start, branch_end - branch_start)
+	var regex := RegEx.new()
+	regex.compile("[0-9]+\\.[0-9]+")
+	var result := {}
+	for text in [scan_line, branch]:
+		for match_result in regex.search_all(text):
+			result[match_result.get_string()] = true
+	return result
 
 
 func test_paleta_padrao_e_rodadas_autoradas_nao_regridem() -> void:

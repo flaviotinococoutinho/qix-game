@@ -129,6 +129,11 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
+  **Contagem parcial de 2026-09-08:** as execuções de 08:00, 09:00, 10:00, 11:00, 12:00, 15:00,
+  16:00 e 17:00Z somam **oito seguidas sem tocar `game/`, `ui/`, `app/` ou `content/`** — a de
+  17:00Z chegou perto (mediu o shader do campo) e ainda assim mudou só `tools/`, `tests/` e
+  `docs/`. O teto de dois PRs empurra para meta-trabalho: com a fila cheia, revisar e medir é o
+  que sobra. Isso é dado para a decisão de cadência acima, não desculpa.
 - [x] **Unificar relatórios da fila (#71, via #92).** `merge_queue_report.sh --order` substitui
   `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
   relatório de superfície, cuja pergunta é diferente. Mudança integrada e CI verde no head `9d02d6f`.
@@ -247,6 +252,19 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   em `_initialize()` não reproduz sua geometria final.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
   *Pronto:* decisão visual, catracas atualizadas e confirmação numa tela, sem piorar legibilidade.
+- [~] **O envelope de `FREE` não era o que o shader desenha (achado de 2026-09-08T17:00Z).**
+  `PaletteContrast.rendered_swatches` aplicava só a scanline; o ramo `FREE` de
+  `board_reveal.gdshader` também multiplica por um poço radial e **soma** uma grade. Os seis pares
+  contra `FREE` — três do campo, três do cursor — saíam otimistas, e os pisos da catraca tinham
+  sido registrados sobre esses números. Nada regrediu na paleta e nenhum par cruzou a meta de 3:1;
+  `FREE`×`THREAT`, o mais apertado, vai de 3,73 para 3,62. Envelope corrigido, seis pisos
+  rebaixados, tabela nova e datada em `ART_DIRECTION.md`.
+  *Pronto (o que faltava e foi entregue):* medição igual ao shader e uma guarda que force a
+  releitura do shader — `test_nenhum_numero_do_ramo_free_do_shader_fica_fora_da_medicao` recusa
+  literal novo do ramo `FREE` e entrada órfã, provada plantando `0.81 + 0.19` no poço.
+  *Continua aberto:* a mesma pergunta para os ramos `BOUNDARY` e `TRAIL`, que hoje conferem por
+  leitura mas não têm guarda equivalente; e as camadas do cursor, que a view não modula mas
+  também ninguém amarra ao `_draw`.
 - [x] **Toque estável (#90, via #92).** Regressões de jitter/arrasto integradas e verdes,
   preservando floating stick, histerese de entrada/saída, margem angular e flick do Atlas.
   Ergonomia em dispositivo real continua no item de QA humana.

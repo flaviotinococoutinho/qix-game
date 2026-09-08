@@ -16,13 +16,27 @@ extends RefCounted
 const TARGET_RATIO := 3.0
 
 ## Modulações aplicadas por `game/board/board_reveal.gdshader`. FREE recebe scanline (0.92/1.0),
-## BOUNDARY recebe glint (0.86/1.0) e TRAIL oscila entre `trail_color` e `trail_hot_color`.
-## Medimos os extremos porque a leitura pior é a que decide se o estado é legível.
+## **poço** e **grade**; BOUNDARY recebe glint (0.86/1.0) e TRAIL oscila entre `trail_color` e
+## `trail_hot_color`. Medimos os extremos porque a leitura pior é a que decide se o estado é
+## legível.
 ##
 ## O produto é feito sobre componentes sRGB: em GL Compatibility (ADR-0002) o canvas 2D trabalha
 ## em sRGB, então `source_color` não vira linear antes da multiplicação.
 const FREE_SCAN := [0.92, 1.0]
 const BOUNDARY_GLINT := [0.86, 1.0]
+
+## O ramo FREE do shader não é só a scanline. Ele também multiplica por um **poço** radial
+## (`well = 0.84 + 0.16 * (1.0 - length(UV - vec2(0.5)))`) e **soma** uma grade
+## (`vec3(0.006, 0.012, 0.016) * grid`, com `grid` em 0..1). Enquanto a medição ignorava os dois,
+## ela afirmava medir "como o shader desenha" e media outra coisa: FREE saía mais escuro do que o
+## pixel mais claro realmente desenhado, e os pares contra FREE saíam **otimistas**.
+##
+## `length(UV - vec2(0.5))` vai de 0.0 no centro a `sqrt(0.5)` no canto, então o poço vive em
+## [0.84 + 0.16 * (1.0 - sqrt(0.5)), 1.0].
+const FREE_WELL_BASE := 0.84
+const FREE_WELL_SPAN := 0.16
+## Amplitude aditiva da grade, por canal, quando `grid` satura em 1.0.
+const FREE_GRID_ADD := Vector3(0.006, 0.012, 0.016)
 
 enum Vision { TRICHROMAT, PROTANOPIA, DEUTERANOPIA, TRITANOPIA }
 
@@ -102,15 +116,20 @@ const CURSOR_PAIRS := [
 	["CURSOR_CORE", "BOUNDARY"],
 ]
 
-## Piso de regressão: pior razão observada em 2026-09-04 sobre a paleta padrão e as três rodadas
-## autoradas, arredondada para baixo. Não é aprovação — vários pares estão abaixo de
-## `TARGET_RATIO` e isso está registrado em `docs/ART_DIRECTION.md`. É uma catraca: uma paleta
-## nova não pode piorar o que já foi medido sem que alguém decida piorar.
+## Piso de regressão: pior razão observada sobre a paleta padrão e as três rodadas autoradas,
+## arredondada para baixo. Não é aprovação — vários pares estão abaixo de `TARGET_RATIO` e isso
+## está registrado em `docs/ART_DIRECTION.md`. É uma catraca: uma paleta nova não pode piorar o
+## que já foi medido sem que alguém decida piorar.
+##
+## Os três pares contra FREE foram **rebaixados em 2026-09-08**, e não porque a paleta piorou: o
+## envelope de FREE passou a incluir o poço e a grade que o shader já desenhava desde sempre. Os
+## pisos antigos (8.90 / 11.20 / 3.70) mediam um chão mais escuro do que o jogo mostra. Os demais
+## pares foram remedidos na mesma execução e não se moveram.
 const PAIR_FLOOR := {
-	"FREE×BOUNDARY": 8.90,
-	"FREE×TRAIL": 11.20,
+	"FREE×BOUNDARY": 8.60,
+	"FREE×TRAIL": 10.90,
 	"BOUNDARY×TRAIL": 1.03,
-	"FREE×THREAT": 3.70,
+	"FREE×THREAT": 3.60,
 	"BOUNDARY×THREAT": 1.27,
 	"TRAIL×THREAT": 1.82,
 }
@@ -120,16 +139,20 @@ const PAIR_FLOOR := {
 ## no mesmo commit, em vez de a documentação envelhecer sozinha.
 const KNOWN_DEBT := ["BOUNDARY×TRAIL", "BOUNDARY×THREAT", "TRAIL×THREAT"]
 
-## Mesma catraca de `PAIR_FLOOR`, para a silhueta do cursor: pior razão observada em 2026-09-05
-## sobre a paleta padrão e as três rodadas autoradas, arredondada para baixo. Os três pares sobre
-## `BOUNDARY` estão registrados como dívida, não como aprovação — ver `docs/ART_DIRECTION.md`.
+## Mesma catraca de `PAIR_FLOOR`, para a silhueta do cursor: pior razão observada sobre a paleta
+## padrão e as três rodadas autoradas, arredondada para baixo. Os três pares sobre `BOUNDARY`
+## estão registrados como dívida, não como aprovação — ver `docs/ART_DIRECTION.md`.
+##
+## Os três pares **contra FREE** foram rebaixados em 2026-09-08 pelo mesmo motivo que os do campo:
+## a silhueta pousa sobre o chão que o shader desenha, poço e grade inclusos, não sobre a
+## multiplicação parcial que a medição antiga usava. Pisos antigos: 12.10 / 5.30 / 15.30.
 const CURSOR_FLOOR := {
 	"CURSOR_INK×BOUNDARY": 8.92,
-	"CURSOR_OUTER×FREE": 12.10,
+	"CURSOR_OUTER×FREE": 11.80,
 	"CURSOR_OUTER×BOUNDARY": 1.00,
-	"CURSOR_ACCENT×FREE": 5.30,
+	"CURSOR_ACCENT×FREE": 5.20,
 	"CURSOR_ACCENT×BOUNDARY": 1.11,
-	"CURSOR_CORE×FREE": 15.30,
+	"CURSOR_CORE×FREE": 14.80,
 	"CURSOR_CORE×BOUNDARY": 1.03,
 }
 
@@ -185,11 +208,33 @@ static func simulate(color: Color, vision: int) -> Color:
 ## `visual` nunca é nulo: `RoundVisualDefinition.new()` já carrega a paleta padrão.
 static func rendered_swatches(visual: RoundVisualDefinition) -> Dictionary:
 	return {
-		"FREE": _modulated(visual.free_color, FREE_SCAN),
+		"FREE": free_swatches(visual.free_color),
 		"BOUNDARY": _modulated(visual.boundary_color, BOUNDARY_GLINT),
 		"TRAIL": [visual.trail_color, visual.trail_hot_color],
 		"THREAT": [visual.threat_color],
 	}
+
+
+## Envelope do ramo FREE: produto cartesiano dos extremos de scanline, poço e grade.
+##
+## O produto é deliberadamente **conservador**. Ele não afirma que o pixel mais claro tem, ao mesmo
+## tempo, scanline no alto, poço no centro e grade saturada — afirma que nenhum pixel desenhado por
+## aquele ramo cai fora deste envelope. Para um piso de legibilidade é a direção certa do erro:
+## medir o chão mais claro que o shader consegue produzir é medir a leitura mais difícil que o
+## jogador pode receber.
+static func free_swatches(free_color: Color) -> Array[Color]:
+	var wells := [FREE_WELL_BASE + FREE_WELL_SPAN * (1.0 - sqrt(0.5)), FREE_WELL_BASE + FREE_WELL_SPAN]
+	var result: Array[Color] = []
+	for scan in FREE_SCAN:
+		for well in wells:
+			for grid in [0.0, 1.0]:
+				result.append(Color(
+					free_color.r * scan * well + FREE_GRID_ADD.x * grid,
+					free_color.g * scan * well + FREE_GRID_ADD.y * grid,
+					free_color.b * scan * well + FREE_GRID_ADD.z * grid,
+					free_color.a,
+				))
+	return result
 
 
 ## Cores opacas de cada camada da silhueta do cursor, na ordem de empilhamento de `_draw`.
