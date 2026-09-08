@@ -41,9 +41,19 @@ const STATES := ["dependencia", "ferramenta", "a-remover"]
 ## do documento inteiro e a busca nunca casa.
 const TOTALS_ROW := "(?m)^Somadas, as ([a-zç]+) pastas `a-remover` ocupam ~[0-9,.]+ MB e declaram ([0-9]+) cenas"
 
-## Só as formas que a frase pode assumir enquanto restar mais de uma pasta. Chegando a uma ou a
-## zero, o plural deixa de servir e a frase tem de ser reescrita — o teste falha e pede isso, em
-## vez de aceitar em silêncio uma concordância errada.
+## O fecho do outro extremo: executadas as sete remoções, não resta pasta condenada e a frase no
+## plural passa a mentir. Medido em 2026-09-07, ao integrar as sete: a guarda acima, escrita
+## quando havia seis, ficava **vermelha exatamente no estado que a ADR-0010 pediu** — o `NUMERALS`
+## começa em `duas` e o regex exige o plural. Uma guarda derivada que proíbe o seu próprio fim é a
+## mesma falha de acoplamento que o #69 tem na matriz de teste, e não a de números desatualizados.
+const EMPTY_TOTALS_ROW := "(?m)^Nenhuma pasta `a-remover` resta"
+
+## Só as formas que a frase pode assumir enquanto restar mais de uma pasta. Zero tem frase própria
+## (`EMPTY_TOTALS_ROW`, acima) e é o estado de chegada da ADR-0010. **Uma** continua sem forma: o
+## plural deixa de servir, `NUMERALS` começa em `duas`, e o teste falha a pedir a reescrita em vez
+## de aceitar em silêncio uma concordância errada. Isso só é alcançável mesclando as sete remoções
+## uma a uma — a integração vai de sete a zero de um golpe e nunca passa por aqui. Quem mesclar a
+## sexta escreve a frase no singular e acrescenta a forma que usou.
 const NUMERALS := {
 	"duas": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6, "sete": 7,
 }
@@ -102,7 +112,11 @@ func test_addons_marked_for_removal_have_no_consumer_left() -> void:
 	for folder in declared:
 		if declared[folder] == "a-remover":
 			doomed.append(folder)
-	ok(not doomed.is_empty() or declared.is_empty(), "inventário sem nenhuma pasta condenada")
+	# A asserção aqui é que o manifesto **foi lido**, não que ainda haja pasta condenada: com as
+	# sete remoções da ADR-0010 executadas, `doomed` vazio é o estado de chegada da decisão, não
+	# um parser que devolveu nada. Escrita como `not doomed.is_empty()`, a guarda proibia
+	# exatamente o fim que a ADR pediu.
+	ok(not declared.is_empty(), "addons/README.md não rendeu nenhuma linha de inventário")
 	var citations := _citations(doomed)
 	for folder in doomed:
 		var cited: PackedStringArray = citations[folder]
@@ -170,7 +184,32 @@ func test_removal_totals_match_the_folders_on_disk() -> void:
 	for folder in doomed:
 		scenes += _count_scenes(ADDONS_DIR + "/" + folder)
 
-	var m := RegEx.create_from_string(TOTALS_ROW).search(_read(MANIFEST))
+	var manifest := _read(MANIFEST)
+	var m := RegEx.create_from_string(TOTALS_ROW).search(manifest)
+
+	# Zero pastas condenadas é o estado de chegada da ADR-0010, e a frase de fecho no plural deixa
+	# de descrever coisa nenhuma. Aqui a guarda inverte-se: exige a frase de encerramento e recusa
+	# um plural sobrevivente, para que a última remoção não deixe para trás um total que já não
+	# soma nada. Os números históricos dessa frase não são deriváveis do disco — as pastas não
+	# estão lá —, por isso o que se confere é a declaração de vazio, não a aritmética.
+	if doomed.is_empty():
+		ok(
+			RegEx.create_from_string(EMPTY_TOTALS_ROW).search(manifest) != null,
+			(
+				"nenhuma pasta continua `a-remover`, mas addons/README.md não declara o fecho da "
+				+ "ADR-0010 (`Nenhuma pasta `a-remover` resta`). Escreva-o: o leitor tem de "
+				+ "distinguir 'a decisão acabou' de 'alguém apagou a linha'."
+			),
+		)
+		ok(
+			m == null,
+			(
+				"addons/README.md ainda promete `as %s pastas a-remover`, mas nenhuma resta. "
+				+ "A última remoção atualizou a tabela e esqueceu o fecho."
+			) % [m.get_string(1) if m != null else ""],
+		)
+		return
+
 	ok(
 		m != null,
 		(
