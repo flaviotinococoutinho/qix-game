@@ -1,7 +1,11 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-08 · commit `3f2d96e` · integração concluída em `main`
-> **Alcance:** as **33 PRs de origem, #59–#91**, foram incorporadas pela [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92).
+> **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, Linux headless (sandbox de nuvem)
+> **Alcance:** esta revisão do cabeçalho fecha o item de direção do #74 e ajusta o backlog; a fila
+> foi conferida no GitHub às 06:00Z e estava em **zero PRs abertos**. Tudo abaixo desta linha é
+> histórico preservado, medido nos commits e ambientes que cada bloco declara — não foi reexecutado aqui.
+> A integração de `3f2d96e` continua sendo a fonte do estado da fila descrito a seguir.
+> **Alcance da integração:** as **33 PRs de origem, #59–#91**, foram incorporadas pela [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92).
 > Merge efetivo em 2026-09-08T05:33:34Z; as 33 PRs constavam como MERGED e a fila estava vazia na conferência às 05:33:37Z.
 > Atlas Vivo (`0c63665`), Godot AI 4.0.2 (`6d23de4`), bundle #78 e resíduos foram preservados por ancestralidade.
 > O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324) passou no head `9d02d6f`; a composição validada está incorporada em `main`.
@@ -129,6 +133,11 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
+  **Contagem corrente:** 2026-09-08T06:05Z foi **mecanismo** (`tests/` + `docs/`). O atrito medido
+  é que todos os itens de experiência ainda livres — `BOUNDARY`×`TRAIL`, QA humana, playtest —
+  pedem uma tela que a nuvem não tem. Ou o critério de pronto de algum deles passa a admitir
+  decisão no escuro verificada por catraca numérica (`verify_palette_contrast.gd` já existe e é
+  headless), ou a proporção não se cumpre sem o mantenedor. Decidir isso vale mais que insistir.
 - [x] **Unificar relatórios da fila (#71, via #92).** `merge_queue_report.sh --order` substitui
   `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
   relatório de superfície, cuja pergunta é diferente. Mudança integrada e CI verde no head `9d02d6f`.
@@ -193,11 +202,20 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [x] **Exceção visual em regras (#74, via #92).** `RoundVisualDefinition` admite cores; isso não
   autoriza outros Resources de domínio a ler `float` ou consumir a apresentação. A costura
   RoundContent também é declarada; serializadores são derivados do grafo real, sem count=2.
-- [ ] **Guarda geral de direção em `game/session/` (#74).** O acesso a `content.visual`
-  já é recusado pela guarda integrada de regras/apresentação. O achado ainda aberto em
-  `docs/loop/runs/2026-09-07T100000Z.md` é mais amplo: quais outras dependências de apresentação
-  podem ser lidas pela sessão sem a guarda nominal perceber? *Pronto:* ampliar a prova de
-  direção com uma violação plantada dessa outra dependência, preservando a cobertura do visual.
+- [x] **Guarda geral de direção em `game/session/` (#74).** Resposta medida à pergunta larga de
+  `docs/loop/runs/2026-09-07T100000Z.md`: **todas as demais** dependências de apresentação
+  passavam. `var _hud: QixGameHud` em `GameSession` e `var _tint := Color("ff00ff")` em
+  `GameSimulation` deixavam a suíte inteira verde (404 testes, 19013 asserções, 0 falhas).
+  `tests/unit/domain_direction_guard_test.gd` fecha a seta domínio→apresentação com a lista de
+  proibidos **derivada** dos `class_name` das pastas de apresentação (uma view nova nasce proibida),
+  mais 31 tipos da engine declarados com motivo, mais a proibição de herdar de nó. A cobertura
+  nominal do visual foi preservada intacta na guarda irmã. Duas guardas cruzadas impedem a
+  duplicação (um nome já acusado por `domain_purity_test.gd` fica vermelho aqui — foi assim que
+  `Tween` ficou de fora) e a divergência de `PRESENTATION_DIRS` entre as duas guardas de direção.
+  Medição das três mutações plantadas em `docs/loop/runs/2026-09-08T060505Z.md`.
+  **O que continua sem guarda, de propósito:** um `Variant` nunca anotado, ou um objeto de
+  apresentação recebido por parâmetro sem tipo, atravessa as três varreduras. É semântica, não
+  sintaxe — só revisão e teste de comportamento alcançam.
 - [x] **Documentação da integração reconciliada (#65, #76, #77, #82, #84, via #92).** Decisões de arte referenciadas,
   geometria atual distinguida de tempos históricos, disponibilidade de Git corrigida,
   seções e chaves de tabela reconciliadas. Guardas e inspeção da integração passaram; a dívida
