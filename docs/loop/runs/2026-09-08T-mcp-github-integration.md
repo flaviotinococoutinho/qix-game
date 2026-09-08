@@ -215,3 +215,20 @@ não substitui notarização nem revisão humana de desafio e mix de som.
 Para novas mudanças, repetir apenas as verificações pertinentes e os gates exigidos sobre
 a nova árvore. Os resultados desta seção são históricos vinculados aos SHAs acima; não
 atualizar números dourados sem explicar uma mudança deliberada no contrato de regras.
+
+## Continuações automáticas após o merge
+
+Enquanto o fechamento era publicado, três execuções automáticas abriram novas PRs. São
+posteriores à consulta de fila vazia das 05:33:37Z; o snapshot original de 33 PRs não foi
+reescrito. O fechamento [#95](https://github.com/flaviotinococoutinho/qix-game/pull/95) incorpora
+os três heads por ancestralidade, além dos recibos e da reconciliação completa do ledger:
+
+| PR | Head auditado | Resolução |
+|---|---|---|
+| #93 | `92659ed028929ae247b8eb9fb576d06e7330d7d3` | Preservada medição Linux adicional. Corrigidas inferências de ausência anterior de testes, de speed-up sem produtor e de igualdade com dourados anteriores ao Atlas. |
+| #94 | `86d46d2a4d3582c342b2c144993777926712c48a` | Corrigido invariante 1 do CLAUDE.md para a taxonomia atual, incluindo a exceção explícita UNGUARDED_BY_DESIGN; relato preservado. |
+| #96 | `29bb7ad727073a4079d91cd075461e401f714e95` | Preservada medição adicional e absorvido o fechamento P0 pelo ledger reconciliado; ausência de GPU da execução não invalida QA macOS anterior. |
+
+Os conflitos ocorreram no ledger, cujo fechamento por intenção foi preservado. Nenhuma dessas
+continuações altera runtime, conteúdo, assets ou configurações MCP. Ao concluir o #95, seu
+registro no GitHub fornece o merge SHA, checks do head final e nova conferência da fila.
