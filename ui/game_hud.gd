@@ -85,6 +85,9 @@ var _effect_ticks := PackedInt32Array()
 var _flash_message: String = ""
 var _flash_ticks: int = 0
 var _flash_is_alert: bool = false
+var _flash_kind: int = -1
+var _flash_actor_id: int = -1
+var _flash_simulation: GameSimulation
 ## Causa da última morte **observada**, ou `-1` enquanto nenhuma foi. Não é um flash com prazo
 ## próprio: quem lhe dá duração é a fase DYING do domínio. Ver `_status_text`.
 var _death_reason: int = -1
@@ -166,7 +169,7 @@ func sync(source: Variant, paused: bool, events: Array[GameEvent]) -> void:
 	var simulation := _simulation_from(source)
 	if simulation == null:
 		return
-	_capture_flash(events)
+	_capture_flash(events, simulation)
 	var session := source as GameSession if source is GameSession else null
 	var visual: RoundVisualDefinition = null
 	var round_number := 1
@@ -272,7 +275,12 @@ func _shield_seconds(simulation: GameSimulation) -> int:
 	return maxi(0, ceili(simulation.shield_ticks / 60.0))
 
 
-func _capture_flash(events: Array[GameEvent]) -> void:
+func _capture_flash(events: Array[GameEvent], simulation: GameSimulation) -> void:
+	# O snapshot já contém o tick inteiro: resolver o aviso antes de arbitrar o ganho
+	# também cobre CAPTURED vindo antes de EMBER_EXTINGUISHED/DART_ABSORBED no mesmo lote.
+	if _flash_is_alert and (_flash_simulation != simulation \
+			or _alert_resolved(simulation, _flash_kind, _flash_actor_id)):
+		_clear_flash()
 	for event in events:
 		match event.kind:
 			GameEvent.Kind.CAPTURED:
@@ -283,28 +291,26 @@ func _capture_flash(events: Array[GameEvent]) -> void:
 				# de estado passa a ser dela até à reentrada. Zerar o prazo pendente impede que um
 				# "CAPTURA +n" ou um "ESCUDO CRÍTICO" anterior reapareça do outro lado da morte,
 				# anunciando um estado que o jogador já não tem.
-				_flash_ticks = 0
-				_flash_message = ""
-				_flash_is_alert = false
+				_clear_flash()
 			GameEvent.Kind.PLAYER_RESPAWNED:
 				# A causa deixa de existir no mesmo tick em que o jogador recupera o controlo.
 				_death_reason = -1
 			GameEvent.Kind.SHIELD_CRITICAL:
-				_set_flash("ESCUDO CRÍTICO", 120, true)
+				_set_alert(event, simulation, "ESCUDO CRÍTICO", 120)
 			GameEvent.Kind.DART_ARMED:
-				_set_flash("DARDO ARMADO · DESVIE", 30, true)
+				_set_alert(event, simulation, "DARDO ARMADO · DESVIE", 30)
 			GameEvent.Kind.TRAIL_CUT:
-				_set_flash("TRILHA CORTADA · CONTINUE!", 75, true)
+				_set_alert(event, simulation, "TRILHA CORTADA · CONTINUE!", 75)
 			GameEvent.Kind.EMBER_IGNITED:
-				_set_flash("BRASA NA TRILHA · AVANCE", 60, true)
+				_set_alert(event, simulation, "BRASA NA TRILHA · AVANCE", 60)
 			GameEvent.Kind.WALKER_EXTINGUISHED:
 				_set_flash("VAGALUME CONTIDO +%d" % event.data.get("points", 0), 60, false)
 			GameEvent.Kind.BOSS_PHASE_CHANGED:
-				_set_flash("NÚCLEO · FASE %d" % (int(event.data.get("phase", 0)) + 1), 100, true)
+				_set_alert(event, simulation, "NÚCLEO · FASE %d" % (int(event.data.get("phase", 0)) + 1), 100)
 			GameEvent.Kind.BOSS_CORNERED:
-				_set_flash("NÚCLEO EM FÚRIA", 75, true)
+				_set_alert(event, simulation, "NÚCLEO EM FÚRIA", 75)
 			GameEvent.Kind.OVERTIME_STARTED:
-				_set_flash("PRESSÃO MÁXIMA · AVANCE", 100, true)
+				_set_alert(event, simulation, "PRESSÃO MÁXIMA · AVANCE", 100)
 			GameEvent.Kind.BEACON_CAPTURED:
 				_set_flash(
 					"BALIZA ×%d  +%d" % [event.data.get("chain", 1), event.data.get("points", 0)],
@@ -340,6 +346,51 @@ func _set_flash(message: String, ticks: int, is_alert: bool) -> void:
 	_flash_message = message
 	_flash_ticks = ticks
 	_flash_is_alert = is_alert
+	_flash_kind = -1
+	_flash_actor_id = -1
+	_flash_simulation = null
+
+
+func _clear_flash() -> void:
+	_flash_message = ""
+	_flash_ticks = 0
+	_flash_is_alert = false
+	_flash_kind = -1
+	_flash_actor_id = -1
+	_flash_simulation = null
+
+
+func _set_alert(event: GameEvent, simulation: GameSimulation, message: String, ticks: int) -> void:
+	var actor_id := -1
+	if event.kind == GameEvent.Kind.DART_ARMED:
+		var slot := int(event.data.get("slot", -1))
+		if slot >= 0 and slot < MinorActorPools.MAX_DARTS:
+			actor_id = simulation.pools.dart_actor_id(slot)
+	# Um aviso pode nascer e ser resolvido no mesmo tick; não o ressuscitar pelo evento antigo.
+	if _alert_resolved(simulation, event.kind, actor_id):
+		return
+	_set_flash(message, ticks, true)
+	_flash_kind = event.kind
+	_flash_actor_id = actor_id
+	_flash_simulation = simulation
+
+
+## Cada aviso conserva a própria causa: absorver outro dardo não resolve este, e extinguir
+## uma brasa não cura o escudo. IDs também distinguem a reutilização de um slot do mesmo ator.
+func _alert_resolved(simulation: GameSimulation, kind: int, actor_id: int) -> bool:
+	match kind:
+		GameEvent.Kind.DART_ARMED:
+			for slot in MinorActorPools.MAX_DARTS:
+				if simulation.pools.dart_alive(slot) and simulation.pools.dart_actor_id(slot) == actor_id:
+					return false
+			return true
+		GameEvent.Kind.EMBER_IGNITED:
+			return not simulation.trail_active or simulation.pools.alive_embers() == 0
+		GameEvent.Kind.TRAIL_CUT:
+			return not simulation.trail_active
+		GameEvent.Kind.SHIELD_CRITICAL:
+			return simulation.shield_ticks > simulation.rules.shield_critical_ticks
+	return false
 
 
 func _status_text(simulation: GameSimulation, session: GameSession, paused: bool) -> String:

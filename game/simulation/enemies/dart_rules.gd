@@ -151,11 +151,8 @@ static func peek_path(pools: MinorActorPools, slot: int, board: BoardState, max_
 	var y_fp := pools.dart(slot, MinorActorPools.D.Y_FP)
 	if not board.in_bounds(x_fp >> 8, y_fp >> 8):
 		return out
-	# O aviso é redesenhado a cada frame enquanto o dardo está armado, e o campo cheio dá
-	# corredores de duas centenas de células. Os invariantes do laço vêm para locais e o
-	# subpasso que não troca de célula sai antes de qualquer leitura do campo: mesma
-	# aritmética de `update()`, sem o custo por chamada. `board.cells` **não** vira local:
-	# copiar o `PackedByteArray` por chamada custa mais do que tudo o que o laço economiza.
+	# O corredor pode atravessar o campo inteiro. Precalculamos os deslocamentos exatos de
+	# cada subpasso; a view conserva o resultado até o ator ou a versão do território mudar.
 	var width := board.width
 	var height := board.height
 	var last_x := x_fp >> 8
@@ -167,15 +164,43 @@ static func peek_path(pools: MinorActorPools, slot: int, board: BoardState, max_
 	var remainder := speed % maxi(1, substeps)
 	var dx_fp: int = DIRECTION_X[dir]
 	var dy_fp: int = DIRECTION_Y[dir]
+	var step_x := PackedInt32Array()
+	var step_y := PackedInt32Array()
+	var tick_x := 0
+	var tick_y := 0
+	for substep in substeps:
+		var distance_fp := step_fp + (1 if substep < remainder else 0)
+		var dx := (dx_fp * distance_fp) >> 8
+		var dy := (dy_fp * distance_fp) >> 8
+		step_x.append(dx)
+		step_y.append(dy)
+		tick_x += dx
+		tick_y += dy
+	var current_free := board.get_cell(last_x, last_y) == BoardState.Cell.FREE
+	if current_free and tick_x == 0 and tick_y == 0:
+		return out
 	# `LIFE` limita o corredor pelo mesmo prazo que retira o dardo por EXPIRED.
-	for _tick in pools.dart(slot, MinorActorPools.D.LIFE):
+	var ticks_left := pools.dart(slot, MinorActorPools.D.LIFE)
+	while ticks_left > 0:
+		# Em velocidade baixa, saltamos só ticks inteiros cujos subpassos permanecem na
+		# mesma célula FREE. Os eixos são monótonos; nenhum contato com território é omitido.
+		if current_free and absi(tick_x) < 256 and absi(tick_y) < 256:
+			var next_change := mini(
+				_ticks_to_next_cell(x_fp, tick_x, ticks_left + 1),
+				_ticks_to_next_cell(y_fp, tick_y, ticks_left + 1))
+			var skipped := mini(ticks_left, next_change - 1)
+			x_fp += tick_x * skipped
+			y_fp += tick_y * skipped
+			ticks_left -= skipped
+			if ticks_left == 0:
+				break
+		ticks_left -= 1
 		for substep in substeps:
-			var distance_fp := step_fp + (1 if substep < remainder else 0)
-			x_fp += (dx_fp * distance_fp) >> 8
-			y_fp += (dy_fp * distance_fp) >> 8
+			x_fp += step_x[substep]
+			y_fp += step_y[substep]
 			var cx := x_fp >> 8
 			var cy := y_fp >> 8
-			if cx == last_x and cy == last_y:
+			if current_free and cx == last_x and cy == last_y:
 				continue
 			if cx < 0 or cx >= width or cy < 0 or cy >= height:
 				return out
@@ -183,10 +208,23 @@ static func peek_path(pools: MinorActorPools, slot: int, board: BoardState, max_
 			last_y = cy
 			var index := cy * width + cx
 			out.append(index)
+			current_free = board.get_cell(cx, cy) == BoardState.Cell.FREE
 			# A célula que absorve ou corta entra no corredor: é onde o dardo termina.
-			if board.get_cell(cx, cy) != BoardState.Cell.FREE or out.size() >= max_cells:
+			if not current_free or out.size() >= max_cells:
 				return out
 	return out
+
+
+## Primeiro tick cujo deslocamento acumulado cruza a borda da célula atual. Inteiros 8.8:
+## mover para o lado negativo exige passar abaixo da borda, não apenas alcançá-la.
+@warning_ignore("integer_division")
+static func _ticks_to_next_cell(position_fp: int, delta_fp: int, stationary: int) -> int:
+	if delta_fp > 0:
+		var remaining := (((position_fp >> 8) + 1) << 8) - position_fp
+		return (remaining + delta_fp - 1) / delta_fp
+	if delta_fp < 0:
+		return (position_fp - ((position_fp >> 8) << 8)) / -delta_fp + 1
+	return stationary
 
 
 ## Dardos sobre células que deixaram de ser FREE (após uma captura) apagam. Devolve os slots.

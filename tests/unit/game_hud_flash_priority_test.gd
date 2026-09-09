@@ -18,21 +18,23 @@ const DART_TEXT := "DARDO ARMADO · DESVIE"
 const SHIELD_TEXT := "ESCUDO CRÍTICO"
 const BEACON_TEXT := "BALIZA ×2  +240"
 const CAPTURE_TEXT := "CAPTURA +7"
+const EMBER_TEXT := "BRASA NA TRILHA · AVANCE"
+const PURGE_TEXT := "PURGA ATIVO"
 
 ## Folga confortável sobre os 30 ticks do dardo, o mais curto dos alertas.
 const TICKS_PAST_THE_DART := 40
 
 
 func test_reward_in_the_same_tick_does_not_take_the_line_from_an_alert() -> void:
-	var hud := _hud()
-	var status := hud.get_node("Status") as Label
-	hud.sync(_simulation(), false, [_dart(), _beacon()])
-	eq(
-		status.text,
-		DART_TEXT,
-		"a baliza colhida no mesmo tick do dardo apagou o aviso que ainda pedia decisão",
-	)
-	hud.free()
+	for reverse_order in [false, true]:
+		var hud := _hud()
+		var status := hud.get_node("Status") as Label
+		var events: Array[GameEvent] = [_dart(), _beacon()]
+		if reverse_order:
+			events.reverse()
+		hud.sync(_simulation(), false, events)
+		eq(status.text, DART_TEXT, "o alerta válido vence nas duas ordens do lote")
+		hud.free()
 
 
 func test_reward_does_not_erase_an_alert_still_on_screen() -> void:
@@ -78,6 +80,7 @@ func test_reward_takes_the_line_once_it_is_free_of_alerts() -> void:
 func test_a_newer_alert_replaces_an_older_one() -> void:
 	var hud := _hud()
 	var simulation := _simulation()
+	simulation.shield_ticks = simulation.rules.shield_critical_ticks
 	var status := hud.get_node("Status") as Label
 	hud.sync(simulation, false, [GameEvent.make(GameEvent.Kind.SHIELD_CRITICAL)])
 	eq(status.text, SHIELD_TEXT, "a montagem precisa de começar com o alerta longo em cena")
@@ -117,8 +120,170 @@ func test_the_flash_hierarchy_does_not_touch_the_domain() -> void:
 	hud.free()
 
 
-func _dart() -> GameEvent:
-	return GameEvent.make(GameEvent.Kind.DART_ARMED, {"slot": 0, "dir_index": 0})
+func test_capture_extinguishes_the_ember_before_the_reward_is_arbitrated() -> void:
+	var hud := _hud()
+	var simulation := _simulation()
+	var status := hud.get_node("Status") as Label
+	for _tick in 7:
+		simulation.step(MoveIntent.make(MoveIntent.Dir.DOWN, true))
+	ok(simulation.trail_active, "a captura começa com trilha real aberta")
+	EmberRules.ignite(simulation.pools, 0, 0, MinorActorPools.Cause.STALL, 30)
+	hud.sync(simulation, false, [_ember()])
+	eq(status.text, EMBER_TEXT)
+	var events := simulation.step(MoveIntent.make(MoveIntent.Dir.DOWN, true))
+	ok(_has_event(events, GameEvent.Kind.CAPTURED), "a rota deve fechar uma captura real")
+	ok(_has_event(events, GameEvent.Kind.EMBER_EXTINGUISHED), "a captura extingue a brasa")
+	ok(not simulation.trail_active)
+	eq(simulation.pools.alive_embers(), 0)
+	var before := simulation.state_checksum()
+	hud.sync(simulation, false, events)
+	ok(status.text.begins_with("CAPTURA +"), "o ganho substitui o perigo já resolvido")
+	eq(simulation.state_checksum(), before, "resolver o aviso não escreve na simulação")
+	hud.free()
+
+
+func test_purge_replaces_each_resolved_alert_with_the_confirmed_item() -> void:
+	for kind in [GameEvent.Kind.DART_ARMED, GameEvent.Kind.EMBER_IGNITED, GameEvent.Kind.SHIELD_CRITICAL]:
+		var hud := _hud()
+		var simulation := _simulation()
+		var status := hud.get_node("Status") as Label
+		var alert := _dart()
+		var expected := DART_TEXT
+		if kind == GameEvent.Kind.EMBER_IGNITED:
+			simulation.step(MoveIntent.make(MoveIntent.Dir.DOWN, true))
+			EmberRules.ignite(simulation.pools, 0, 0, MinorActorPools.Cause.STALL, 30)
+			alert = _ember()
+			expected = EMBER_TEXT
+		elif kind == GameEvent.Kind.SHIELD_CRITICAL:
+			simulation.shield_ticks = simulation.rules.shield_critical_ticks
+			alert = GameEvent.make(kind)
+			expected = SHIELD_TEXT
+		hud.sync(simulation, false, [alert])
+		eq(status.text, expected, "o perigo precisa existir antes de ser expurgado")
+		var events: Array[GameEvent] = []
+		simulation._activate_item(ItemProfile.Kind.PURGE, events)
+		eq(simulation.pools.alive_total(), 0)
+		ok(simulation.shield_ticks > simulation.rules.shield_critical_ticks)
+		var before := simulation.state_checksum()
+		hud.sync(simulation, false, events)
+		eq(status.text, PURGE_TEXT, "o HUD deve reconhecer o efeito que resolveu o alerta")
+		eq(simulation.state_checksum(), before)
+		hud.free()
+
+
+func test_purge_does_not_clear_a_shield_alert_if_the_authored_floor_is_still_critical() -> void:
+	var hud := _hud()
+	var simulation := _simulation()
+	simulation.shield_ticks = 100
+	simulation.item_profile().shield_floor_ticks = 150
+	hud.sync(simulation, false, [GameEvent.make(GameEvent.Kind.SHIELD_CRITICAL)])
+	var events: Array[GameEvent] = []
+	simulation._activate_item(ItemProfile.Kind.PURGE, events)
+	eq(simulation.shield_ticks, 150)
+	hud.sync(simulation, false, events)
+	eq((hud.get_node("Status") as Label).text, SHIELD_TEXT, "o nome PURGA não resolve um perigo ainda real")
+	hud.free()
+
+
+func test_absorbing_another_dart_does_not_clear_the_announced_actor() -> void:
+	var hud := _hud()
+	var simulation := _simulation()
+	_spawn_dart(simulation, 1)
+	hud.sync(simulation, false, [_dart(1)])
+	simulation.pools.retire_dart(0, MinorActorPools.Reason.ABSORBED)
+	hud.sync(simulation, false, [
+		GameEvent.make(GameEvent.Kind.DART_ABSORBED, {"slot": 0}), _beacon()])
+	eq((hud.get_node("Status") as Label).text, DART_TEXT, "o dardo avisado ainda está vivo")
+	hud.free()
+
+
+func test_reusing_the_dart_slot_does_not_keep_the_old_actor_warning_alive() -> void:
+	var hud := _hud()
+	var simulation := _simulation()
+	hud.sync(simulation, false, [_dart()])
+	var retired_id := simulation.pools.dart_actor_id(0)
+	simulation.pools.retire_dart(0, MinorActorPools.Reason.ABSORBED, 0)
+	_spawn_dart(simulation, 0)
+	ne(simulation.pools.dart_actor_id(0), retired_id)
+	hud.sync(simulation, false, [_beacon()])
+	eq((hud.get_node("Status") as Label).text, BEACON_TEXT, "um slot reutilizado não ressuscita aviso sem novo evento")
+	hud.free()
+
+
+func test_an_alert_resolved_in_its_own_event_batch_never_hides_the_reward() -> void:
+	var hud := _hud()
+	var simulation := _simulation()
+	simulation.pools.retire_dart(0, MinorActorPools.Reason.ABSORBED)
+	hud.sync(simulation, false, [
+		_dart(), _beacon(), GameEvent.make(GameEvent.Kind.DART_ABSORBED, {"slot": 0})])
+	eq((hud.get_node("Status") as Label).text, BEACON_TEXT, "o snapshot final resolve até o aviso novo no lote")
+	hud.free()
+
+
+func test_absorbing_a_dart_does_not_resolve_an_unrelated_shield_alert() -> void:
+	var hud := _hud()
+	var simulation := _simulation()
+	simulation.shield_ticks = simulation.rules.shield_critical_ticks
+	hud.sync(simulation, false, [GameEvent.make(GameEvent.Kind.SHIELD_CRITICAL)])
+	simulation.pools.retire_dart(0, MinorActorPools.Reason.ABSORBED)
+	hud.sync(simulation, false, [
+		GameEvent.make(GameEvent.Kind.DART_ABSORBED, {"slot": 0}), _beacon()])
+	eq((hud.get_node("Status") as Label).text, SHIELD_TEXT, "a resolução de outra causa não libera esta prioridade")
+	hud.free()
+
+
+func test_death_and_respawn_do_not_restore_an_old_alert_or_block_new_rewards() -> void:
+	var hud := _hud()
+	var simulation := _simulation()
+	var status := hud.get_node("Status") as Label
+	hud.sync(simulation, false, [_dart()])
+	simulation.shield_ticks = 1
+	hud.sync(simulation, false, simulation.step(MoveIntent.none()))
+	eq(simulation.phase, GameSimulation.Phase.DYING)
+	eq(status.text, "ESCUDO ESGOTADO · REENTRADA")
+	for _tick in 6:
+		hud.sync(simulation, false, simulation.step(MoveIntent.none()))
+		if simulation.phase == GameSimulation.Phase.PLAYING:
+			break
+	eq(simulation.phase, GameSimulation.Phase.PLAYING, "a fixture deve completar a reentrada")
+	ne(status.text, DART_TEXT)
+	hud.sync(simulation, false, [_beacon()])
+	eq(status.text, BEACON_TEXT, "o alerta anterior à morte não conserva a prioridade")
+	hud.free()
+
+
+func test_a_new_simulation_does_not_inherit_an_alert_from_equal_actor_ids() -> void:
+	var hud := _hud()
+	var previous := _simulation()
+	var current := _simulation()
+	eq(previous.pools.dart_actor_id(0), current.pools.dart_actor_id(0))
+	hud.sync(previous, false, [_dart()])
+	hud.sync(current, false, [_beacon()])
+	eq((hud.get_node("Status") as Label).text, BEACON_TEXT, "IDs são locais à simulação")
+	hud.free()
+
+
+func _dart(slot: int = 0) -> GameEvent:
+	return GameEvent.make(GameEvent.Kind.DART_ARMED, {"slot": slot, "dir_index": 0})
+
+
+func _ember() -> GameEvent:
+	return GameEvent.make(GameEvent.Kind.EMBER_IGNITED, {"slot": 0})
+
+
+func _has_event(events: Array[GameEvent], kind: int) -> bool:
+	for event in events:
+		if event.kind == kind:
+			return true
+	return false
+
+
+func _spawn_dart(simulation: GameSimulation, slot: int) -> void:
+	simulation.pools.begin_dart(slot, 100)
+	simulation.pools.set_dart(slot, MinorActorPools.D.X_FP, (1 << 8) + 128)
+	simulation.pools.set_dart(slot, MinorActorPools.D.Y_FP, (1 << 8) + 128)
+	simulation.pools.set_dart(slot, MinorActorPools.D.WARMUP, 100)
+	simulation.pools.set_dart(slot, MinorActorPools.D.LIFE, 100)
 
 
 func _beacon() -> GameEvent:
@@ -140,10 +305,17 @@ func _simulation() -> GameSimulation:
 	rules.boss_speed_fp = 0
 	rules.boss_turn_every_ticks = 0
 	rules.shield_ticks = 10_000
+	rules.death_ticks = 2
+	var items := ItemProfile.new()
+	items.enabled = true
+	items.sealed_free_cell_limit = 0
+	rules.items = items
 	var round_definition := RoundDefinition.new()
 	round_definition.field_width = 9
 	round_definition.field_height = 9
 	round_definition.player_spawn = Vector2i(4, 0)
-	round_definition.boss_start = Vector2i(4, 4)
+	round_definition.boss_start = Vector2i(6, 4)
 	round_definition.boss_dir_index = 0
-	return GameSimulation.new(rules, round_definition, 7)
+	var simulation := GameSimulation.new(rules, round_definition, 7)
+	_spawn_dart(simulation, 0)
+	return simulation

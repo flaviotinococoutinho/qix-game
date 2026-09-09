@@ -1,45 +1,23 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, Linux headless (sandbox de nuvem)
-> **Alcance:** esta revisão do cabeçalho fecha o item de direção do #74 e ajusta o backlog; a fila
-> foi conferida no GitHub às 06:00Z e estava em **zero PRs abertos**. Tudo abaixo desta linha é
-> histórico preservado, medido nos commits e ambientes que cada bloco declara — não foi reexecutado aqui.
-> **Revisão de 2026-09-08T22:00Z** (mesmo ambiente, head `859f4e4` desta branch): corrigido o
-> inventário composto #98+#99 que esta PR publicava — `414` casos medidos às 11:00Z, **416** hoje —
-> e reescrita a instrução para derivar em vez de copiar. A fila tinha **cinco** PRs abertas nessa
-> conferência (#98–#102), acima dos tetos das regras 7 e 8. Alcance: só os dois números e a redação
-> ao redor; nada de `game/`, `ui/`, `app/` ou `content/` foi tocado, e nenhum outro bloco histórico
-> foi reverificado.
-> A integração de `3f2d96e` continua sendo a fonte do estado da fila descrito a seguir.
-> **Alcance da integração:** as **33 PRs de origem, #59–#91**, foram incorporadas pela [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92).
-> Merge efetivo em 2026-09-08T05:33:34Z; as 33 PRs constavam como MERGED e a fila estava vazia na conferência às 05:33:37Z.
-> Atlas Vivo (`0c63665`), Godot AI 4.0.2 (`6d23de4`), bundle #78 e resíduos foram preservados por ancestralidade.
-> O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324) passou no head `9d02d6f`; a composição validada está incorporada em `main`.
-> O [CI pós-merge 34191087087](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34191087087) também passou em `3f2d96e`.
-> A execução de 2026-09-08T07:04Z mexeu apenas no backlog e entregou o item #69 de procedência das
-> contagens; a integração acima não foi reverificada por ela.
+> **Verificado em** 2026-09-09 · commit `41899a7` · Godot 4.7.2 Mono, macOS; com as correções desta integração aplicadas
+> **Alcance:** composição autorizada das PRs #99–#106 sobre `main`, que já contém #98.
+> Evidências, heads de origem, conflitos e limites estão no
+> [relato da integração](loop/runs/2026-09-09T-pr-integration.md).
+> As medições dos relatos anteriores continuam históricas; não são resultados desta árvore.
 
-O usuário autorizou explicitamente nesta sessão a modernização, auditoria, revisão, correções,
-integração e merges das PRs. Esta execução cumpriu esse escopo amplo: a regra rotineira de um
-item por loop não exige uma segunda autorização para o trabalho já solicitado. As mutações Git,
-a validação executável e a integração no GitHub foram centralizadas pelo agente coordenador.
-O merge acima foi conferido no GitHub; autorização e revisão técnica, por si sós, não o
-comprovariam. A mesma conta autora também não pode simular aprovação independente.
+O usuário autorizou revisão, correções, testes locais, atualização do projeto e merges no GitHub.
+A integração ampla tem precedência sobre o limite rotineiro de um item por execução.
+Git e Godot ficaram sob coordenação única, com revisões e implementação delegadas por arquivo.
+A conta autora não pode dar a si própria uma aprovação independente; revisão técnica e merge
+são registrados com sua identidade real.
 
-O [relato desta integração](loop/runs/2026-09-08T-mcp-github-integration.md) preserva o snapshot
-inicial de 32 heads (#59–#90), suas intenções e decisões, e a incorporação posterior do #91,
-totalizando 33 PRs de origem. No snapshot inicial, #78 continha integralmente 20 heads,
-contando o próprio. Os 12 resíduos foram reconciliados: o passo CI do índice Python de #83
-foi portado e as regressões de #90 foram adaptadas ao touch Atlas, preservando os relatos.
-O #91 removeu a guarda redundante de arquivamento sem mudar a máquina de fases.
-Consultar o GitHub antes de agir: a fila vazia acima é uma observação datada, não um contador automático.
-
-O CI Linux registrou 404 testes do jogo, 19.009 asserções, zero falhas e 92 testes Python
-no head `9d02d6f`, árvore `528244e11304dfed4a15d977c4ad014dd2828d87`.
-O manifesto confirma `tested_head=true` e `source_unchanged=true`. O reexport macOS arm64 desse
-head passou em codesign estrito e executou 900/900 ticks em 17,259 s, sem erro observado.
-Renderer, MCP e limites do import/export Mono estão discriminados no relato; merge e QA
-ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamento humano.
+A integração anterior preservou Atlas Vivo, Godot AI 4.0.2 e as 33 PRs #59–#91 via #92;
+#93/#94/#96 foram incorporadas depois, e #97 foi fechado como duplicata. O estado local inicial
+estava limpo em `5318d0a`; o remoto avançara para `a5b2b06` com #98. O bundle de segurança
+preserva todas as referências anteriores à composição. Consulte o
+[relato anterior](loop/runs/2026-09-08T-mcp-github-integration.md) para suas medições e CI.
+Uma fila vazia é sempre observação datada: conferir o GitHub antes do próximo trabalho.
 
 ## Histórico preservado e entrega Atlas
 
@@ -157,17 +135,11 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
   mesclada via #92, mas a recomendação de branch diária não foi aceita automaticamente.
   O item volta a livre porque nenhum PR aberto o reivindica; agendamento externo não foi alterado.
   *Pronto:* decisão do mantenedor registrada e scheduler coerente com ela.
-- [ ] **Drenar a fila (#98–#105): ela compõe, mas a resolução decide.** Medido em 2026-09-09
-  (`docs/loop/runs/2026-09-09T090126Z.md`, com a correção de 11:20Z): as PRs tocam **código
-  disjunto** e nenhuma está parada por CI. O atrito é que cinco escrevem na mesma linha de
-  `TEST_MATRIX.md` a contagem da própria branch — verdadeira só enquanto aquela branch está
-  sozinha. `main` + #99 + #104 dá **2 falhas** quando o conflito preserva o lado do #99, e
-  `tools/sync_test_matrix_inventory.gd -- --write --assertions=<lido>` as fecha: **0 falhas**,
-  sem prosa arbitrada à mão. Dá **3 falhas** se a resolução descartar o lado do #99 — e esse é o
-  risco a vigiar: **quem descarta um carimbo do #99 descarta, junto, a guarda que o cobraria**,
-  então nada acusa. `ATLAS_VIVO.md` não conflita e se defende sozinho; `TEST_MATRIX.md` e
-  `LOOP_LEDGER.md` não. **Mescle #99 primeiro** e preserve as linhas carimbadas dele; receita
-  completa no relato. *Pronto:* fila em zero, matriz derivada da árvore final, cabeçalho datado.
+- [x] **Integrar e revisar #99–#106 sobre #98, a pedido do usuário.** Oito heads preservados
+  por merge, conflitos de documentação reconciliados por intenção, inventário derivado da
+  composição. A revisão corrigiu ainda alcance truncado do dardo, alertas já resolvidos e
+  sincronizador que aceitava matriz incompleta. O relato desta integração registra validação
+  e publicação. As marcações desta entrega descrevem a composição incorporada por este merge.
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
@@ -175,11 +147,9 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
   romperam a série — o #103 em `game/enemies/` e `game/simulation/enemies/`, e a de
   2026-09-09T08:08Z em `ui/touch/`. O item fica aberto porque a razão de uma em cada três
   ainda não se cumpriu na janela de dez; quem contar, conte a partir do #102.
-- [ ] **A fila do loop está acima do teto e só o mantenedor a destrava.** Em 2026-09-09T08:08Z
-  havia **seis PRs abertas** (#98–#103), todas em rascunho, todas com a suíte headless verde,
-  nenhuma em conflito; o teto do protocolo é dois. O loop não mescla as próprias PRs e não há
-  PR vermelha para consertar, então nenhuma execução resolve isto sozinha. *Pronto:* fila em
-  dois ou menos, por merge ou por fechamento explicado.
+- [x] **Drenar a fila acima do teto.** O snapshot desta integração encontrou oito PRs
+  abertas (#99–#106). Todas foram auditadas e compostas; conferir a fila novamente depois
+  do merge e registrar o horário. A cadência externa continua sendo decisão separada.
 - [x] **Unificar relatórios da fila (#71, via #92).** `merge_queue_report.sh --order` substitui
   `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
   relatório de superfície, cuja pergunta é diferente. Mudança integrada e CI verde no head `9d02d6f`.
@@ -344,23 +314,19 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   e isolamento da apresentação.
 - [x] **Geometria real do HUD (#52, via #55).** A sonda executa frames; medir Label apenas
   em `_initialize()` não reproduz sua geometria final.
-- [~] **O aviso do dardo mostra o corredor real (achado de 2026-09-09, fora do backlog).**
-  O armamento desenhava `direction * 5.0` — cinco células — enquanto `dart_min_range` vale 24 e
-  o dardo nasce por backtrack *a partir* do jogador. O alvo não conseguia ler que estava na mira.
-  `DartRules.peek_path` é leitura pura com a mesma aritmética de `update()`, e a view desenha o
-  corredor só em WARMUP. Teto de 48 células (o dobro de `dart_min_range`) por custo medido: sem
-  ele, seis dardos armados custavam 4,768 ms/frame; com ele, 0,54 ms. Corredor que bate no teto
-  perde a ponta de seta, porque seta significa «morre aqui». *Pronto:* entregue e verde
-  (408/19131, rota M2 intacta, checksum dourado imóvel); **falta** a leitura em tela, que vai
-  junto no item de QA humana abaixo. Ver `docs/loop/runs/2026-09-09T063041Z.md`.
-- [~] **A linha de flash respeita a hierarquia alerta > recompensa (achado de 2026-09-09T12:04Z).**
-  Reivindicado pela PR aberta desta execução. O slot único de `_capture_flash` era de quem
-  escrevesse por último: `BEACON_CAPTURED` (90 ticks) apagava `DART_ARMED` (30 ticks) no mesmo
-  tick e enquanto o aviso ainda corria — pontos por cima do único aviso acionável, contra
-  `ART_DIRECTION` §Hierarquia 4. Agora um alerta toma a linha sempre e uma recompensa só entra
-  com a linha livre, sendo descartada e não enfileirada. Medido nos dois sentidos: três dos sete
-  testes novos ficam vermelhos contra o `game_hud.gd` de `main`. A linha não tinha teste nenhum
-  antes disto. Relato em `docs/loop/runs/2026-09-09T120412Z.md`.
+- [x] **Corredor do dardo legível em campo de produção (#103).** A previsão usa a mesma
+  aritmética de subpassos de `update()`, sem avançar atores ou consumir RNG. A revisão de
+  integração encontrou que `min_range=24` é distância mínima: o teto de 48 células escondia
+  o alvo em 225×283 (seed 17, origem x=1, jogador x=112). A composição remove esse corte,
+  conserva o percurso até absorção/vida e reutiliza a geometria até ator ou território mudar.
+  Regressões cobrem campo completo, invalidação e equivalência com movimento real.
+  A leitura humana em movimento continua no item de QA; medições antigas de custo da
+  versão truncada permanecem somente no relato original de #103.
+- [x] **Alertas válidos têm prioridade sobre recompensa (#106).** O HUD arbitra as duas
+  ordens do lote e descarta ganhos da linha ocupada sem perder sua pontuação. A revisão
+  acrescenta validade da causa no estado confirmado: captura, absorção e PURGA liberam
+  avisos resolvidos. IDs distinguem dardos no mesmo slot e a identidade da simulação
+  impede avisos entre rodadas. Morte limpa a linha; outros perigos ativos mantêm prioridade.
 - [ ] **A cor da linha de estado não acompanha a hierarquia que o texto já respeita
   (achado de 2026-09-09T12:04Z, fora do backlog).** `_sync_threat_instruments` pinta
   `_status_label` de `DANGER_COLOR` por uma condição só — trilha ativa **e** brasas vivas — e de
@@ -380,8 +346,8 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   Sobra a decisão de paleta, com dono humano: escurecer `boundary_color` ou `trail_color` mexe em
   `FREE`×`BOUNDARY` (9,0–10,0:1) e `FREE`×`TRAIL` (11,2–12,9:1), hoje folgados.
   *Pronto:* decisão visual, catracas atualizadas e confirmação numa tela, sem piorar legibilidade.
-  A **PR #100** mexe no mesmo tooling de contraste (envelope de `FREE`) sem reivindicar este par:
-  quem pegar este item, conte com conflito em `tools/palette_contrast.gd`.
+  O envelope de `FREE` de #100 foi incorporado sem resolver este par. Preservar sua medição
+  ao propor uma alteração futura de paleta.
 - [x] **O chrome do toque não cobre mais instrumento do HUD (2026-09-09T08:08Z).** A pausa era
   desenhada a 58 % começando em y=10, dentro dos 19 px da banda superior, sobre 32 dos 82 px do
   trilho do escudo e o pé das vitais. Passou a encostar por baixo da banda, derivando
@@ -391,18 +357,18 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   `TEXT_HEIGHT`**: a guarda usa X do nó e Y da linha declarada, e quem escrever guarda de layout
   aqui cai no mesmo buraco se não fizer igual. O que ficou **medido e aceito, não resolvido**:
   os arcos do stick e da ação cruzam a linha de texto do rodapé (35,8 px dos 91 do título,
-  17,6 px dos 139 do status) — recuar reabriria a ergonomia fechada em #90. Falta confirmação
-  numa tela do novo lugar da pausa.
-- [~] **O envelope de `FREE` não era o que o shader desenha (achado de 2026-09-08T17:00Z).**
+  17,6 px dos 139 do status) — recuar reabriria a ergonomia fechada em #90. Falta ergonomia
+  numa tela física de toque. A posição nova e sua hitbox passaram na sonda com renderer local.
+- [x] **O envelope de `FREE` não era o que o shader desenha (achado de 2026-09-08T17:00Z).**
   `PaletteContrast.rendered_swatches` aplicava só a scanline; o ramo `FREE` de
   `board_reveal.gdshader` também multiplica por um poço radial e **soma** uma grade. Os seis pares
   contra `FREE` — três do campo, três do cursor — saíam otimistas, e os pisos da catraca tinham
   sido registrados sobre esses números. Nada regrediu na paleta e nenhum par cruzou a meta de 3:1;
   `FREE`×`THREAT`, o mais apertado, vai de 3,73 para 3,62. Envelope corrigido, seis pisos
   rebaixados, tabela nova e datada em `ART_DIRECTION.md`.
-  *Pronto (o que faltava e foi entregue):* medição igual ao shader e uma guarda que force a
-  releitura do shader — `test_nenhum_numero_do_ramo_free_do_shader_fica_fora_da_medicao` recusa
-  literal novo do ramo `FREE` e entrada órfã, provada plantando `0.81 + 0.19` no poço.
+  A composição acrescenta uma guarda por expressão e posição dos canais: o conjunto de
+  números sozinho não detectava troca entre R e B. Extremos RGB e mutações da fórmula
+  são exercitados. O envelope é conservador, não medição fotométrica do framebuffer.
   *Continua aberto:* a mesma pergunta para os ramos `BOUNDARY` e `TRAIL`, que hoje conferem por
   leitura mas não têm guarda equivalente; e as camadas do cursor, que a view não modula mas
   também ninguém amarra ao `_draw`.

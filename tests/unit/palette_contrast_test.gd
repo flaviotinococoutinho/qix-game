@@ -79,30 +79,25 @@ func test_swatches_seguem_as_modulacoes_do_shader() -> void:
 
 func test_o_envelope_de_free_cobre_os_dois_extremos_que_o_shader_desenha() -> void:
 	# O erro que este teste existe para impedir é o que a medição carregou até 2026-09-08: afirmar
-	# "como o shader desenha" enquanto se aplicava só a scanline. O canal verde basta para provar os
-	# dois cantos, porque poço e grade agem em todos os canais.
+	# "como o shader desenha" enquanto se aplicava só a scanline. Os três canais importam:
+	# trocar R e B na grade conserva todos os literais, mas muda as cores realmente desenhadas.
 	var visual := RoundVisualDefinition.new()
-	var green := visual.free_color.g
-	var darkest := INF
-	var brightest := -INF
-	for swatch in PaletteContrast.free_swatches(visual.free_color):
-		darkest = minf(darkest, swatch.g)
-		brightest = maxf(brightest, swatch.g)
 	var well_floor: float = (
 		PaletteContrast.FREE_WELL_BASE + PaletteContrast.FREE_WELL_SPAN * (1.0 - sqrt(0.5))
 	)
-	ok(
-		_close(darkest, green * 0.92 * well_floor),
-		"canto escuro de FREE = scanline mínima × poço do canto (%.5f)" % darkest,
-	)
-	ok(
-		_close(brightest, green + PaletteContrast.FREE_GRID_ADD.y),
-		"canto claro de FREE = cor autorada + grade saturada (%.5f)" % brightest,
-	)
-	# A direção do erro importa: um envelope que não incluísse o canto claro devolveria razões
-	# **maiores** do que o jogo entrega, que é exatamente o otimismo que se está removendo.
-	ok(brightest > green, "o canto claro precisa ser mais claro que a cor autorada")
-	ok(darkest < green * 0.92, "o canto escuro precisa ser mais escuro que só a scanline")
+	for channel in 3:
+		var base: float = visual.free_color[channel]
+		var darkest := INF
+		var brightest := -INF
+		for swatch in PaletteContrast.free_swatches(visual.free_color):
+			darkest = minf(darkest, swatch[channel])
+			brightest = maxf(brightest, swatch[channel])
+		ok(absf(darkest - base * PaletteContrast.FREE_SCAN[0] * well_floor) < 0.000001,
+			"canal %d: scanline mínima × poço do canto" % channel)
+		ok(absf(brightest - (base + PaletteContrast.FREE_GRID_ADD[channel])) < 0.000001,
+			"canal %d: a grade é somada ao canal correspondente" % channel)
+		ok(brightest > base, "a grade clareia o canal %d" % channel)
+		ok(darkest < base * PaletteContrast.FREE_SCAN[0], "o poço escurece o canal %d" % channel)
 
 
 func test_nenhum_numero_do_ramo_free_do_shader_fica_fora_da_medicao() -> void:
@@ -139,15 +134,76 @@ func test_nenhum_numero_do_ramo_free_do_shader_fica_fora_da_medicao() -> void:
 			found.has(literal),
 			"%s consta como literal do ramo FREE mas sumiu do shader: entrada órfã" % literal,
 		)
-	# E os três que carregam brilho não podem só estar declarados: precisam ser os que a medição usa.
-	eq(float(PaletteContrast.FREE_SCAN[0]), 0.92, "FREE_SCAN[0] acompanha o shader")
-	eq(PaletteContrast.FREE_WELL_BASE, 0.84, "FREE_WELL_BASE acompanha o shader")
-	eq(PaletteContrast.FREE_WELL_SPAN, 0.16, "FREE_WELL_SPAN acompanha o shader")
-	eq(
-		PaletteContrast.FREE_GRID_ADD,
-		Vector3(0.006, 0.012, 0.016),
-		"FREE_GRID_ADD acompanha o shader",
-	)
+	# Inventário de números não vincula papel nem canal: a fórmula também precisa conferir.
+	eq(_free_brightness_contract_errors(FileAccess.get_file_as_string(SHADER_PATH)),
+		PackedStringArray(), "scan, well e os canais RGB devem alimentar a fórmula medida")
+
+
+func test_free_shader_guard_binds_channels_and_operations_even_when_literals_repeat() -> void:
+	var source := FileAccess.get_file_as_string(SHADER_PATH)
+	eq(_free_brightness_contract_errors(source), PackedStringArray())
+	var mutations: Array[String] = [
+		source.replace("vec3(0.006, 0.012, 0.016)", "vec3(0.016, 0.012, 0.006)"),
+		source.replace("float scan = 0.92 + 0.08", "float scan = 0.08 + 0.92"),
+		source.replace("float well = 0.84 + 0.16", "float well = 0.16 + 0.84"),
+		source.replace("free_color.rgb * scan * well", "free_color.rgb * scan + well"),
+	]
+	for mutated in mutations:
+		ok(mutated != source, "a fixture precisa alterar a fórmula real")
+		ok(not _free_brightness_contract_errors(mutated).is_empty(),
+			"mesmos números em canais ou operações diferentes não representam o mesmo shader")
+	var formatted := source.replace("float well =", "float /* anotação */ well  =\n")
+	formatted = formatted.replace("vec3(0.006, 0.012, 0.016)", "vec3( 0.006,\n0.012, 0.016 )")
+	eq(_free_brightness_contract_errors(formatted), PackedStringArray(),
+		"espaçamento e comentários não mudam a fórmula")
+
+
+## Extrai valores pelo papel que exercem na fórmula. Forma desconhecida exige revisão:
+## não tentamos interpretar GLSL arbitrário nem aceitar uma equação nova como equivalente.
+func _free_brightness_contract_errors(source: String) -> PackedStringArray:
+	var errors := PackedStringArray()
+	var comments := RegEx.create_from_string("(?s)/\\*.*?\\*/|//[^\\n]*")
+	var clean := comments.sub(source, "", true)
+	var branch_pattern := RegEx.create_from_string(
+		"(?s)if\\s*\\(\\s*state\\s*<\\s*0\\.5\\s*\\)\\s*\\{(.*?)\\}\\s*else\\s+if")
+	var branch_match := branch_pattern.search(clean)
+	if branch_match == null:
+		return PackedStringArray(["ramo FREE não reconhecido"])
+	var branch := branch_match.get_string(1)
+	var number := "([0-9]+(?:\\.[0-9]+)?)"
+	var scan_pattern := RegEx.create_from_string(
+		"\\bfloat\\s+scan\\s*=\\s*%s\\s*\\+\\s*%s\\s*\\*\\s*step\\s*\\(" % [number, number])
+	var scan := scan_pattern.search(clean)
+	if scan == null:
+		errors.append("scan: fórmula não reconhecida")
+	else:
+		var base := scan.get_string(1).to_float()
+		var span := scan.get_string(2).to_float()
+		if absf(base - PaletteContrast.FREE_SCAN[0]) > 0.000001 \
+			or absf(base + span - PaletteContrast.FREE_SCAN[1]) > 0.000001:
+			errors.append("scan: base ou amplitude diverge de FREE_SCAN")
+	var well_pattern := RegEx.create_from_string(
+		("\\bfloat\\s+well\\s*=\\s*%s\\s*\\+\\s*%s\\s*\\*\\s*"
+		+ "\\(\\s*1\\.0\\s*-\\s*length\\s*\\(\\s*UV\\s*-\\s*vec2\\s*"
+		+ "\\(\\s*0\\.5\\s*\\)\\s*\\)\\s*\\)\\s*;") % [number, number])
+	var well := well_pattern.search(branch)
+	if well == null:
+		errors.append("well: fórmula não reconhecida")
+	elif absf(well.get_string(1).to_float() - PaletteContrast.FREE_WELL_BASE) > 0.000001 \
+		or absf(well.get_string(2).to_float() - PaletteContrast.FREE_WELL_SPAN) > 0.000001:
+		errors.append("well: base ou amplitude diverge da medição")
+	var result_pattern := RegEx.create_from_string(
+		("\\bresult\\s*=\\s*vec4\\s*\\(\\s*free_color\\.rgb\\s*\\*\\s*scan\\s*\\*\\s*well\\s*"
+		+ "\\+\\s*vec3\\s*\\(\\s*%s\\s*,\\s*%s\\s*,\\s*%s\\s*\\)\\s*\\*\\s*grid\\s*,\\s*"
+		+ "free_color\\.a\\s*\\)\\s*;") % [number, number, number])
+	var result := result_pattern.search(branch)
+	if result == null:
+		errors.append("result: produto de scan/well e soma da grade não reconhecidos")
+	else:
+		for channel in 3:
+			if absf(result.get_string(channel + 1).to_float() - PaletteContrast.FREE_GRID_ADD[channel]) > 0.000001:
+				errors.append("grade: canal %d diverge de FREE_GRID_ADD" % channel)
+	return errors
 
 
 ## Literais do ramo FREE, mais a linha `scan` que ele consome. Devolve as grafias como estão no

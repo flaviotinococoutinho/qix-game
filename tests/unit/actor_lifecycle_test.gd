@@ -202,6 +202,24 @@ func _walk_dart(
 	return walked
 
 
+func test_dart_peek_path_preserves_slow_oblique_steps_and_expiry() -> void:
+	var board := BoardState.new(20, 20)
+	var player := PlayerState.new()
+	player.reset(Vector2i(0, 0))
+	for direction in 16:
+		for speed in [1, 85, 255]:
+			var pools := MinorActorPools.new()
+			_setup_dart(pools, Vector2i(10, 10), speed)
+			pools.set_dart(0, MinorActorPools.D.DIR_INDEX, direction)
+			pools.set_dart(0, MinorActorPools.D.LIFE, 30)
+			var before := pools.canonical_bytes()
+			var predicted := DartRules.peek_path(pools, 0, board, board.width + board.height)
+			eq(pools.canonical_bytes(), before)
+			eq(_walk_dart(pools, board, player, Vector2i(10, 10)), predicted,
+				"saltar ticks sem mudar célula preserva direção %d, velocidade %d e LIFE" % [direction, speed])
+			ok(not pools.dart_alive(0), "o percurso foi observado até absorção ou expiração")
+
+
 func _setup_dart(pools: MinorActorPools, cell: Vector2i, speed: int) -> void:
 	pools.begin_dart(0, 0)
 	pools.set_dart(0, MinorActorPools.D.X_FP, cell.x << 8)

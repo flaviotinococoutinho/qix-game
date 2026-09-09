@@ -27,12 +27,7 @@ func test_first_ten_seconds_never_kill_idle_player_with_minor_actor() -> void:
 func test_armed_dart_corridor_reaches_the_player_it_was_aimed_at() -> void:
 	var board := BoardState.new(60, 60)
 	var player_cell := Vector2i(30, 30)
-	# O teto do desenho precisa cobrir a distância em que o dardo nasce, senão o corredor é
-	# cortado justamente antes do alvo e o aviso volta a esconder a mira.
-	var min_range := ThreatProfile.new().dart_min_range
-	ok(QixMinorActorView.TELEGRAPH_MAX_CELLS >= min_range * 2,
-		"o teto de %d células cobre com folga o alcance mínimo de %d" % [QixMinorActorView.TELEGRAPH_MAX_CELLS, min_range])
-	var reach := QixMinorActorView.TELEGRAPH_MAX_CELLS
+	var reach := board.width + board.height
 	var aimed := 0
 	for seed_value in [11, 2026, 90210, 4242]:
 		var pools := MinorActorPools.new()
@@ -52,6 +47,33 @@ func test_armed_dart_corridor_reaches_the_player_it_was_aimed_at() -> void:
 				aimed += 1
 				break
 	eq(aimed, 4, "o corredor avisado alcança a vizinhança que a regra de contato usa")
+
+
+func test_dart_telegraph_reaches_the_target_on_the_production_board() -> void:
+	var definition := RoundDefinition.new()
+	definition.boss_start = Vector2i(150, 100)
+	var simulation := GameSimulation.new(GameRules.new(), definition, 17)
+	var target := Vector2i(112, 141)
+	simulation.player.reset(target)
+	simulation.player.trail_active = true
+	simulation.player.trail = PackedInt32Array([simulation.board.index_of(target.x, target.y)])
+	simulation.board.set_cell(target.x, target.y, BoardState.Cell.TRAIL)
+	var slot := DartRules.try_spawn(simulation.pools, simulation.board, target,
+		DeterministicRng.new(17), 384, 24, 24, 900, MinorActorPools.Cause.EXPOSURE)
+	eq(Vector2i(simulation.board.width, simulation.board.height), Vector2i(225, 283))
+	eq(slot, 0)
+	eq(simulation.pools.dart_cell(slot), Vector2i(1, 141), "24 é mínimo; o nascimento está a 111 células")
+	var before := simulation.state_checksum()
+	var view := QixMinorActorView.new()
+	view.sync(simulation)
+	var actor: Dictionary = view.presentation_state().darts[0]
+	var target_screen := Vector2(CoordinateSpace.field_to_screen(target))
+	ok(actor.path.size() > 48, "o aviso não pode parar na antiga janela de 48 células")
+	ok(actor.path.has(target_screen), "a posição que motivou a mira precisa aparecer no aviso desenhado")
+	eq(actor.corridor[actor.corridor.size() - 1], target_screen, "a trilha é o terminal real do disparo")
+	eq(actor.muzzle.size(), QixMinorActorView.MUZZLE_CELLS + 1)
+	eq(simulation.state_checksum(), before)
+	view.free()
 
 
 func test_boss_hunts_trail_even_when_base_pattern_wanders() -> void:

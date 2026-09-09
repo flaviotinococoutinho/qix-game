@@ -12,11 +12,6 @@ const EMBER_COLOR := Color("fff0c4")
 const TELEGRAPH_CELLS := 6
 ## Boca do disparo: as células mais próximas do dardo, no brilho que o aviso já tinha.
 const MUZZLE_CELLS := 5
-## Teto do corredor avisado: o dobro de `dart_min_range` (24), a distância em que o dardo nasce
-## do jogador. Nunca esconde o alvo, e impede que seis dardos armados sobre um campo quase todo
-## livre custem milissegundos por frame só para desenhar aviso. Um corredor que bate no teto
-## perde a ponta de seta: seta significa «é aqui que ele morre», e isso não pode ser inventado.
-const TELEGRAPH_MAX_CELLS := 48
 
 var _walkers: Array[Dictionary] = []
 var _darts: Array[Dictionary] = []
@@ -26,6 +21,10 @@ var _tick: int = 0
 var _accent := Color("50e3c2")
 var _hot := Color("fff4b0")
 var _threat := Color("ff426d")
+## No máximo uma entrada por slot. A chave guarda valores, nunca referências ao domínio.
+## Warmup diminui sem mover o dardo: só mudanças que afetam a rota invalidam a previsão.
+var _dart_path_cache: Dictionary = {}
+var _dart_path_builds: int = 0
 
 
 func sync(simulation: GameSimulation, visual: RoundVisualDefinition = null) -> void:
@@ -67,18 +66,25 @@ func sync(simulation: GameSimulation, visual: RoundVisualDefinition = null) -> v
 		})
 	for slot in MinorActorPools.MAX_DARTS:
 		var lifecycle := pools.dart_lifecycle(slot)
+		if lifecycle != ActorLifecycle.State.WARMUP:
+			_dart_path_cache.erase(slot)
 		if lifecycle == ActorLifecycle.State.DESPAWNED:
 			continue
 		var dir := pools.dart(slot, MinorActorPools.D.DIR_INDEX)
 		var direction := Vector2(DartRules.DIRECTION_X[dir], DartRules.DIRECTION_Y[dir]).normalized()
 		var center := Vector2(CoordinateSpace.field_to_screen(pools.dart_cell(slot)))
 		var path := PackedVector2Array()
+		var corridor := PackedVector2Array()
+		var muzzle := PackedVector2Array()
 		if lifecycle == ActorLifecycle.State.WARMUP:
-			for index in DartRules.peek_path(pools, slot, simulation.board, TELEGRAPH_MAX_CELLS):
-				path.append(_screen(simulation.board, index))
+			var cached := _dart_telegraph(simulation.board, pools, slot, center)
+			path = cached.path
+			corridor = cached.corridor
+			muzzle = cached.muzzle
 		_darts.append({
 			"slot": slot, "id": pools.dart_actor_id(slot), "lifecycle": lifecycle,
 			"position": center, "direction": direction, "path": path,
+			"corridor": corridor, "muzzle": muzzle,
 			"warmup": pools.dart(slot, MinorActorPools.D.WARMUP),
 			"state_ticks": pools.dart(slot, MinorActorPools.D.STATE_TICKS),
 			"cause": pools.dart(slot, MinorActorPools.D.CAUSE),
@@ -120,6 +126,36 @@ func presentation_state() -> Dictionary:
 		"walkers": _walkers.duplicate(true), "darts": _darts.duplicate(true),
 		"embers": _embers.duplicate(true), "beacons": _beacons.duplicate(true),
 	}
+
+
+## Diagnóstico de custo, sem participar do snapshot autoritativo ou do checksum.
+func telegraph_cache_state() -> Dictionary:
+	return {"entries": _dart_path_cache.size(), "builds": _dart_path_builds}
+
+
+func _dart_telegraph(board: BoardState, pools: MinorActorPools, slot: int, center: Vector2) -> Dictionary:
+	var key := PackedInt64Array([
+		board.get_instance_id(), pools.get_instance_id(), board.version, board.width, board.height,
+		pools.dart_actor_id(slot), pools.dart_lifecycle(slot),
+		pools.dart(slot, MinorActorPools.D.X_FP), pools.dart(slot, MinorActorPools.D.Y_FP),
+		pools.dart(slot, MinorActorPools.D.DIR_INDEX), pools.dart(slot, MinorActorPools.D.SPEED_FP),
+		pools.dart(slot, MinorActorPools.D.LIFE),
+	])
+	var cached: Dictionary = _dart_path_cache.get(slot, {})
+	if not cached.is_empty() and cached.key == key:
+		return cached
+	var path := PackedVector2Array()
+	# Cada eixo do voo é monótono: width + height limita todas as células visitáveis,
+	# sem confundir dart_min_range (distância mínima de nascimento) com alcance máximo.
+	for index in DartRules.peek_path(pools, slot, board, board.width + board.height):
+		path.append(_screen(board, index))
+	var corridor := PackedVector2Array([center])
+	corridor.append_array(path)
+	cached = {"key": key, "path": path, "corridor": corridor,
+		"muzzle": corridor.slice(0, mini(corridor.size(), MUZZLE_CELLS + 1))}
+	_dart_path_cache[slot] = cached
+	_dart_path_builds += 1
+	return cached
 
 
 func _screen(board: BoardState, index: int) -> Vector2:
@@ -189,22 +225,20 @@ func _draw_dart(actor: Dictionary) -> void:
 		# comprimento arbitrário: quem está na reta precisa ver que ela chega até ele.
 		var path: PackedVector2Array = actor.path
 		if path.size() > 0:
-			var corridor := PackedVector2Array([center])
-			corridor.append_array(path)
+			var corridor: PackedVector2Array = actor.corridor
 			draw_polyline(corridor, INK, 2.0, true)
 			# Corredor inteiro discreto; a boca do disparo conserva a leitura forte de antes.
 			var far := DART_COLOR
 			far.a = 0.55
 			draw_polyline(corridor, far, 0.75, true)
-			var muzzle := corridor.slice(0, mini(corridor.size(), MUZZLE_CELLS + 1))
+			var muzzle: PackedVector2Array = actor.muzzle
 			if muzzle.size() > 1:
 				draw_polyline(muzzle, DART_COLOR, 0.75, true)
-			if path.size() < TELEGRAPH_MAX_CELLS:
-				# Corredor inteiro: a seta marca a célula que absorve ou corta o dardo.
-				var end: Vector2 = path[path.size() - 1]
-				draw_polyline(PackedVector2Array([
-					end - direction * 1.3 - tangent, end, end - direction * 1.3 + tangent,
-				]), _hot, 0.6, true)
+			# A consulta completa termina por absorção ou prazo de vida, sem corte artificial.
+			var end: Vector2 = path[path.size() - 1]
+			draw_polyline(PackedVector2Array([
+				end - direction * 1.3 - tangent, end, end - direction * 1.3 + tangent,
+			]), _hot, 0.6, true)
 		_draw_brackets(center, 3.5, DART_COLOR)
 	else:
 		draw_line(center - direction * 4.5, center, Color("541c36"), 1.6, true)
