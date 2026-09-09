@@ -1,9 +1,11 @@
 # Direção de arte — Lumen Cartography / Atlas Vivo
 
-> **Verificado em** 2026-09-08 · commit `e8307d1` · revisão da direção na integração local Atlas + remoto
-> **Alcance:** intenção visual e correspondência com os arquivos atuais; provas históricas de
-> contraste permanecem datadas abaixo. A validação final da composição e a calibração humana
-> estão em andamento, sem aprovação estética ou publicação inferida desta edição.
+> **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, build Linux não-Mono, sandbox de nuvem headless
+> **Alcance:** remedição do envelope de `FREE` feita nesta branch sobre `5318d0a`; a edição
+> anterior da direção é de `e8307d1`. Intenção visual e correspondência com os arquivos atuais; provas históricas de
+> contraste permanecem datadas abaixo, e a remedição do envelope de `FREE` está na seção de
+> 2026-09-08. Nada foi visto nem jogado: esta sessão não tem tela. A validação final da composição
+> e a calibração humana estão em andamento, sem aprovação estética ou publicação inferida desta edição.
 
 A identidade é cartografia bioluminescente: o jogador estabiliza regiões de um mapa vivo e
 revela uma paisagem cósmica encoberta. Atlas acrescenta volume individual aos atores, relevo e
@@ -156,6 +158,39 @@ As tabelas e seus alcances originais permanecem no histórico Git anterior à re
 inclusive em e8307d1:docs/ART_DIRECTION.md. Não houve remedição nesta edição documental.
 A aceitação do jogo exige confirmar contornos no renderer e em movimento, não apenas comparar
 triplas de cor isoladas.
+
+## Correção do envelope de `FREE` — remedição de 2026-09-08
+
+Godot 4.7.2-stable, build Linux não-Mono, sandbox de nuvem headless, sobre `5318d0a`.
+
+As tabelas de setembro/04 e setembro/05 acima medem o chão livre como `free_color` vezes a
+scanline. O shader faz mais que isso no ramo `FREE`: multiplica também por um **poço** radial
+(`0.84 + 0.16 * (1 - length(UV - 0.5))`) e **soma** uma grade de `vec3(0.006, 0.012, 0.016)`.
+Enquanto os dois ficaram fora da conta, o chão medido era mais escuro que o pixel mais claro
+realmente desenhado, e todo par contra `FREE` saía **otimista**.
+
+Nada na paleta mudou e nada regrediu: os números abaixo sempre foram os do jogo. O que mudou é
+que agora são medidos. Sempre o pior caso entre visão tricromática e as três dicromacias.
+
+| Par | Antes (medido) | Agora (envelope real) | Piso | Meta 3:1 |
+|---|---|---|---|---|
+| `FREE`×`BOUNDARY` | 8,93 | **8,69** | 8,60 | ok |
+| `FREE`×`TRAIL` | 11,23 | **10,96** | 10,90 | ok |
+| `FREE`×`THREAT` | 3,73 | **3,62** | 3,60 | ok |
+| `CURSOR_OUTER`×`FREE` | 12,19 | **11,86** | 11,80 | ok |
+| `CURSOR_ACCENT`×`FREE` | 5,38 | **5,25** | 5,20 | ok |
+| `CURSOR_CORE`×`FREE` | 15,33 | **14,85** | 14,80 | ok |
+
+Cada linha é o pior caso entre a paleta padrão e as três rodadas autoradas. Os pares que não
+tocam `FREE` foram remedidos na mesma execução e não se moveram; a dívida documentada continua
+sendo `BOUNDARY`×`TRAIL`, `BOUNDARY`×`THREAT` e `TRAIL`×`THREAT`, com as mesmas três camadas do
+cursor sobre `BOUNDARY`. **Nenhum par cruzou a meta nos dois sentidos** — `FREE`×`THREAT`, o mais
+apertado, continua acima de 3:1 com 0,62 de folga em vez de 0,73.
+
+O envelope é conservador de propósito: ele cruza os extremos de scanline, poço e grade sem
+afirmar que os três saturam no mesmo pixel. Para um piso de legibilidade, errar para o chão mais
+claro possível é errar na direção certa. A leitura em movimento, num aparelho real, continua
+pendente de revisão humana como o resto desta seção.
 
 ## Barra de qualidade e próximos marcos
 

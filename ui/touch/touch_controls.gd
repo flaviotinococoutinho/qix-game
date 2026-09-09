@@ -39,6 +39,29 @@ const ACTION_RADIUS := 39.0
 const STICK_ZONE_RIGHT_RATIO := 0.55
 const STICK_ZONE_TOP_RATIO := 0.48
 
+## A pausa encosta **por baixo** da banda superior do HUD, derivando a altura dela em vez de
+## repetir o número. Antes começava em y=10, dentro dos 19 px do HUD: o preenchimento quase
+## opaco cobria 32 dos 82 px do trilho do escudo e o pé dos números vitais. Um instrumento meio
+## escondido é pior que um instrumento ausente — o jogador lê um valor e acredita nele sem ver
+## que falta pedaço, e o escudo é justamente a leitura de urgência.
+##
+## O custo assumido no lugar disso é um véu sobre o canto superior direito da moldura. É o
+## mesmo trato que o anel do stick e o botão de ação já fazem com o rodapé do campo, e a
+## opacidade adotada aqui é a deles: sob 24 % de véu a moldura e um corpo de ameaça continuam
+## legíveis, sob 58 % um número não continua.
+const PAUSE_SIZE := Vector2(32.0, 24.0)
+const PAUSE_RIGHT_INSET := 42.0
+const PAUSE_TOP := QixGameHud.TOP_BAR_HEIGHT
+
+## Tintas da sobreposição, promovidas de locais de `_draw()` a constantes: é o que permite a
+## `tests/unit/touch_hud_occlusion_test.gd` provar que nenhuma peça do chrome é opaca o
+## bastante para esconder o que está debaixo dela.
+const VEIL_STICK := Color(0.38, 0.97, 0.82, 0.24)
+const VEIL_ACTION := Color(1.0, 0.52, 0.66, 0.28)
+const VEIL_PAUSE := Color(0.04, 0.08, 0.14, 0.24)
+const CHROME_LINE := Color(0.78, 1.0, 0.96, 0.62)
+const KNOB_FILL := Color(0.75, 1.0, 0.95, 0.42)
+
 @export var touch_enabled: bool = true:
 	set(value):
 		touch_enabled = value
@@ -259,28 +282,48 @@ func _action_center() -> Vector2:
 
 func _pause_rect() -> Rect2:
 	var layout := _layout_size()
-	return Rect2(layout.x - 42.0, 10.0, 32.0, 24.0)
+	return Rect2(Vector2(layout.x - PAUSE_RIGHT_INSET, PAUSE_TOP), PAUSE_SIZE)
+
+
+## Caixas do que a sobreposição realmente desenha, com o veu de cada uma. `_draw()` e a guarda
+## de oclusão leem esta mesma função: uma peça nova de chrome nasce medida contra o HUD, sem
+## depender de alguém lembrar de a listar num teste.
+##
+## O anel do stick é dado pelo centro **efetivo**, não pelo de descanso: enquanto o dedo está
+## na zona, o anel viaja com ele e é essa a caixa que esconde campo.
+func chrome_rects() -> Dictionary:
+	var stick := _stick_center()
+	var action := _action_center()
+	return {
+		"stick": {
+			"rect": Rect2(stick - Vector2.ONE * STICK_RADIUS, Vector2.ONE * STICK_RADIUS * 2.0),
+			"veil": VEIL_STICK,
+		},
+		"action": {
+			"rect": Rect2(action - Vector2.ONE * ACTION_RADIUS, Vector2.ONE * ACTION_RADIUS * 2.0),
+			"veil": VEIL_ACTION,
+		},
+		"pause": {"rect": _pause_rect(), "veil": VEIL_PAUSE},
+	}
 
 
 func _draw() -> void:
 	if not touch_enabled:
 		return
-	var cyan := Color(0.38, 0.97, 0.82, 0.24)
-	var hot := Color(1.0, 0.52, 0.66, 0.28)
-	var line := Color(0.78, 1.0, 0.96, 0.62)
+	var chrome := chrome_rects()
 	var center := _stick_center()
-	draw_circle(center, STICK_RADIUS, cyan)
-	draw_arc(center, STICK_RADIUS, 0.0, TAU, 48, line, 1.25, true)
+	draw_circle(center, STICK_RADIUS, chrome["stick"]["veil"])
+	draw_arc(center, STICK_RADIUS, 0.0, TAU, 48, CHROME_LINE, 1.25, true)
 	var knob := _stick_position if _stick_touch >= 0 else center
 	var delta := knob - center
 	if delta.length() > STICK_RADIUS - 8.0:
 		knob = center + delta.normalized() * (STICK_RADIUS - 8.0)
-	draw_circle(knob, 13.0, Color(0.75, 1.0, 0.95, 0.42))
-	draw_circle(_action_center(), ACTION_RADIUS, hot)
-	draw_arc(_action_center(), ACTION_RADIUS, 0.0, TAU, 48, line, 1.5, true)
-	draw_string(ThemeDB.fallback_font, _action_center() + Vector2(-12.0, 5.0), "DRAW", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 8, line)
-	var pause := _pause_rect()
-	draw_rect(pause, Color(0.04, 0.08, 0.14, 0.58), true)
-	draw_rect(pause, line, false, 1.0)
-	draw_line(pause.position + Vector2(12.0, 7.0), pause.position + Vector2(12.0, 17.0), line, 2.0)
-	draw_line(pause.position + Vector2(20.0, 7.0), pause.position + Vector2(20.0, 17.0), line, 2.0)
+	draw_circle(knob, 13.0, KNOB_FILL)
+	draw_circle(_action_center(), ACTION_RADIUS, chrome["action"]["veil"])
+	draw_arc(_action_center(), ACTION_RADIUS, 0.0, TAU, 48, CHROME_LINE, 1.5, true)
+	draw_string(ThemeDB.fallback_font, _action_center() + Vector2(-12.0, 5.0), "DRAW", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 8, CHROME_LINE)
+	var pause: Rect2 = chrome["pause"]["rect"]
+	draw_rect(pause, chrome["pause"]["veil"], true)
+	draw_rect(pause, CHROME_LINE, false, 1.0)
+	draw_line(pause.position + Vector2(12.0, 7.0), pause.position + Vector2(12.0, 17.0), CHROME_LINE, 2.0)
+	draw_line(pause.position + Vector2(20.0, 7.0), pause.position + Vector2(20.0, 17.0), CHROME_LINE, 2.0)

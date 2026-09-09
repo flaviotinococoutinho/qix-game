@@ -84,6 +84,10 @@ var _beacons_captured: int = 0
 var _effect_ticks := PackedInt32Array()
 var _flash_message: String = ""
 var _flash_ticks: int = 0
+var _flash_is_alert: bool = false
+var _flash_kind: int = -1
+var _flash_actor_id: int = -1
+var _flash_simulation: GameSimulation
 ## Causa da última morte **observada**, ou `-1` enquanto nenhuma foi. Não é um flash com prazo
 ## próprio: quem lhe dá duração é a fase DYING do domínio. Ver `_status_text`.
 var _death_reason: int = -1
@@ -165,7 +169,7 @@ func sync(source: Variant, paused: bool, events: Array[GameEvent]) -> void:
 	var simulation := _simulation_from(source)
 	if simulation == null:
 		return
-	_capture_flash(events)
+	_capture_flash(events, simulation)
 	var session := source as GameSession if source is GameSession else null
 	var visual: RoundVisualDefinition = null
 	var round_number := 1
@@ -271,56 +275,122 @@ func _shield_seconds(simulation: GameSimulation) -> int:
 	return maxi(0, ceili(simulation.shield_ticks / 60.0))
 
 
-func _capture_flash(events: Array[GameEvent]) -> void:
+func _capture_flash(events: Array[GameEvent], simulation: GameSimulation) -> void:
+	# O snapshot já contém o tick inteiro: resolver o aviso antes de arbitrar o ganho
+	# também cobre CAPTURED vindo antes de EMBER_EXTINGUISHED/DART_ABSORBED no mesmo lote.
+	if _flash_is_alert and (_flash_simulation != simulation \
+			or _alert_resolved(simulation, _flash_kind, _flash_actor_id)):
+		_clear_flash()
 	for event in events:
 		match event.kind:
 			GameEvent.Kind.CAPTURED:
-				_flash_message = "CAPTURA +%d" % event.data.get("filled_delta", 0)
-				_flash_ticks = 75
+				_set_flash("CAPTURA +%d" % event.data.get("filled_delta", 0), 75, false)
 			GameEvent.Kind.PLAYER_DIED:
 				_death_reason = event.data.get("reason", GameSimulation.DeathReason.BOSS_CONTACT)
 				# A morte não entra na fila de flashes: ela tem fase própria no domínio e a linha
 				# de estado passa a ser dela até à reentrada. Zerar o prazo pendente impede que um
 				# "CAPTURA +n" ou um "ESCUDO CRÍTICO" anterior reapareça do outro lado da morte,
 				# anunciando um estado que o jogador já não tem.
-				_flash_ticks = 0
-				_flash_message = ""
+				_clear_flash()
 			GameEvent.Kind.PLAYER_RESPAWNED:
 				# A causa deixa de existir no mesmo tick em que o jogador recupera o controlo.
 				_death_reason = -1
 			GameEvent.Kind.SHIELD_CRITICAL:
-				_flash_message = "ESCUDO CRÍTICO"
-				_flash_ticks = 120
+				_set_alert(event, simulation, "ESCUDO CRÍTICO", 120)
 			GameEvent.Kind.DART_ARMED:
-				_flash_message = "DARDO ARMADO · DESVIE"
-				_flash_ticks = 30
+				_set_alert(event, simulation, "DARDO ARMADO · DESVIE", 30)
 			GameEvent.Kind.TRAIL_CUT:
-				_flash_message = "TRILHA CORTADA · CONTINUE!"
-				_flash_ticks = 75
+				_set_alert(event, simulation, "TRILHA CORTADA · CONTINUE!", 75)
 			GameEvent.Kind.EMBER_IGNITED:
-				_flash_message = "BRASA NA TRILHA · AVANCE"
-				_flash_ticks = 60
+				_set_alert(event, simulation, "BRASA NA TRILHA · AVANCE", 60)
 			GameEvent.Kind.WALKER_EXTINGUISHED:
-				_flash_message = "VAGALUME CONTIDO +%d" % event.data.get("points", 0)
-				_flash_ticks = 60
+				_set_flash("VAGALUME CONTIDO +%d" % event.data.get("points", 0), 60, false)
 			GameEvent.Kind.BOSS_PHASE_CHANGED:
-				_flash_message = "NÚCLEO · FASE %d" % (int(event.data.get("phase", 0)) + 1)
-				_flash_ticks = 100
+				_set_alert(event, simulation, "NÚCLEO · FASE %d" % (int(event.data.get("phase", 0)) + 1), 100)
 			GameEvent.Kind.BOSS_CORNERED:
-				_flash_message = "NÚCLEO EM FÚRIA"
-				_flash_ticks = 75
+				_set_alert(event, simulation, "NÚCLEO EM FÚRIA", 75)
 			GameEvent.Kind.OVERTIME_STARTED:
-				_flash_message = "PRESSÃO MÁXIMA · AVANCE"
-				_flash_ticks = 100
+				_set_alert(event, simulation, "PRESSÃO MÁXIMA · AVANCE", 100)
 			GameEvent.Kind.BEACON_CAPTURED:
-				_flash_message = "BALIZA ×%d  +%d" % [event.data.get("chain", 1), event.data.get("points", 0)]
-				_flash_ticks = 90
+				_set_flash(
+					"BALIZA ×%d  +%d" % [event.data.get("chain", 1), event.data.get("points", 0)],
+					90,
+					false,
+				)
 			GameEvent.Kind.ITEM_STARTED:
-				_flash_message = "%s ATIVO" % _item_name(int(event.data.get("item", 0)))
-				_flash_ticks = 75
+				_set_flash("%s ATIVO" % _item_name(int(event.data.get("item", 0))), 75, false)
 			GameEvent.Kind.BOSS_SEALED:
-				_flash_message = "NÚCLEO SELADO"
-				_flash_ticks = 100
+				_set_flash("NÚCLEO SELADO", 100, false)
+
+
+## Escreve a linha de flash respeitando a hierarquia de `docs/ART_DIRECTION.md` §Hierarquia 4:
+## «o alerta de perigo conserva prioridade sobre recompensas».
+##
+## O slot é único e era do último a escrever, sem olhar a quem. Isso invertia a hierarquia no
+## caso mais comum do jogo: as balizas ficam no chão livre, que é onde os dardos armam. Meio
+## segundo depois de "DARDO ARMADO · DESVIE" (30 ticks) o jogador colhe a baliza que estava a
+## perseguir, e "BALIZA ×2  +240" ocupa a linha por 90 ticks — pontos por cima do único aviso
+## sobre o qual ainda dava para agir, e três vezes mais tempo do que o aviso teria durado.
+##
+## A regra: um alerta toma a linha sempre, inclusive de outro alerta — a ameaça mais nova é a
+## que ainda pede decisão. Uma recompensa só entra com a linha livre de alerta; caso contrário
+## é descartada, não enfileirada. Descartar é honesto porque o ganho não depende desta linha:
+## ele já está a ser pago, degrau a degrau, no contador de pontuação (ADR-0009), e a baliza
+## conta em `B n/m` na linha de vitais. O aviso não tem segunda casa.
+##
+## Continua apresentação pura: lê eventos já confirmados e não devolve nada ao domínio
+## (invariante 6). Trocar a hierarquia não pode mexer em checksum (invariante 8).
+func _set_flash(message: String, ticks: int, is_alert: bool) -> void:
+	if not is_alert and _flash_ticks > 0 and _flash_is_alert:
+		return
+	_flash_message = message
+	_flash_ticks = ticks
+	_flash_is_alert = is_alert
+	_flash_kind = -1
+	_flash_actor_id = -1
+	_flash_simulation = null
+
+
+func _clear_flash() -> void:
+	_flash_message = ""
+	_flash_ticks = 0
+	_flash_is_alert = false
+	_flash_kind = -1
+	_flash_actor_id = -1
+	_flash_simulation = null
+
+
+func _set_alert(event: GameEvent, simulation: GameSimulation, message: String, ticks: int) -> void:
+	var actor_id := -1
+	if event.kind == GameEvent.Kind.DART_ARMED:
+		var slot := int(event.data.get("slot", -1))
+		if slot >= 0 and slot < MinorActorPools.MAX_DARTS:
+			actor_id = simulation.pools.dart_actor_id(slot)
+	# Um aviso pode nascer e ser resolvido no mesmo tick; não o ressuscitar pelo evento antigo.
+	if _alert_resolved(simulation, event.kind, actor_id):
+		return
+	_set_flash(message, ticks, true)
+	_flash_kind = event.kind
+	_flash_actor_id = actor_id
+	_flash_simulation = simulation
+
+
+## Cada aviso conserva a própria causa: absorver outro dardo não resolve este, e extinguir
+## uma brasa não cura o escudo. IDs também distinguem a reutilização de um slot do mesmo ator.
+func _alert_resolved(simulation: GameSimulation, kind: int, actor_id: int) -> bool:
+	match kind:
+		GameEvent.Kind.DART_ARMED:
+			for slot in MinorActorPools.MAX_DARTS:
+				if simulation.pools.dart_alive(slot) and simulation.pools.dart_actor_id(slot) == actor_id:
+					return false
+			return true
+		GameEvent.Kind.EMBER_IGNITED:
+			return not simulation.trail_active or simulation.pools.alive_embers() == 0
+		GameEvent.Kind.TRAIL_CUT:
+			return not simulation.trail_active
+		GameEvent.Kind.SHIELD_CRITICAL:
+			return simulation.shield_ticks > simulation.rules.shield_critical_ticks
+	return false
 
 
 func _status_text(simulation: GameSimulation, session: GameSession, paused: bool) -> String:

@@ -2,6 +2,7 @@
 
 > **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
 > **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
+> A edição de 2026-09-08 apenas carimbou ambiente e data nas linhas que afirmam contagens: **nada foi remedido**, e a data acima segue sendo a da última verificação real.
 **Atualização Atlas Vivo:** palco 2.5D com GLBs Blender, lifecycle/diretor/balizas/itens e replay v4 foram integrados localmente. A evidência de shipping 2D de setembro/03 é histórica; a prontidão AAA e de distribuição permanece aberta. [Contrato e autoria atuais](ATLAS_VIVO.md).
 
 
@@ -155,7 +156,8 @@ cd /Users/flaviocoutinho/development/qiqix/qix-game
 ```
 
 O run final registrou **16 staged e 16 committed**. A suíte direcionada da transação passou
-**22 testes e 353 asserções**, cobrindo concorrência entre processos, retomada de lock stale,
+**22 testes e 353 asserções** em macOS, no run de 2026-09-03, cobrindo concorrência entre
+processos, retomada de lock stale,
 commit, rollback byte a byte, remoção de destinos novos, cache, validação de paths, integridade
 de manifest/WAL/payload/backup, todos os arcos da state machine, estado terminal dos targets e
 recovery após interrupção injetada. O WAL torna a recuperação persistente entre processos;
@@ -221,21 +223,26 @@ O runner:
 Os presets são de QA: sem identidade/certificado de distribuição, notarização, Play Console ou
 credenciais de publicação.
 
-## Evidência final registrada
+## Evidência final registrada — run `20260903T065739Z-65912`
 
-| Artefato | Resultado | Interpretação correta |
-|---|---|---|
-| suíte headless | 134 testes, 11.489 asserções, 0 falhas | contratos e integrações locais verdes, sem warning na repetição final |
-| transação de conteúdo | 22 testes, 353 asserções; gerador 16 staged/16 committed | WAL v3, lock, integridade e recovery verdes |
-| parser Metal HUD | 10 testes Python, 10 aprovados | parser rejeita linhas/pairs incoerentes antes do gate GPU |
-| macOS | 101.199.872 bytes, arm64, payload/smokes/codesign verdes | bundle QA atual validado localmente; assinatura é ad-hoc, não de distribuição |
-| smoke macOS gráfico | 900/900 ticks a 60 Hz; nominal 15 s, wall 17 s; 1 marker; watchdog 30 s sem timeout; saída 0 | áudio real/runtime-default atravessou o loop PCM; não substitui escuta crítica |
-| frame pacing exportado | 600 amostras, gameplay ativo; p95 18,331 ms, p99 20,041 ms, máx. 75,433 ms | gate de frame pacing passou e não houve stall ≥150 ms |
-| Metal HUD | 1.380 pares; GPU p95 0,23 ms, p99 0,29 ms, máx. 0,4 ms; zero malformed/unpaired/stalls | gate GPU local passou em Apple M2/Metal |
-| framebuffer exportado | 17 asserções, 240×320, máscara R8 igual ao board | `CLAIMED` preservou o texel do fundo no resultado final do shader |
-| Android APK | 40.486.376 bytes; SHA-256 `db61015cfc6bea849ec41fad6907e1c0af625d8c38866c2e38bc68306c6411e2` | archive/payload/assinatura debug verdes |
-| smoke Android | `emulator-5554`, iniciado pelo runner; main loop após 13 s + 30 s vivo, screenshot e scan limpos | seleção e emulador passaram; isso não substitui aparelho físico nem soak |
-| logs finais | sem script/resource/parse/invalid-call ou `ObjectDB` leak nos gates | ausência das assinaturas procuradas, não prova ausência de todo problema possível |
+Toda linha da tabela vem desse run único. A coluna **Origem** repete ambiente e data em cada
+linha porque é assim que a tabela é lida: quem procura "quantos testes tem o projeto" varre a
+coluna, não o parágrafo acima. A contagem viva da árvore de hoje está em
+[TEST_MATRIX.md](TEST_MATRIX.md), e é outra — estes números não a substituem nem a contradizem.
+
+| Artefato | Resultado | Origem | Interpretação correta |
+|---|---|---|---|
+| suíte headless | 134 testes, 11.489 asserções, 0 falhas | macOS arm64, 2026-09-03 | contratos e integrações locais verdes, sem warning na repetição final |
+| transação de conteúdo | 22 testes, 353 asserções; gerador 16 staged/16 committed | macOS arm64, 2026-09-03 | WAL v3, lock, integridade e recovery verdes |
+| parser Metal HUD | 10 testes Python, 10 aprovados | macOS arm64, 2026-09-03 | parser rejeita linhas/pairs incoerentes antes do gate GPU |
+| macOS | 101.199.872 bytes, arm64, payload/smokes/codesign verdes | macOS arm64, 2026-09-03 | bundle QA atual validado localmente; assinatura é ad-hoc, não de distribuição |
+| smoke macOS gráfico | 900/900 ticks a 60 Hz; nominal 15 s, wall 17 s; 1 marker; watchdog 30 s sem timeout; saída 0 | macOS arm64, 2026-09-03 | áudio real/runtime-default atravessou o loop PCM; não substitui escuta crítica |
+| frame pacing exportado | 600 amostras, gameplay ativo; p95 18,331 ms, p99 20,041 ms, máx. 75,433 ms | macOS arm64, 2026-09-03 | gate de frame pacing passou e não houve stall ≥150 ms |
+| Metal HUD | 1.380 pares; GPU p95 0,23 ms, p99 0,29 ms, máx. 0,4 ms; zero malformed/unpaired/stalls | macOS Apple M2/Metal, 2026-09-03 | gate GPU local passou em Apple M2/Metal |
+| framebuffer exportado | 17 asserções, 240×320, máscara R8 igual ao board | macOS arm64, 2026-09-03 | `CLAIMED` preservou o texel do fundo no resultado final do shader |
+| Android APK | 40.486.376 bytes; SHA-256 `db61015cfc6bea849ec41fad6907e1c0af625d8c38866c2e38bc68306c6411e2` | Android arm64, 2026-09-03 | archive/payload/assinatura debug verdes |
+| smoke Android | `emulator-5554`, iniciado pelo runner; main loop após 13 s + 30 s vivo, screenshot e scan limpos | Android emulador, 2026-09-03 | seleção e emulador passaram; isso não substitui aparelho físico nem soak |
+| logs finais | sem script/resource/parse/invalid-call ou `ObjectDB` leak nos gates | macOS e Android, 2026-09-03 | ausência das assinaturas procuradas, não prova ausência de todo problema possível |
 
 Relatórios: `build/shipping/reports/result.txt`, `run-state.txt`,
 `macos-audio-smoke-evidence.txt`, `macos-frame-pacing.json`, `macos-metal-hud.json`,

@@ -1,9 +1,9 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, **Linux headless** (build não-Mono, sandbox de nuvem), com a guarda de direção deste PR aplicada sobre esse commit
-> **Alcance:** suíte explícita do projeto e rota M2. A reconciliação Atlas + 33 heads (#59–#91) permanece incorporada; ela foi medida em `ecc6a23`, macOS headless, e **não** foi reexecutada aqui.
-> **Resultado:** 411 testes, 20251 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
-> Exportação, assinatura, Android físico, GPU real e mérito visual/sonoro não foram revalidados.
+> **Verificado em** 2026-09-09 · commit `41899a7` · Godot 4.7.2 Mono, macOS; com as correções desta integração aplicadas
+> **Alcance:** suíte explícita desta integração, com inventário derivado pelo sincronizador.
+> **Resultado:** 463 testes, 20863 asserções, 0 falhas.
+> Renderer, export e limites são discriminados no [relato](loop/runs/2026-09-09T-pr-integration.md).
 
 ## Comando canônico da suíte
 
@@ -11,12 +11,11 @@
 python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado da suíte integrada: **411 testes, 20251 asserções, 0 falhas** — árvore de `5318d0a`
-mais a guarda de direção deste PR, em Linux headless; resultados de outras branches não são
-intercambiáveis. Os 404 testes / 19009 asserções medidos em `ecc6a23` (macOS) continuam sendo o
-registro daquela execução: a diferença são os **7 casos** de `domain_direction_guard_test.gd`.
+Resultado da suíte integrada: **463 testes, 20863 asserções, 0 falhas** — composição local
+sobre `a5b2b06`, em macOS headless. Números de outras branches ou ambientes não são
+intercambiáveis. Resultados históricos permanecem nos relatos originais.
 
-**Inventário da suíte (derivado, não digitado):** 75 arquivos de teste · 411 casos `test_*`.
+**Inventário da suíte (derivado, não digitado):** 79 arquivos de teste · 463 casos `test_*`.
 
 A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
 de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
@@ -43,14 +42,18 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | entrada | teclado/InputMap, direção única/sobreposição, D-pad, stick com histerese, A/X/Start, estado independente por gamepad, deduplicação InputMap×raw de A/Start, multitouch, disconnect/reset e equivalência canônica gamepad×touch |
 | feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum; intenção e prioridade declaradas por cue, escada de prioridade do som igual à da háptica, e alocação de voz que recusa cortar um cue mais importante; o limiar de exposição soa **e** se sente com a mesma prioridade (35), o aviso é recusado quando algo mais alto acontece no mesmo tick, e a aresta é lida sem ser consumida — checksum imóvel ao longo de oito `sync` |
 | boss | validação dos perfis WANDER/PURSUIT/SWEEP, octantes inteiros, jitter determinístico, reflexão, pulso de velocidade, limites seguros, hash de regras e replay incompatível rejeitado antes da mutação |
+| aviso do dardo | o corredor previsto por `DartRules.peek_path` é o mesmo que `update()` percorre — igualdade estrita a uma célula por tick e, acima disso, toda célula andada prevista na ordem, com o mesmo terminal absorvente; território conquistado encurta o aviso; a previsão não move o dardo nem consome RNG (`canonical_bytes` imóvel); o corredor alcança o alvo no campo de produção 225×283, inclusive além de 48 células; cache por estado confirmado invalida com território/ator; a view só carrega o corredor em WARMUP |
 | conteúdo | três rodadas ordenadas, IDs/seeds únicos, referências externas separadas, fundos 225×283 aprovados, alvo 80%, curva crescente e três perfis externos de boss |
 | geração transacional | shadow staging, lock exclusivo por projeto via loopback, WAL v3 ancorado ao SHA do manifest, hashes/tamanhos de payload/backup, state machine integral, targets terminais, rollback/cache e recovery após interrupção/processo morto |
 | apresentação | HUD de campanha, progresso até alvo, contador de percentagem encenado em degraus (escada de denominações, teto e piso de duração, regressão instantânea), intro/clear/game over/campanha/pausa, continuidade de score/vidas entre setores (carry-in na intro, ganho do setor no clear, setores estabilizados nas fases terminais, prompt herdando o acento do próximo setor), VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
-| contraste cromático | luminância WCAG contra referências conhecidas, matrizes de dicromacia colapsando o eixo correto, swatches iguais às modulações do shader, catraca de regressão por par e dívida documentada coerente com a paleta autorada |
+| oclusão do toque sobre o HUD | nenhuma peça do chrome de `TouchControls` cobre instrumento da banda superior, medida contra os nós reais do HUD; a pausa deriva a altura da banda em vez de repetir o número; a âncora flutuante do stick não alcança a banda; intrusão em repouso na barra inferior presa por peça (stick 6 px, ação 3 px, pausa 0) e mordida dos arcos na linha de texto presa em largura de círculo, não de caixa; teto de opacidade por véu; violação plantada (a pausa na geometria antiga, sobre 32 dos 82 px do trilho do escudo) é acusada |
+| hierarquia da linha de flash | um alerta toma a linha de estado sempre, inclusive de outro alerta; uma recompensa só entra com a linha livre e é descartada, não enfileirada, quando não entra; a morte continua limpando a linha inteira; a resolução da causa no snapshot libera avisos por captura/absorção/PURGA sem confundir slots ou rodadas; o defeito original foi medido antes da correção — «BALIZA ×2  +240» ocupava o lugar de «DARDO ARMADO · DESVIE» no mesmo tick e enquanto o aviso ainda corria — e o checksum é idêntico com e sem `sync` |
+| contraste cromático | luminância WCAG contra referências conhecidas, matrizes de dicromacia colapsando o eixo correto, swatches iguais às modulações do shader, catraca de regressão por par, envelope FREE com scanline/poço/grade e guarda por expressão/canal RGB; dívida documentada coerente com a paleta autorada |
 | shipping | ícone quadrado, presets sem segredo, filtros, dispatch pela cena principal, smoke de áudio com marker/watchdog, seleção segura do serial, frame pacing e contratos de framebuffer/Metal HUD |
 | integração | existência, carga, campanha/feedback/touch ligados, camadas obrigatórias da cena principal, permissão Android de vibração e 60 Hz persistidos no projeto |
 | captura de erros | o runner de testes falha por erro de script ocorrido depois de uma asserção, e limpa a janela entre testes |
-| inventário desta matriz | a contagem de arquivos e de casos `test_*` é derivada pela mesma varredura de diretório do runner e conferida contra a linha declarada aqui; toda afirmação `N testes, M asserções, K falhas` do documento precisa repetir os mesmos números. Fora do alcance de propósito: a contagem de asserções (só existe depois de executar) e os demais `docs/*.md`, cujos números de outro ambiente são registro histórico |
+| inventário desta matriz | a contagem de arquivos e de casos `test_*` é derivada pela mesma varredura de diretório do runner e conferida contra a linha declarada aqui; toda afirmação `N testes, M asserções, K falhas` do documento precisa repetir os mesmos números. sincronizador recusa marcadores ausentes/duplicados, descoberta inválida e parâmetros inválidos antes de gravar. Fora do alcance de propósito: inferir asserções sem execução |
+| procedência das contagens fora desta matriz | toda linha que se lê sozinha — linha de tabela ou início de item de lista — em `docs/*.md` e que afirme `N testes` ou `M asserções` precisa dizer, nela mesma, de que ambiente e data veio, ou declarar-se derivada da árvore desta branch. Prosa corrida, linha de continuação recuada, `docs/loop/` e `docs/decisions/` ficam fora de propósito; a regra é provada nos dois sentidos sobre uma linha sintética carimbada e nua |
 | invariantes 1 e 4 | varredura estática de `game/simulation`, `game/rules` e `game/session` por símbolo do mundo real (acaso global, relógio, `Input`, `Tween`, física, `await`, `_process`); o próprio scanner é validado contra amostras positivas e negativas, de modo que ele não pode passar sem olhar |
 | invariante 10 | SHA-256 de todo arquivo de mídia de `assets`, `game`, `ui`, `app`, `content`, `tools`, `tests` e `reference` conferido contra `assets/ASSET-PROVENANCE.md`; hash declarado sem arquivo correspondente é recusado como órfão salvo em linha `(removido)`; arquivo marcado `(removido)` não pode reaparecer; a checagem é exercitada contra bytes de controle não declarados e o padrão da tabela é validado numa linha sintética, para que uma reformatação não a transforme em laço vazio |
 
@@ -67,12 +70,12 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | natureza da rota | **automatizada, não humana**; não mede dificuldade, ergonomia, diversão ou balanceamento percebido |
 | boss autorável | WANDER, PURSUIT e SWEEP externos, determinísticos, distintos e limitados a velocidade segura |
 | áudio PCM | guard frame cobre a leitura one-past-end do loop observada no Android e documentada no Godot #119778 |
-| geração autorável | WAL v3 finalizou 16 staged/16 committed; subconjunto direcionado passou 22 testes/353 asserções |
+| geração autorável | WAL v3 finalizou 16 staged/16 committed; subconjunto direcionado passou 22 testes/353 asserções em macOS, 2026-09-03 |
 | perfil isolado do board | R8 p50/p95 1/1 µs em 240 amostras; legado sintético 31.160/32.304 µs; speedup p95 32.304× e 4× menos bytes por refresh |
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 411 testes, 20251 asserções, 0 falhas; Linux headless em 2026-09-08, runner explícito com inspeção de diagnósticos |
+| log final da suíte | 463 testes, 20863 asserções, 0 falhas; macOS headless em 2026-09-09, runner explícito com inspeção de diagnósticos |
 | guarda de direção domínio→apresentação | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-08 em Linux headless: `var _hud: QixGameHud` em `game/session/game_session.gd`, `var _tint := Color("ff00ff")` em `game/simulation/game_simulation.gd` e `extends Node` em `game/session/round_start_state.gd`. **as mesmas duas primeiras mutações deixam a suíte anterior inteiramente verde** — zero falhas em 404 casos e 19013 asserções, sem esta guarda no disco — e é essa a medida do buraco que ela fecha |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
@@ -86,7 +89,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | smoke macOS com áudio real | **passou** | 900/900 ticks a 60 Hz; nominal 15 s, wall 17 s; 1 marker; watchdog 30 s sem timeout/sinal; saída 0 |
 | frame pacing exportado | **passou** | 600 amostras em gameplay ativo; p95 18,331 ms, p99 20,041 ms, máximo 75,433 ms; render CPU p95 0,071 ms; zero stalls ≥150 ms |
 | GPU Metal exportada | **passou** | 1.380 pares válidos; GPU p95 0,23 ms, p99 0,29 ms, máximo 0,4 ms; frame p95/p99 16,67 ms, máximo 64,97 ms; malformed/unpaired/stalls = 0 |
-| framebuffer exportado | **passou** | 17 asserções, viewport final 240×320, máscara R8 igual ao board; somente `CLAIMED` preservou o texel original amostrado |
+| framebuffer exportado | **passou** | 17 asserções em macOS, 2026-09-03; viewport final 240×320, máscara R8 igual ao board; somente `CLAIMED` preservou o texel original amostrado |
 | export Android | **passou** | APK 40.486.376 bytes; archive, payload e assinatura debug verdes; SHA-256 `db61015cfc6bea849ec41fad6907e1c0af625d8c38866c2e38bc68306c6411e2` |
 | seleção Android | **passou** | `selected_serial=emulator-5554`, `selection_source=runner-started-emulator`; sem seleção implícita de device físico |
 | smoke Android/AVD | **passou** | readiness estável, instalação sem streaming, main loop após 13 s, +30 s vivo, screenshot e scan sem crash do pacote/ANR/script/resource |

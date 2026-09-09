@@ -2,6 +2,7 @@
 
 > **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono e Blender 5.2.0 LTS
 > **Alcance:** implementação local sobre essa base, ainda sem commit próprio; testes e probes atuais em `build/modernization/`. Produção AAA, paridade integral com Volfied e QA de aparelhos físicos não foram concluídos.
+> A edição de 2026-09-08 apenas carimbou ambiente e data na linha da suíte: **nada foi remedido**, e a data acima segue sendo a da última verificação real.
 
 ## O que está jogável
 
@@ -109,7 +110,8 @@ não o resultado de um refactor ou de um total de testes. Para avançar com crit
 
 ## Evidência reproduzível
 
-- Suíte final: **260 testes, 13.598 asserções, zero falhas** em 8.133 ms.
+- Suíte final em macOS Apple M2, 2026-09-07: **260 testes, 13.598 asserções, zero falhas**
+  em 8.133 ms. Não é a contagem da árvore de hoje; essa vive em [TEST_MATRIX.md](TEST_MATRIX.md).
 - Renderer GL Compatibility real: **20 verificações**, seis modelos carregados, captura
   de 17,9%, coleta de baliza, layout assentado e checksum preservado na troca de apresentação.
 - Campanha ativa: três setores completos com três vidas; score acumulado 46.045,

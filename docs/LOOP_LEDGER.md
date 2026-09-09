@@ -1,43 +1,23 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, Linux headless (sandbox de nuvem)
-> **Alcance:** esta revisão do cabeçalho fecha o item de direção do #74 e ajusta o backlog; a fila
-> foi conferida no GitHub às 06:00Z e estava em **zero PRs abertos**. Tudo abaixo desta linha é
-> histórico preservado, medido nos commits e ambientes que cada bloco declara — não foi reexecutado aqui.
-> **Revisão de 2026-09-08T22:00Z** (mesmo ambiente, head `859f4e4` desta branch): corrigido o
-> inventário composto #98+#99 que esta PR publicava — `414` casos medidos às 11:00Z, **416** hoje —
-> e reescrita a instrução para derivar em vez de copiar. A fila tinha **cinco** PRs abertas nessa
-> conferência (#98–#102), acima dos tetos das regras 7 e 8. Alcance: só os dois números e a redação
-> ao redor; nada de `game/`, `ui/`, `app/` ou `content/` foi tocado, e nenhum outro bloco histórico
-> foi reverificado.
-> A integração de `3f2d96e` continua sendo a fonte do estado da fila descrito a seguir.
-> **Alcance da integração:** as **33 PRs de origem, #59–#91**, foram incorporadas pela [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92).
-> Merge efetivo em 2026-09-08T05:33:34Z; as 33 PRs constavam como MERGED e a fila estava vazia na conferência às 05:33:37Z.
-> Atlas Vivo (`0c63665`), Godot AI 4.0.2 (`6d23de4`), bundle #78 e resíduos foram preservados por ancestralidade.
-> O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324) passou no head `9d02d6f`; a composição validada está incorporada em `main`.
-> O [CI pós-merge 34191087087](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34191087087) também passou em `3f2d96e`.
+> **Verificado em** 2026-09-09 · commit `41899a7` · Godot 4.7.2 Mono, macOS; com as correções desta integração aplicadas
+> **Alcance:** composição autorizada das PRs #99–#106 sobre `main`, que já contém #98.
+> Evidências, heads de origem, conflitos e limites estão no
+> [relato da integração](loop/runs/2026-09-09T-pr-integration.md).
+> As medições dos relatos anteriores continuam históricas; não são resultados desta árvore.
 
-O usuário autorizou explicitamente nesta sessão a modernização, auditoria, revisão, correções,
-integração e merges das PRs. Esta execução cumpriu esse escopo amplo: a regra rotineira de um
-item por loop não exige uma segunda autorização para o trabalho já solicitado. As mutações Git,
-a validação executável e a integração no GitHub foram centralizadas pelo agente coordenador.
-O merge acima foi conferido no GitHub; autorização e revisão técnica, por si sós, não o
-comprovariam. A mesma conta autora também não pode simular aprovação independente.
+O usuário autorizou revisão, correções, testes locais, atualização do projeto e merges no GitHub.
+A integração ampla tem precedência sobre o limite rotineiro de um item por execução.
+Git e Godot ficaram sob coordenação única, com revisões e implementação delegadas por arquivo.
+A conta autora não pode dar a si própria uma aprovação independente; revisão técnica e merge
+são registrados com sua identidade real.
 
-O [relato desta integração](loop/runs/2026-09-08T-mcp-github-integration.md) preserva o snapshot
-inicial de 32 heads (#59–#90), suas intenções e decisões, e a incorporação posterior do #91,
-totalizando 33 PRs de origem. No snapshot inicial, #78 continha integralmente 20 heads,
-contando o próprio. Os 12 resíduos foram reconciliados: o passo CI do índice Python de #83
-foi portado e as regressões de #90 foram adaptadas ao touch Atlas, preservando os relatos.
-O #91 removeu a guarda redundante de arquivamento sem mudar a máquina de fases.
-Consultar o GitHub antes de agir: a fila vazia acima é uma observação datada, não um contador automático.
-
-O CI Linux registrou 404 testes do jogo, 19.009 asserções, zero falhas e 92 testes Python
-no head `9d02d6f`, árvore `528244e11304dfed4a15d977c4ad014dd2828d87`.
-O manifesto confirma `tested_head=true` e `source_unchanged=true`. O reexport macOS arm64 desse
-head passou em codesign estrito e executou 900/900 ticks em 17,259 s, sem erro observado.
-Renderer, MCP e limites do import/export Mono estão discriminados no relato; merge e QA
-ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamento humano.
+A integração anterior preservou Atlas Vivo, Godot AI 4.0.2 e as 33 PRs #59–#91 via #92;
+#93/#94/#96 foram incorporadas depois, e #97 foi fechado como duplicata. O estado local inicial
+estava limpo em `5318d0a`; o remoto avançara para `a5b2b06` com #98. O bundle de segurança
+preserva todas as referências anteriores à composição. Consulte o
+[relato anterior](loop/runs/2026-09-08T-mcp-github-integration.md) para suas medições e CI.
+Uma fila vazia é sempre observação datada: conferir o GitHub antes do próximo trabalho.
 
 ## Histórico preservado e entrega Atlas
 
@@ -49,7 +29,7 @@ ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamen
   IDs/pools, ameaças justas, balizas, quatro itens, bônus, campanha/replay v4, GLBs originais,
   palco 2.5D, F2/F3/F4 e feedback. A decisão corrente é a
   [ADR-0014](decisions/ADR-0014-atlas-lifecycle-depth-stage.md); ADR-0012 continua sendo cursor ink.
-- Na árvore Atlas anterior foram registrados 260 testes / 13.598 asserções / zero falhas e
+- Na árvore Atlas anterior, em macOS, 2026-09-07, foram registrados 260 testes / 13.598 asserções / zero falhas e
   20 verificações em renderer real. A evidência detalhada está em [ATLAS_VIVO.md](ATLAS_VIVO.md).
   Esses números não são o inventário nem o resultado da composição atual.
 - Não restaurar goldens v3 ou caminhos anteriores à taxonomia `game/simulation/{board,enemies,
@@ -155,14 +135,21 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
   mesclada via #92, mas a recomendação de branch diária não foi aceita automaticamente.
   O item volta a livre porque nenhum PR aberto o reivindica; agendamento externo não foi alterado.
   *Pronto:* decisão do mantenedor registrada e scheduler coerente com ela.
+- [x] **Integrar e revisar #99–#106 sobre #98, a pedido do usuário.** Oito heads preservados
+  por merge, conflitos de documentação reconciliados por intenção, inventário derivado da
+  composição. A revisão corrigiu ainda alcance truncado do dardo, alertas já resolvidos e
+  sincronizador que aceitava matriz incompleta. O relato desta integração registra validação
+  e publicação. As marcações desta entrega descrevem a composição incorporada por este merge.
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
-  **Contagem corrente:** 2026-09-08T06:05Z foi **mecanismo** (`tests/` + `docs/`). O atrito medido
-  é que todos os itens de experiência ainda livres — `BOUNDARY`×`TRAIL`, QA humana, playtest —
-  pedem uma tela que a nuvem não tem. Ou o critério de pronto de algum deles passa a admitir
-  decisão no escuro verificada por catraca numérica (`verify_palette_contrast.gd` já existe e é
-  headless), ou a proporção não se cumpre sem o mantenedor. Decidir isso vale mais que insistir.
+  **Medição do #102: 0 de 15 execuções tocaram essas pastas.** As duas execuções seguintes
+  romperam a série — o #103 em `game/enemies/` e `game/simulation/enemies/`, e a de
+  2026-09-09T08:08Z em `ui/touch/`. O item fica aberto porque a razão de uma em cada três
+  ainda não se cumpriu na janela de dez; quem contar, conte a partir do #102.
+- [x] **Drenar a fila acima do teto.** O snapshot desta integração encontrou oito PRs
+  abertas (#99–#106). Todas foram auditadas e compostas; conferir a fila novamente depois
+  do merge e registrar o horário. A cadência externa continua sendo decisão separada.
 - [x] **Unificar relatórios da fila (#71, via #92).** `merge_queue_report.sh --order` substitui
   `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
   relatório de superfície, cuja pergunta é diferente. Mudança integrada e CI verde no head `9d02d6f`.
@@ -280,15 +267,31 @@ para o inventário da **árvore final**, não somar números copiados das descri
   `docs/loop/runs/2026-09-07T180244Z.md`.
 - [ ] **Procedência da licença raiz (#73).** Preservar o aviso de `IMPLEMENTATION_STATUS`:
   não substituir titularidade ou licença sem decisão do mantenedor e verificação de direitos.
-- [ ] **Contagem de outro ambiente parece atual fora da matriz (#69).** `IMPLEMENTATION_STATUS.md`
-  passou a separar a evidência Atlas dos registros históricos e a apontar para TEST_MATRIX.
-  `SHIPPING_PASS.md` ainda cita **134 testes, 11.489 asserções** do run de macOS de 2026-09-03
-  sem repetir a data e o ambiente na própria linha da tabela. O
-  número é verdadeiro **por ser histórico**, e por isso a guarda de inventário do #69 não o
-  alcança: forçá-lo a bater com a árvore de hoje falsificaria evidência que a nuvem não reproduz.
-  O risco é de leitura — nada **na linha** avisa que aquilo é outro ambiente e outra data.
-  *Pronto:* toda contagem de suíte em `docs/` diz, na própria linha, de que ambiente e data veio,
-  ou é derivada da árvore.
+- [x] **Contagem de outro ambiente parece atual fora da matriz (#69).** `SHIPPING_PASS.md` nomeia
+  o run no título da seção e carrega uma coluna **Origem** por linha; `TEST_MATRIX.md` e
+  `ATLAS_VIVO.md` tiveram suas linhas carimbadas ou marcadas como derivadas.
+  `tests/unit/doc_suite_count_provenance_test.gd` guarda a regra: **linha que se lê sozinha** —
+  linha de tabela ou início de item de lista — em `docs/*.md` afirmando `N testes`/`M asserções`
+  diz ambiente **e** data, ou declara-se derivada da árvore (contagem derivada não leva data,
+  senão a guarda plantaria a mentira que existe para impedir).
+  **Prosa corrida fica fora de propósito e não deve ser trazida para dentro:** `PERFORMANCE.md`
+  qualifica seus números na frase seguinte, e exigir carimbo por linha ali repetiria a heurística
+  de baixa precisão que o #82 mediu e recusou. Precisão medida nesta entrega: 8 acusações sobre os
+  nove docs vivos, todas verdadeiras, zero falso positivo. Relato em
+  `docs/loop/runs/2026-09-08T070425Z.md`.
+  A guarda de inventário ficou vermelha com o arquivo novo e a matriz foi **remedida**, não
+  copiada: 409 testes / 19.041 asserções / 0 falhas na árvore desta branch, Linux headless.
+  **Revisão de 2026-09-08T16:00Z, na mesma branch:** a porta da contagem derivada aceitava a
+  palavra `árvore` sozinha, e com isso `134 testes, 11.489 asserções, 0 falhas naquela árvore` —
+  os números de macOS de 2026-09-03, sem ambiente nem data — atravessava a suíte **verde**.
+  Citar a árvore de onde o número veio é o contrário de declarar procedência: é a doença, com a
+  palavra certa dentro. As marcas passaram a nomear **esta** árvore, e a linha viva da árvore
+  Atlas neste próprio arquivo — que passava pelo mesmo buraco — foi carimbada. A varredura
+  também não descia para as quatro subpastas de `docs/`, e o cabeçalho da guarda só declarava
+  duas: as quatro agora constam com motivo, e uma pasta nova fica vermelha até alguém decidir.
+  *Continua fora do alcance:* a guarda de inventário confere casos e arquivos contra a árvore,
+  mas **não** as asserções — nesta execução `19.044` passou verde antes de a medição dizer
+  `19.041`. Fechar isso mudaria o custo de todo PR que mexe em teste; é decisão do mantenedor.
 
 ### P3 — experiência e estética
 
@@ -311,8 +314,64 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   e isolamento da apresentação.
 - [x] **Geometria real do HUD (#52, via #55).** A sonda executa frames; medir Label apenas
   em `_initialize()` não reproduz sua geometria final.
+- [x] **Corredor do dardo legível em campo de produção (#103).** A previsão usa a mesma
+  aritmética de subpassos de `update()`, sem avançar atores ou consumir RNG. A revisão de
+  integração encontrou que `min_range=24` é distância mínima: o teto de 48 células escondia
+  o alvo em 225×283 (seed 17, origem x=1, jogador x=112). A composição remove esse corte,
+  conserva o percurso até absorção/vida e reutiliza a geometria até ator ou território mudar.
+  Regressões cobrem campo completo, invalidação e equivalência com movimento real.
+  A leitura humana em movimento continua no item de QA; medições antigas de custo da
+  versão truncada permanecem somente no relato original de #103.
+- [x] **Alertas válidos têm prioridade sobre recompensa (#106).** O HUD arbitra as duas
+  ordens do lote e descarta ganhos da linha ocupada sem perder sua pontuação. A revisão
+  acrescenta validade da causa no estado confirmado: captura, absorção e PURGA liberam
+  avisos resolvidos. IDs distinguem dardos no mesmo slot e a identidade da simulação
+  impede avisos entre rodadas. Morte limpa a linha; outros perigos ativos mantêm prioridade.
+- [ ] **A cor da linha de estado não acompanha a hierarquia que o texto já respeita
+  (achado de 2026-09-09T12:04Z, fora do backlog).** `_sync_threat_instruments` pinta
+  `_status_label` de `DANGER_COLOR` por uma condição só — trilha ativa **e** brasas vivas — e de
+  `HUD_COLOR` em todo o resto. Então `EXPOSTO · VOLTE À BORDA`, `DARDO ARMADO · DESVIE` e a causa
+  da morte saem na mesma tinta de `DESENHE · ESPAÇO/Z`, enquanto o canal de cor responde a algo
+  que o texto nem sempre está a dizer. A prioridade do texto já foi resolvida; a da cor não.
+  *Pronto:* a tinta da linha deriva da mesma classificação alerta/recompensa que o texto usa,
+  com catraca de contraste, sem tocar no domínio nem no checksum.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
+  Medido de novo em 2026-09-08 (Linux headless): 1,04–1,05:1 nas quatro paletas, meta 3:1.
+  **Dois caminhos já foram investigados e recusados — não reandar sem argumento novo.** (a) Tinta
+  própria, como ADR-0011 e ADR-0012: impossível, porque uma célula de campo é **um pixel lógico**
+  (`CoordinateSpace`, campo 225×283 em viewport 240×320) — não há sub-célula onde desenhar
+  contorno, e a trilha tem um pixel de largura. (b) Vale do pulso descendo até a luminância de
+  `FREE`: separaria de `BOUNDARY`, mas apagaria parte da trilha contra `FREE`, que é o chão onde
+  ela passa a partida inteira — piora a legibilidade que o critério manda preservar.
+  Sobra a decisão de paleta, com dono humano: escurecer `boundary_color` ou `trail_color` mexe em
+  `FREE`×`BOUNDARY` (9,0–10,0:1) e `FREE`×`TRAIL` (11,2–12,9:1), hoje folgados.
   *Pronto:* decisão visual, catracas atualizadas e confirmação numa tela, sem piorar legibilidade.
+  O envelope de `FREE` de #100 foi incorporado sem resolver este par. Preservar sua medição
+  ao propor uma alteração futura de paleta.
+- [x] **O chrome do toque não cobre mais instrumento do HUD (2026-09-09T08:08Z).** A pausa era
+  desenhada a 58 % começando em y=10, dentro dos 19 px da banda superior, sobre 32 dos 82 px do
+  trilho do escudo e o pé das vitais. Passou a encostar por baixo da banda, derivando
+  `TOP_BAR_HEIGHT`, com o véu na família de 24 % do resto do overlay.
+  `tests/unit/touch_hud_occlusion_test.gd` lê `chrome_rects()` — a mesma função que `_draw()` usa
+  — e mede contra os nós reais do HUD. **Ler `size.y` de um `Label` no runner mede 23 px, não
+  `TEXT_HEIGHT`**: a guarda usa X do nó e Y da linha declarada, e quem escrever guarda de layout
+  aqui cai no mesmo buraco se não fizer igual. O que ficou **medido e aceito, não resolvido**:
+  os arcos do stick e da ação cruzam a linha de texto do rodapé (35,8 px dos 91 do título,
+  17,6 px dos 139 do status) — recuar reabriria a ergonomia fechada em #90. Falta ergonomia
+  numa tela física de toque. A posição nova e sua hitbox passaram na sonda com renderer local.
+- [x] **O envelope de `FREE` não era o que o shader desenha (achado de 2026-09-08T17:00Z).**
+  `PaletteContrast.rendered_swatches` aplicava só a scanline; o ramo `FREE` de
+  `board_reveal.gdshader` também multiplica por um poço radial e **soma** uma grade. Os seis pares
+  contra `FREE` — três do campo, três do cursor — saíam otimistas, e os pisos da catraca tinham
+  sido registrados sobre esses números. Nada regrediu na paleta e nenhum par cruzou a meta de 3:1;
+  `FREE`×`THREAT`, o mais apertado, vai de 3,73 para 3,62. Envelope corrigido, seis pisos
+  rebaixados, tabela nova e datada em `ART_DIRECTION.md`.
+  A composição acrescenta uma guarda por expressão e posição dos canais: o conjunto de
+  números sozinho não detectava troca entre R e B. Extremos RGB e mutações da fórmula
+  são exercitados. O envelope é conservador, não medição fotométrica do framebuffer.
+  *Continua aberto:* a mesma pergunta para os ramos `BOUNDARY` e `TRAIL`, que hoje conferem por
+  leitura mas não têm guarda equivalente; e as camadas do cursor, que a view não modula mas
+  também ninguém amarra ao `_draw`.
 - [x] **Toque estável (#90, via #92).** Regressões de jitter/arrasto integradas e verdes,
   preservando floating stick, histerese de entrada/saída, margem angular e flick do Atlas.
   Ergonomia em dispositivo real continua no item de QA humana.

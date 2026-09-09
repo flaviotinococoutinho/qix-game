@@ -78,6 +78,126 @@ func test_dart_snapshot_uses_domain_direction_and_warmup() -> void:
 	view.free()
 
 
+func test_dart_warmup_telegraph_carries_the_domain_corridor_and_only_while_armed() -> void:
+	var simulation := _simulation()
+	var slot := DartRules.try_spawn(
+		simulation.pools, simulation.board, Vector2i(16, 14), simulation.rng,
+		384, 6, 24, 240, MinorActorPools.Cause.EXPOSURE)
+	ok(slot >= 0)
+	var corridor := DartRules.peek_path(
+		simulation.pools, slot, simulation.board, simulation.board.width + simulation.board.height)
+	ok(corridor.size() > QixMinorActorView.MUZZLE_CELLS, "há corredor além da boca do disparo")
+	var before := simulation.state_checksum()
+	var view := QixMinorActorView.new()
+	view.sync(simulation)
+	var actor: Dictionary = view.presentation_state().darts[0]
+	eq(actor.lifecycle, ActorLifecycle.State.WARMUP)
+	eq(actor.path.size(), corridor.size())
+	for index in corridor.size():
+		@warning_ignore("integer_division")
+		var cell := Vector2i(corridor[index] % simulation.board.width, corridor[index] / simulation.board.width)
+		eq(actor.path[index], Vector2(CoordinateSpace.field_to_screen(cell)))
+	eq(simulation.state_checksum(), before, "desenhar o corredor não consome RNG nem move o dardo")
+	# Disparado, o aviso some: a leitura passa a ser o rastro do voo confirmado.
+	simulation.pools.set_dart(slot, MinorActorPools.D.WARMUP, 0)
+	simulation.pools.set_dart(slot, MinorActorPools.D.STATE, ActorLifecycle.State.ACTIVE)
+	view.sync(simulation)
+	eq(view.presentation_state().darts[0].lifecycle, ActorLifecycle.State.ACTIVE)
+	eq(view.presentation_state().darts[0].path.size(), 0, "corredor previsto só existe no armamento")
+	view.free()
+
+
+func test_dart_telegraph_cache_reuses_warmup_and_refreshes_territory() -> void:
+	var simulation := _simulation()
+	_setup_preview_dart(simulation)
+	var view := QixMinorActorView.new()
+	view.sync(simulation)
+	var original: PackedVector2Array = view.presentation_state().darts[0].path
+	for warmup in range(23, 0, -1):
+		simulation.pools.set_dart(0, MinorActorPools.D.WARMUP, warmup)
+		simulation.pools.set_dart(0, MinorActorPools.D.STATE_TICKS, warmup)
+		view.sync(simulation)
+	eq(view.telegraph_cache_state(), {"entries": 1, "builds": 1}, "warmup e frames não repetem a consulta")
+	var detached := view.presentation_state()
+	detached.darts[0].path.clear()
+	view.sync(simulation)
+	eq(view.presentation_state().darts[0].path, original, "o consumidor não edita a rota em cache")
+	simulation.board.set_cell(10, 10, BoardState.Cell.CLAIMED)
+	var before := simulation.state_checksum()
+	view.sync(simulation)
+	var blocked: PackedVector2Array = view.presentation_state().darts[0].path
+	eq(blocked[blocked.size() - 1], Vector2(CoordinateSpace.field_to_screen(Vector2i(10, 10))))
+	eq(view.telegraph_cache_state().builds, 2, "board.version invalida a rota")
+	eq(simulation.state_checksum(), before)
+	simulation.board.set_cell(10, 10, BoardState.Cell.FREE)
+	view.sync(simulation)
+	eq(view.presentation_state().darts[0].path, original, "liberar território restaura o corredor completo")
+	# Outra rodada pode ter a mesma versão e dimensões, mas outro território.
+	var replacement := BoardState.new(simulation.board.width, simulation.board.height)
+	replacement.set_cell(8, 10, BoardState.Cell.CLAIMED)
+	replacement.set_cell(30, 15, BoardState.Cell.FREE)
+	eq(replacement.version, simulation.board.version)
+	simulation.board = replacement
+	view.sync(simulation)
+	blocked = view.presentation_state().darts[0].path
+	eq(blocked[blocked.size() - 1], Vector2(CoordinateSpace.field_to_screen(Vector2i(8, 10))))
+	eq(view.telegraph_cache_state().builds, 4, "identidade do board evita reutilizar uma rodada anterior")
+	view.free()
+
+
+func test_dart_cache_invalidates_actor_identity_motion_life_and_lifecycle() -> void:
+	var simulation := _simulation()
+	_setup_preview_dart(simulation)
+	var view := QixMinorActorView.new()
+	view.sync(simulation)
+	_setup_preview_dart(simulation)
+	view.sync(simulation)
+	eq(view.telegraph_cache_state().builds, 2, "reusar slot com ID novo descarta a previsão anterior")
+	var changes := {
+		MinorActorPools.D.X_FP: (2 << 8) + 250,
+		MinorActorPools.D.Y_FP: (11 << 8) + 128,
+		MinorActorPools.D.DIR_INDEX: 4,
+		MinorActorPools.D.SPEED_FP: 512,
+		MinorActorPools.D.LIFE: 2,
+	}
+	var builds := 2
+	for field in changes:
+		simulation.pools.set_dart(0, field, changes[field])
+		var before := simulation.state_checksum()
+		view.sync(simulation)
+		builds += 1
+		eq(view.telegraph_cache_state().builds, builds, "alterar %d precisa rever a trajetória" % field)
+		var expected := PackedVector2Array()
+		for index in DartRules.peek_path(simulation.pools, 0, simulation.board, 62):
+			expected.append(Vector2(CoordinateSpace.field_to_screen(
+				Vector2i(simulation.board.x_of(index), simulation.board.y_of(index)))))
+		eq(view.presentation_state().darts[0].path, expected)
+		eq(simulation.state_checksum(), before)
+	simulation.pools.set_dart(0, MinorActorPools.D.STATE, ActorLifecycle.State.ACTIVE)
+	view.sync(simulation)
+	eq(view.telegraph_cache_state().entries, 0, "o cache só guarda atores armados")
+	eq(view.presentation_state().darts[0].path.size(), 0)
+	for slot in MinorActorPools.MAX_DARTS:
+		_setup_preview_dart(simulation, slot)
+	view.sync(simulation)
+	eq(view.telegraph_cache_state().entries, MinorActorPools.MAX_DARTS, "capacidade limitada aos slots")
+	for slot in MinorActorPools.MAX_DARTS:
+		simulation.pools.retire_dart(slot, MinorActorPools.Reason.ABSORBED, 12)
+	view.sync(simulation)
+	eq(view.telegraph_cache_state().entries, 0, "dissipação não retém rotas obsoletas")
+	view.free()
+
+
+func _setup_preview_dart(simulation: GameSimulation, slot: int = 0) -> void:
+	simulation.pools.begin_dart(slot, 24)
+	simulation.pools.set_dart(slot, MinorActorPools.D.X_FP, 2 << 8)
+	simulation.pools.set_dart(slot, MinorActorPools.D.Y_FP, 10 << 8)
+	simulation.pools.set_dart(slot, MinorActorPools.D.DIR_INDEX, 0)
+	simulation.pools.set_dart(slot, MinorActorPools.D.SPEED_FP, 256)
+	simulation.pools.set_dart(slot, MinorActorPools.D.WARMUP, 24)
+	simulation.pools.set_dart(slot, MinorActorPools.D.LIFE, 900)
+
+
 func test_retired_ember_uses_last_confirmed_cell_after_trail_disappears() -> void:
 	var simulation := _simulation()
 	simulation.player.trail_active = true
@@ -139,6 +259,11 @@ func test_hud_exposes_confirmed_pressure_and_urgent_trail_cut() -> void:
 	eq((hud.get_node("Status") as Label).text, "FASE 2 · PRESSÃO 4")
 	eq(hud.presentation_state().phase, 1)
 	eq(hud.presentation_state().pressure, 3)
+	# O alerta exige uma trilha ainda ativa no snapshot, não apenas um evento antigo.
+	for _tick in 3:
+		simulation.step(MoveIntent.make(MoveIntent.Dir.DOWN, true))
+	ok(simulation.trail_active)
+	before = simulation.state_checksum()
 	hud.sync(simulation, false, [GameEvent.make(GameEvent.Kind.TRAIL_CUT, {"trail_index": 2})])
 	eq((hud.get_node("Status") as Label).text, "TRILHA CORTADA · CONTINUE!")
 	eq(simulation.state_checksum(), before)
