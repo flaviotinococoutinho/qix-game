@@ -1,8 +1,8 @@
 # TEST_MATRIX
 
-> **Verificado em** 2026-09-08 · commit `ecc6a23` · Godot 4.7.2-stable Mono, macOS headless
-> **Alcance:** reconciliação Atlas + todos os 33 heads de PRs (#59–#91), Godot AI 4.0.2 e pipeline Blender; suíte explícita do projeto.
-> **Resultado:** 404 testes, 19009 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
+> **Verificado em** 2026-09-09 · commit `5318d0a` · Godot 4.7.2-stable não-Mono, Linux headless de nuvem
+> **Alcance:** reconciliação Atlas + todos os 33 heads de PRs (#59–#91), Godot AI 4.0.2 e pipeline Blender; suíte explícita do projeto, reexecutada nesta árvore com o corredor real do aviso do dardo.
+> **Resultado:** 408 testes, 19131 asserções, 0 falhas. O inventário abaixo é conferido pelo runner.
 > Exportação, assinatura, Android físico e mérito visual/sonoro não foram revalidados.
 
 ## Comando canônico da suíte
@@ -11,10 +11,10 @@
 python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado da suíte integrada: **404 testes, 19009 asserções, 0 falhas** — árvore preparada sobre
-`ecc6a23`; resultados de outras branches não são intercambiáveis.
+Resultado da suíte integrada: **408 testes, 19131 asserções, 0 falhas** — medido em 2026-09-09 no
+Linux headless de nuvem, sobre `5318d0a`; resultados de outras branches não são intercambiáveis.
 
-**Inventário da suíte (derivado, não digitado):** 74 arquivos de teste · 404 casos `test_*`.
+**Inventário da suíte (derivado, não digitado):** 74 arquivos de teste · 408 casos `test_*`.
 
 A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
 de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
@@ -41,6 +41,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | entrada | teclado/InputMap, direção única/sobreposição, D-pad, stick com histerese, A/X/Start, estado independente por gamepad, deduplicação InputMap×raw de A/Start, multitouch, disconnect/reset e equivalência canônica gamepad×touch |
 | feedback | cues por evento, streams PCM determinísticos, loops distintos e guard frame, buses Music/SFX com limiter, oito vozes, pausa/teardown, prioridade háptica e invariância de replay/checksum; intenção e prioridade declaradas por cue, escada de prioridade do som igual à da háptica, e alocação de voz que recusa cortar um cue mais importante; o limiar de exposição soa **e** se sente com a mesma prioridade (35), o aviso é recusado quando algo mais alto acontece no mesmo tick, e a aresta é lida sem ser consumida — checksum imóvel ao longo de oito `sync` |
 | boss | validação dos perfis WANDER/PURSUIT/SWEEP, octantes inteiros, jitter determinístico, reflexão, pulso de velocidade, limites seguros, hash de regras e replay incompatível rejeitado antes da mutação |
+| aviso do dardo | o corredor previsto por `DartRules.peek_path` é o mesmo que `update()` percorre — igualdade estrita a uma célula por tick e, acima disso, toda célula andada prevista na ordem, com o mesmo terminal absorvente; território conquistado encurta o aviso; a previsão não move o dardo nem consome RNG (`canonical_bytes` imóvel); o corredor armado alcança a vizinhança Chebyshev ≤ 1 do jogador em quatro seeds, e a view só carrega o corredor em WARMUP |
 | conteúdo | três rodadas ordenadas, IDs/seeds únicos, referências externas separadas, fundos 225×283 aprovados, alvo 80%, curva crescente e três perfis externos de boss |
 | geração transacional | shadow staging, lock exclusivo por projeto via loopback, WAL v3 ancorado ao SHA do manifest, hashes/tamanhos de payload/backup, state machine integral, targets terminais, rollback/cache e recovery após interrupção/processo morto |
 | apresentação | HUD de campanha, progresso até alvo, contador de percentagem encenado em degraus (escada de denominações, teto e piso de duração, regressão instantânea), intro/clear/game over/campanha/pausa, continuidade de score/vidas entre setores (carry-in na intro, ganho do setor no clear, setores estabilizados nas fases terminais, prompt herdando o acento do próximo setor), VFX de captura/impacto e paleta de jogador/boss sem alterar checksum |
@@ -70,7 +71,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
 | guarda de proveniência | vermelha nos três sentidos, verificada plantando e revertendo em 2026-09-06: um PNG não declarado em `ui/` é acusado pelo hash e pelo nome; um byte apenso a `assets/backgrounds/aurora_foundry.png` deixa o arquivo indeclarado **e** torna órfão o hash `57517e7e…` do manifesto; recriar `backgrounds/verdant_singularity.png`, marcado `(removido)`, é recusado |
-| log final da suíte | 404 testes, 19009 asserções, 0 falhas; runner explícito com JSON e inspeção de diagnósticos em 2026-09-08 |
+| log final da suíte | 408 testes, 19131 asserções, 0 falhas; runner explícito com JSON e inspeção de diagnósticos no Linux headless de nuvem em 2026-09-09 |
 | guarda do checksum dourado | provada nos dois sentidos: alterar um default de `BossBehaviorProfile` deixa `config_hash` de R1/R2 e o log serializado vermelhos; trocar `trail_color` de uma rodada mantém os quatro testes verdes |
 
 ## Matriz histórica do shipping externo — setembro/03

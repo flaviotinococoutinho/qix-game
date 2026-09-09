@@ -136,6 +136,59 @@ static func update(
 	return Outcome.NONE
 
 
+## Corredor que o dardo ainda vai percorrer, lido do estado confirmado com a mesma aritmética de
+## `update()`: mesmos subpassos, mesma parada na borda e na primeira célula não-FREE. Não muta o
+## pool nem consome RNG — é leitura pura, para que o aviso de armamento mostre o percurso real.
+## O contato com o jogador não encerra o corredor de propósito: o alvo precisa enxergar que a
+## reta passa por ele, que é o que torna «desviar duas células basta» uma promessa legível.
+static func peek_path(pools: MinorActorPools, slot: int, board: BoardState, max_cells: int) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	if not pools.dart_alive(slot) or max_cells <= 0:
+		return out
+	var speed := pools.dart(slot, MinorActorPools.D.SPEED_FP)
+	var dir := pools.dart(slot, MinorActorPools.D.DIR_INDEX)
+	var x_fp := pools.dart(slot, MinorActorPools.D.X_FP)
+	var y_fp := pools.dart(slot, MinorActorPools.D.Y_FP)
+	if not board.in_bounds(x_fp >> 8, y_fp >> 8):
+		return out
+	# O aviso é redesenhado a cada frame enquanto o dardo está armado, e o campo cheio dá
+	# corredores de duas centenas de células. Os invariantes do laço vêm para locais e o
+	# subpasso que não troca de célula sai antes de qualquer leitura do campo: mesma
+	# aritmética de `update()`, sem o custo por chamada. `board.cells` **não** vira local:
+	# copiar o `PackedByteArray` por chamada custa mais do que tudo o que o laço economiza.
+	var width := board.width
+	var height := board.height
+	var last_x := x_fp >> 8
+	var last_y := y_fp >> 8
+	@warning_ignore("integer_division")
+	var substeps := (speed + 255) / 256
+	@warning_ignore("integer_division")
+	var step_fp := speed / maxi(1, substeps)
+	var remainder := speed % maxi(1, substeps)
+	var dx_fp: int = DIRECTION_X[dir]
+	var dy_fp: int = DIRECTION_Y[dir]
+	# `LIFE` limita o corredor pelo mesmo prazo que retira o dardo por EXPIRED.
+	for _tick in pools.dart(slot, MinorActorPools.D.LIFE):
+		for substep in substeps:
+			var distance_fp := step_fp + (1 if substep < remainder else 0)
+			x_fp += (dx_fp * distance_fp) >> 8
+			y_fp += (dy_fp * distance_fp) >> 8
+			var cx := x_fp >> 8
+			var cy := y_fp >> 8
+			if cx == last_x and cy == last_y:
+				continue
+			if cx < 0 or cx >= width or cy < 0 or cy >= height:
+				return out
+			last_x = cx
+			last_y = cy
+			var index := cy * width + cx
+			out.append(index)
+			# A célula que absorve ou corta entra no corredor: é onde o dardo termina.
+			if board.get_cell(cx, cy) != BoardState.Cell.FREE or out.size() >= max_cells:
+				return out
+	return out
+
+
 ## Dardos sobre células que deixaram de ser FREE (após uma captura) apagam. Devolve os slots.
 static func absorb_grounded(pools: MinorActorPools, board: BoardState, despawn_ticks: int = 12) -> PackedInt32Array:
 	var absorbed := PackedInt32Array()

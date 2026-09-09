@@ -10,6 +10,13 @@ const WALKER_COLOR := Color("ffb35b")
 const DART_COLOR := Color("ff708a")
 const EMBER_COLOR := Color("fff0c4")
 const TELEGRAPH_CELLS := 6
+## Boca do disparo: as células mais próximas do dardo, no brilho que o aviso já tinha.
+const MUZZLE_CELLS := 5
+## Teto do corredor avisado: o dobro de `dart_min_range` (24), a distância em que o dardo nasce
+## do jogador. Nunca esconde o alvo, e impede que seis dardos armados sobre um campo quase todo
+## livre custem milissegundos por frame só para desenhar aviso. Um corredor que bate no teto
+## perde a ponta de seta: seta significa «é aqui que ele morre», e isso não pode ser inventado.
+const TELEGRAPH_MAX_CELLS := 48
 
 var _walkers: Array[Dictionary] = []
 var _darts: Array[Dictionary] = []
@@ -65,9 +72,13 @@ func sync(simulation: GameSimulation, visual: RoundVisualDefinition = null) -> v
 		var dir := pools.dart(slot, MinorActorPools.D.DIR_INDEX)
 		var direction := Vector2(DartRules.DIRECTION_X[dir], DartRules.DIRECTION_Y[dir]).normalized()
 		var center := Vector2(CoordinateSpace.field_to_screen(pools.dart_cell(slot)))
+		var path := PackedVector2Array()
+		if lifecycle == ActorLifecycle.State.WARMUP:
+			for index in DartRules.peek_path(pools, slot, simulation.board, TELEGRAPH_MAX_CELLS):
+				path.append(_screen(simulation.board, index))
 		_darts.append({
 			"slot": slot, "id": pools.dart_actor_id(slot), "lifecycle": lifecycle,
-			"position": center, "direction": direction,
+			"position": center, "direction": direction, "path": path,
 			"warmup": pools.dart(slot, MinorActorPools.D.WARMUP),
 			"state_ticks": pools.dart(slot, MinorActorPools.D.STATE_TICKS),
 			"cause": pools.dart(slot, MinorActorPools.D.CAUSE),
@@ -174,14 +185,27 @@ func _draw_dart(actor: Dictionary) -> void:
 		return
 	var tangent := direction.orthogonal()
 	if lifecycle == ActorLifecycle.State.WARMUP:
-		# Aviso de cinco células na direção fixada pelo domínio, sem inventar uma mira.
-		draw_line(center, center + direction * 5.0, INK, 2.0, true)
-		draw_line(center, center + direction * 5.0, DART_COLOR, 0.75, true)
+		# O aviso é o corredor real até a célula que vai absorver o dardo, e não um raio de
+		# comprimento arbitrário: quem está na reta precisa ver que ela chega até ele.
+		var path: PackedVector2Array = actor.path
+		if path.size() > 0:
+			var corridor := PackedVector2Array([center])
+			corridor.append_array(path)
+			draw_polyline(corridor, INK, 2.0, true)
+			# Corredor inteiro discreto; a boca do disparo conserva a leitura forte de antes.
+			var far := DART_COLOR
+			far.a = 0.55
+			draw_polyline(corridor, far, 0.75, true)
+			var muzzle := corridor.slice(0, mini(corridor.size(), MUZZLE_CELLS + 1))
+			if muzzle.size() > 1:
+				draw_polyline(muzzle, DART_COLOR, 0.75, true)
+			if path.size() < TELEGRAPH_MAX_CELLS:
+				# Corredor inteiro: a seta marca a célula que absorve ou corta o dardo.
+				var end: Vector2 = path[path.size() - 1]
+				draw_polyline(PackedVector2Array([
+					end - direction * 1.3 - tangent, end, end - direction * 1.3 + tangent,
+				]), _hot, 0.6, true)
 		_draw_brackets(center, 3.5, DART_COLOR)
-		var end := center + direction * 5.0
-		draw_polyline(PackedVector2Array([
-			end - direction * 1.3 - tangent, end, end - direction * 1.3 + tangent,
-		]), _hot, 0.6, true)
 	else:
 		draw_line(center - direction * 4.5, center, Color("541c36"), 1.6, true)
 		draw_line(center - direction * 2.5, center, DART_COLOR, 0.65, true)
