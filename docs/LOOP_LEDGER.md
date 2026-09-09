@@ -1,7 +1,17 @@
 # LOOP_LEDGER — memória entre execuções do agente
 
-> **Verificado em** 2026-09-08 · commit `3f2d96e` · integração concluída em `main`
-> **Alcance:** as **33 PRs de origem, #59–#91**, foram incorporadas pela [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92).
+> **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, Linux headless (sandbox de nuvem)
+> **Alcance:** esta revisão do cabeçalho fecha o item de direção do #74 e ajusta o backlog; a fila
+> foi conferida no GitHub às 06:00Z e estava em **zero PRs abertos**. Tudo abaixo desta linha é
+> histórico preservado, medido nos commits e ambientes que cada bloco declara — não foi reexecutado aqui.
+> **Revisão de 2026-09-08T22:00Z** (mesmo ambiente, head `859f4e4` desta branch): corrigido o
+> inventário composto #98+#99 que esta PR publicava — `414` casos medidos às 11:00Z, **416** hoje —
+> e reescrita a instrução para derivar em vez de copiar. A fila tinha **cinco** PRs abertas nessa
+> conferência (#98–#102), acima dos tetos das regras 7 e 8. Alcance: só os dois números e a redação
+> ao redor; nada de `game/`, `ui/`, `app/` ou `content/` foi tocado, e nenhum outro bloco histórico
+> foi reverificado.
+> A integração de `3f2d96e` continua sendo a fonte do estado da fila descrito a seguir.
+> **Alcance da integração:** as **33 PRs de origem, #59–#91**, foram incorporadas pela [PR #92](https://github.com/flaviotinococoutinho/qix-game/pull/92).
 > Merge efetivo em 2026-09-08T05:33:34Z; as 33 PRs constavam como MERGED e a fila estava vazia na conferência às 05:33:37Z.
 > Atlas Vivo (`0c63665`), Godot AI 4.0.2 (`6d23de4`), bundle #78 e resíduos foram preservados por ancestralidade.
 > O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324) passou no head `9d02d6f`; a composição validada está incorporada em `main`.
@@ -69,6 +79,25 @@ ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamen
    da execução, sem abrir outro PR redundante. Origem: #53 e o censo de posse de 2026-09-06.
    O limite operacional é dois PRs do loop em andamento; com o limite atingido, priorize revisão
    e correção dos existentes, não a geração de uma nova mudança sobre os mesmos arquivos.
+8. **Um só PR do loop que toque testes, enquanto a matriz declarar inventário global.**
+   Medido em 2026-09-08T14:00Z sobre o head do #98: `docs/TEST_MATRIX.md` carrega uma linha de
+   inventário derivado (`75 arquivos · 411 casos`) e **três** afirmações `N testes, M asserções,
+   K falhas` que `test_matrix_inventory_test.gd` obriga a repetirem os mesmos números. Qualquer PR
+   que acrescente ou altere um caso reescreve essas mesmas quatro linhas do mesmo arquivo, e é
+   isso que faz duas PRs do loop colidirem **por construção**, não por azar. O teto de dois da
+   regra 7 vale para PRs que não tocam a suíte; para os que tocam, o teto é **um**.
+9. **Não reande a sonda de composição.** Quatro execuções (08:00Z, 09:00Z, 11:00Z, 12:00Z) mediram
+   a mesma composição #98 × #99 e publicaram quatro totais de asserções diferentes — 20262, 20256,
+   20265, 20272 — porque as guardas de documento assertam por linha varrida e o total **depende do
+   texto da própria resolução**. A sonda não converge e o número não é transferível: só o
+   inventário derivado — arquivos `*_test.gd` e funções `test_*` — sobrevive à mudança de redação.
+   **Mas derive-o, não o copie.** Esta regra publicava `76 arquivos · 414 casos`; era a verdade da
+   sonda de 11:00Z e envelheceu sozinha quando o **#99** ganhou dois casos às 16:05Z. Um literal de
+   inventário é evidência datada como qualquer outra: quem for mesclar recalcula
+   `casos(A) + casos(B) − casos(main)` sobre os heads do momento e confere com o runner.
+   Uma execução que encontre o teto
+   atingido **escala ao mantenedor** — a fila só anda com um merge, que o loop não pode dar — e
+   registra isso no relato, em vez de gastar a hora remedindo o que já está medido.
 
 ### Legenda do backlog (convenção de #34)
 
@@ -129,6 +158,11 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
+  **Contagem corrente:** 2026-09-08T06:05Z foi **mecanismo** (`tests/` + `docs/`). O atrito medido
+  é que todos os itens de experiência ainda livres — `BOUNDARY`×`TRAIL`, QA humana, playtest —
+  pedem uma tela que a nuvem não tem. Ou o critério de pronto de algum deles passa a admitir
+  decisão no escuro verificada por catraca numérica (`verify_palette_contrast.gd` já existe e é
+  headless), ou a proporção não se cumpre sem o mantenedor. Decidir isso vale mais que insistir.
 - [x] **Unificar relatórios da fila (#71, via #92).** `merge_queue_report.sh --order` substitui
   `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
   relatório de superfície, cuja pergunta é diferente. Mudança integrada e CI verde no head `9d02d6f`.
@@ -193,11 +227,43 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [x] **Exceção visual em regras (#74, via #92).** `RoundVisualDefinition` admite cores; isso não
   autoriza outros Resources de domínio a ler `float` ou consumir a apresentação. A costura
   RoundContent também é declarada; serializadores são derivados do grafo real, sem count=2.
-- [ ] **Guarda geral de direção em `game/session/` (#74).** O acesso a `content.visual`
-  já é recusado pela guarda integrada de regras/apresentação. O achado ainda aberto em
-  `docs/loop/runs/2026-09-07T100000Z.md` é mais amplo: quais outras dependências de apresentação
-  podem ser lidas pela sessão sem a guarda nominal perceber? *Pronto:* ampliar a prova de
-  direção com uma violação plantada dessa outra dependência, preservando a cobertura do visual.
+- [x] **Guarda geral de direção em `game/session/` (#74).** Resposta medida à pergunta larga de
+  `docs/loop/runs/2026-09-07T100000Z.md`: **todas as demais** dependências de apresentação
+  passavam. `var _hud: QixGameHud` em `GameSession` e `var _tint := Color("ff00ff")` em
+  `GameSimulation` deixavam a suíte inteira verde (404 testes, 19013 asserções, 0 falhas).
+  `tests/unit/domain_direction_guard_test.gd` fecha a seta domínio→apresentação com a lista de
+  proibidos **derivada** dos `class_name` das pastas de apresentação (uma view nova nasce proibida),
+  mais 31 tipos da engine declarados com motivo, mais a proibição de herdar de nó. A cobertura
+  nominal do visual foi preservada intacta na guarda irmã. Duas guardas cruzadas impedem a
+  duplicação (um nome já acusado por `domain_purity_test.gd` fica vermelho aqui — foi assim que
+  `Tween` ficou de fora) e a divergência de `PRESENTATION_DIRS` entre as duas guardas de direção.
+  Medição das três mutações plantadas em `docs/loop/runs/2026-09-08T060505Z.md`.
+  **Buraco encontrado e fechado na revisão de 10:00Z** (`docs/loop/runs/2026-09-08T100000Z.md`):
+  a guarda varria duas pastas digitadas e **não lia `DOMAIN_FILES`** da guarda irmã — a lista que
+  a invariante 1 usa para admitir domínio fora das pastas. Um arquivo declarado nas duas listas
+  como manda o contrato, contendo `var _hud: QixGameHud` e um `Color`, atravessava a suíte inteira
+  **verde** (410 testes, 20252 asserções, 0 falhas): pureza guardada, direção livre. A guarda
+  cruzada da irmã não o apanhava porque conhece duas guardas, e esta é a terceira. Agora
+  `_domain_files()` funde as pastas com `DOMAIN_FILES`, e
+  `test_the_guard_covers_every_domain_file_the_sibling_declares` faz pelo lado do domínio o
+  confronto que já existia pelo lado da apresentação: `game/rules/` só fica fora por constar em
+  `DOMAIN_DIRS_EXCLUDED_ON_PURPOSE` com motivo escrito. **Lição:** confrontar uma ponta das duas
+  guardas e não a outra é meia seta guardada — e o lado não conferido é o que ninguém olha.
+  **O que continua sem guarda, de propósito:** um `Variant` nunca anotado, ou um objeto de
+  apresentação recebido por parâmetro sem tipo, atravessa as três varreduras. É semântica, não
+  sintaxe — só revisão e teste de comportamento alcançam.
+  **Revisão de 11:00Z** (`docs/loop/runs/2026-09-08T110042Z.md`): a prosa da matriz dizia
+  `6 casos` onde a aritmética dá **7** (411 − 404, e sete funções `test_*` no arquivo) — corrigido.
+  E esta PR **conflita** com a **#99** em `LOOP_LEDGER.md` e `TEST_MATRIX.md`: as duas declaram
+  `75 arquivos`, contando só a própria guarda. Compostas, a árvore tem **76 arquivos · 416 casos**,
+  derivados em 2026-09-08T22:00Z sobre os heads `859f4e4` (#98) e `735ed50` (#99), em Linux
+  headless: `411 + 409 − 404`, confirmado contando os arquivos e as funções `test_*` da árvore
+  mesclada. **Recalcule antes de usar.** A revisão de 22:00Z encontrou aqui `414`, medido às
+  11:00Z e já falso desde 16:05Z, quando o #99 cresceu — ver
+  `docs/loop/runs/2026-09-08T220000Z.md`. Quem mesclar o **segundo** precisa
+  reconciliar o ledger à mão, derivar o inventário dos heads que estiver mesclando e **reexecutar**
+  a suíte para a contagem de asserções: somar as duas ou copiar o número da sonda planta evidência
+  falsa, e um inventário literal com data velha planta a mesma coisa mais devagar.
 - [x] **Documentação da integração reconciliada (#65, #76, #77, #82, #84, via #92).** Decisões de arte referenciadas,
   geometria atual distinguida de tempos históricos, disponibilidade de Git corrigida,
   seções e chaves de tabela reconciliadas. Guardas e inspeção da integração passaram; a dívida
