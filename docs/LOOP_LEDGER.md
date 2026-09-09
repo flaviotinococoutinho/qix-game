@@ -157,6 +157,17 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
   mesclada via #92, mas a recomendação de branch diária não foi aceita automaticamente.
   O item volta a livre porque nenhum PR aberto o reivindica; agendamento externo não foi alterado.
   *Pronto:* decisão do mantenedor registrada e scheduler coerente com ela.
+- [ ] **Drenar a fila (#98–#105): ela compõe, mas a resolução decide.** Medido em 2026-09-09
+  (`docs/loop/runs/2026-09-09T090126Z.md`, com a correção de 11:20Z): as PRs tocam **código
+  disjunto** e nenhuma está parada por CI. O atrito é que cinco escrevem na mesma linha de
+  `TEST_MATRIX.md` a contagem da própria branch — verdadeira só enquanto aquela branch está
+  sozinha. `main` + #99 + #104 dá **2 falhas** quando o conflito preserva o lado do #99, e
+  `tools/sync_test_matrix_inventory.gd -- --write --assertions=<lido>` as fecha: **0 falhas**,
+  sem prosa arbitrada à mão. Dá **3 falhas** se a resolução descartar o lado do #99 — e esse é o
+  risco a vigiar: **quem descarta um carimbo do #99 descarta, junto, a guarda que o cobraria**,
+  então nada acusa. `ATLAS_VIVO.md` não conflita e se defende sozinho; `TEST_MATRIX.md` e
+  `LOOP_LEDGER.md` não. **Mescle #99 primeiro** e preserve as linhas carimbadas dele; receita
+  completa no relato. *Pronto:* fila em zero, matriz derivada da árvore final, cabeçalho datado.
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.

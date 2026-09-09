@@ -68,6 +68,7 @@ $G --headless --path . --script res://tools/profile_board_view.gd       # perfil
 $G --headless --path . --script res://tools/verify_palette_contrast.gd  # contraste por estado
 $G --headless --path . --script res://tools/verify_hud_row_geometry.gd  # linhas do HUD nas barras
 $G --headless --path . --script res://tools/build_campaign_content.gd   # conteúdo transacional
+$G --headless --path . --script res://tools/sync_test_matrix_inventory.gd  # matriz × árvore
 tools/shipping/run_shipping_qa.sh                                       # exports + probes (macOS)
 ```
 
