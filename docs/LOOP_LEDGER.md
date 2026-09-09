@@ -6,6 +6,10 @@
 > Atlas Vivo (`0c63665`), Godot AI 4.0.2 (`6d23de4`), bundle #78 e resíduos foram preservados por ancestralidade.
 > O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324) passou no head `9d02d6f`; a composição validada está incorporada em `main`.
 > O [CI pós-merge 34191087087](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34191087087) também passou em `3f2d96e`.
+>
+> A execução de 2026-09-09T08:08Z acrescentou itens ao backlog e marcou como `[~]` os que já
+> tinham PR aberta. **A data acima não mudou de propósito:** aquela integração não foi
+> reverificada aqui, e trocar o carimbo faria a evidência de 09-08 parecer medida hoje.
 
 O usuário autorizou explicitamente nesta sessão a modernização, auditoria, revisão, correções,
 integração e merges das PRs. Esta execução cumpriu esse escopo amplo: a regra rotineira de um
@@ -129,6 +133,15 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
+  **Medição do #102: 0 de 15 execuções tocaram essas pastas.** As duas execuções seguintes
+  romperam a série — o #103 em `game/enemies/` e `game/simulation/enemies/`, e a de
+  2026-09-09T08:08Z em `ui/touch/`. O item fica aberto porque a razão de uma em cada três
+  ainda não se cumpriu na janela de dez; quem contar, conte a partir do #102.
+- [ ] **A fila do loop está acima do teto e só o mantenedor a destrava.** Em 2026-09-09T08:08Z
+  havia **seis PRs abertas** (#98–#103), todas em rascunho, todas com a suíte headless verde,
+  nenhuma em conflito; o teto do protocolo é dois. O loop não mescla as próprias PRs e não há
+  PR vermelha para consertar, então nenhuma execução resolve isto sozinha. *Pronto:* fila em
+  dois ou menos, por merge ou por fechamento explicado.
 - [x] **Unificar relatórios da fila (#71, via #92).** `merge_queue_report.sh --order` substitui
   `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
   relatório de superfície, cuja pergunta é diferente. Mudança integrada e CI verde no head `9d02d6f`.
@@ -193,7 +206,9 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [x] **Exceção visual em regras (#74, via #92).** `RoundVisualDefinition` admite cores; isso não
   autoriza outros Resources de domínio a ler `float` ou consumir a apresentação. A costura
   RoundContent também é declarada; serializadores são derivados do grafo real, sem count=2.
-- [ ] **Guarda geral de direção em `game/session/` (#74).** O acesso a `content.visual`
+- [~] **Guarda geral de direção em `game/session/` (#74).** Reivindicado pela **PR #98**, aberta
+  e verde. Não escolher. O texto original do item segue abaixo.
+  O acesso a `content.visual`
   já é recusado pela guarda integrada de regras/apresentação. O achado ainda aberto em
   `docs/loop/runs/2026-09-07T100000Z.md` é mais amplo: quais outras dependências de apresentação
   podem ser lidas pela sessão sem a guarda nominal perceber? *Pronto:* ampliar a prova de
@@ -214,7 +229,9 @@ para o inventário da **árvore final**, não somar números copiados das descri
   `docs/loop/runs/2026-09-07T180244Z.md`.
 - [ ] **Procedência da licença raiz (#73).** Preservar o aviso de `IMPLEMENTATION_STATUS`:
   não substituir titularidade ou licença sem decisão do mantenedor e verificação de direitos.
-- [ ] **Contagem de outro ambiente parece atual fora da matriz (#69).** `IMPLEMENTATION_STATUS.md`
+- [~] **Contagem de outro ambiente parece atual fora da matriz (#69).** Reivindicado pela
+  **PR #99**, aberta e verde. Não escolher. O texto original do item segue abaixo.
+  `IMPLEMENTATION_STATUS.md`
   passou a separar a evidência Atlas dos registros históricos e a apontar para TEST_MATRIX.
   `SHIPPING_PASS.md` ainda cita **134 testes, 11.489 asserções** do run de macOS de 2026-09-03
   sem repetir a data e o ambiente na própria linha da tabela. O
@@ -247,6 +264,19 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   em `_initialize()` não reproduz sua geometria final.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
   *Pronto:* decisão visual, catracas atualizadas e confirmação numa tela, sem piorar legibilidade.
+  A **PR #100** mexe no mesmo tooling de contraste (envelope de `FREE`) sem reivindicar este par:
+  quem pegar este item, conte com conflito em `tools/palette_contrast.gd`.
+- [x] **O chrome do toque não cobre mais instrumento do HUD (2026-09-09T08:08Z).** A pausa era
+  desenhada a 58 % começando em y=10, dentro dos 19 px da banda superior, sobre 32 dos 82 px do
+  trilho do escudo e o pé das vitais. Passou a encostar por baixo da banda, derivando
+  `TOP_BAR_HEIGHT`, com o véu na família de 24 % do resto do overlay.
+  `tests/unit/touch_hud_occlusion_test.gd` lê `chrome_rects()` — a mesma função que `_draw()` usa
+  — e mede contra os nós reais do HUD. **Ler `size.y` de um `Label` no runner mede 23 px, não
+  `TEXT_HEIGHT`**: a guarda usa X do nó e Y da linha declarada, e quem escrever guarda de layout
+  aqui cai no mesmo buraco se não fizer igual. O que ficou **medido e aceito, não resolvido**:
+  os arcos do stick e da ação cruzam a linha de texto do rodapé (35,8 px dos 91 do título,
+  17,6 px dos 139 do status) — recuar reabriria a ergonomia fechada em #90. Falta confirmação
+  numa tela do novo lugar da pausa.
 - [x] **Toque estável (#90, via #92).** Regressões de jitter/arrasto integradas e verdes,
   preservando floating stick, histerese de entrada/saída, margem angular e flick do Atlas.
   Ergonomia em dispositivo real continua no item de QA humana.
