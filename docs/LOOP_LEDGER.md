@@ -342,6 +342,22 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   perde a ponta de seta, porque seta significa «morre aqui». *Pronto:* entregue e verde
   (408/19131, rota M2 intacta, checksum dourado imóvel); **falta** a leitura em tela, que vai
   junto no item de QA humana abaixo. Ver `docs/loop/runs/2026-09-09T063041Z.md`.
+- [~] **A linha de flash respeita a hierarquia alerta > recompensa (achado de 2026-09-09T12:04Z).**
+  Reivindicado pela PR aberta desta execução. O slot único de `_capture_flash` era de quem
+  escrevesse por último: `BEACON_CAPTURED` (90 ticks) apagava `DART_ARMED` (30 ticks) no mesmo
+  tick e enquanto o aviso ainda corria — pontos por cima do único aviso acionável, contra
+  `ART_DIRECTION` §Hierarquia 4. Agora um alerta toma a linha sempre e uma recompensa só entra
+  com a linha livre, sendo descartada e não enfileirada. Medido nos dois sentidos: três dos sete
+  testes novos ficam vermelhos contra o `game_hud.gd` de `main`. A linha não tinha teste nenhum
+  antes disto. Relato em `docs/loop/runs/2026-09-09T120412Z.md`.
+- [ ] **A cor da linha de estado não acompanha a hierarquia que o texto já respeita
+  (achado de 2026-09-09T12:04Z, fora do backlog).** `_sync_threat_instruments` pinta
+  `_status_label` de `DANGER_COLOR` por uma condição só — trilha ativa **e** brasas vivas — e de
+  `HUD_COLOR` em todo o resto. Então `EXPOSTO · VOLTE À BORDA`, `DARDO ARMADO · DESVIE` e a causa
+  da morte saem na mesma tinta de `DESENHE · ESPAÇO/Z`, enquanto o canal de cor responde a algo
+  que o texto nem sempre está a dizer. A prioridade do texto já foi resolvida; a da cor não.
+  *Pronto:* a tinta da linha deriva da mesma classificação alerta/recompensa que o texto usa,
+  com catraca de contraste, sem tocar no domínio nem no checksum.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
   Medido de novo em 2026-09-08 (Linux headless): 1,04–1,05:1 nas quatro paletas, meta 3:1.
   **Dois caminhos já foram investigados e recusados — não reandar sem argumento novo.** (a) Tinta
