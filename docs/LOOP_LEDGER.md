@@ -6,6 +6,11 @@
 > Atlas Vivo (`0c63665`), Godot AI 4.0.2 (`6d23de4`), bundle #78 e resíduos foram preservados por ancestralidade.
 > O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324) passou no head `9d02d6f`; a composição validada está incorporada em `main`.
 > O [CI pós-merge 34191087087](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34191087087) também passou em `3f2d96e`.
+>
+> A execução de 2026-09-09T12:04Z acrescentou dois itens de P3 e entregou o primeiro deles, em
+> `ui/`. **A data acima não mudou de propósito:** aquela integração não foi reverificada aqui, e
+> trocar o carimbo faria a evidência de 09-08 parecer medida hoje. A suíte desta árvore está
+> carimbada em `docs/TEST_MATRIX.md` e no relato `docs/loop/runs/2026-09-09T120412Z.md`.
 
 O usuário autorizou explicitamente nesta sessão a modernização, auditoria, revisão, correções,
 integração e merges das PRs. Esta execução cumpriu esse escopo amplo: a regra rotineira de um
@@ -245,6 +250,22 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   e isolamento da apresentação.
 - [x] **Geometria real do HUD (#52, via #55).** A sonda executa frames; medir Label apenas
   em `_initialize()` não reproduz sua geometria final.
+- [~] **A linha de flash respeita a hierarquia alerta > recompensa (achado de 2026-09-09T12:04Z).**
+  Reivindicado pela PR aberta desta execução. O slot único de `_capture_flash` era de quem
+  escrevesse por último: `BEACON_CAPTURED` (90 ticks) apagava `DART_ARMED` (30 ticks) no mesmo
+  tick e enquanto o aviso ainda corria — pontos por cima do único aviso acionável, contra
+  `ART_DIRECTION` §Hierarquia 4. Agora um alerta toma a linha sempre e uma recompensa só entra
+  com a linha livre, sendo descartada e não enfileirada. Medido nos dois sentidos: três dos sete
+  testes novos ficam vermelhos contra o `game_hud.gd` de `main`. A linha não tinha teste nenhum
+  antes disto. Relato em `docs/loop/runs/2026-09-09T120412Z.md`.
+- [ ] **A cor da linha de estado não acompanha a hierarquia que o texto já respeita
+  (achado de 2026-09-09T12:04Z, fora do backlog).** `_sync_threat_instruments` pinta
+  `_status_label` de `DANGER_COLOR` por uma condição só — trilha ativa **e** brasas vivas — e de
+  `HUD_COLOR` em todo o resto. Então `EXPOSTO · VOLTE À BORDA`, `DARDO ARMADO · DESVIE` e a causa
+  da morte saem na mesma tinta de `DESENHE · ESPAÇO/Z`, enquanto o canal de cor responde a algo
+  que o texto nem sempre está a dizer. A prioridade do texto já foi resolvida; a da cor não.
+  *Pronto:* a tinta da linha deriva da mesma classificação alerta/recompensa que o texto usa,
+  com catraca de contraste, sem tocar no domínio nem no checksum.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
   *Pronto:* decisão visual, catracas atualizadas e confirmação numa tela, sem piorar legibilidade.
 - [x] **Toque estável (#90, via #92).** Regressões de jitter/arrasto integradas e verdes,

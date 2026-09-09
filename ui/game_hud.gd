@@ -84,6 +84,7 @@ var _beacons_captured: int = 0
 var _effect_ticks := PackedInt32Array()
 var _flash_message: String = ""
 var _flash_ticks: int = 0
+var _flash_is_alert: bool = false
 ## Causa da última morte **observada**, ou `-1` enquanto nenhuma foi. Não é um flash com prazo
 ## próprio: quem lhe dá duração é a fase DYING do domínio. Ver `_status_text`.
 var _death_reason: int = -1
@@ -275,8 +276,7 @@ func _capture_flash(events: Array[GameEvent]) -> void:
 	for event in events:
 		match event.kind:
 			GameEvent.Kind.CAPTURED:
-				_flash_message = "CAPTURA +%d" % event.data.get("filled_delta", 0)
-				_flash_ticks = 75
+				_set_flash("CAPTURA +%d" % event.data.get("filled_delta", 0), 75, false)
 			GameEvent.Kind.PLAYER_DIED:
 				_death_reason = event.data.get("reason", GameSimulation.DeathReason.BOSS_CONTACT)
 				# A morte não entra na fila de flashes: ela tem fase própria no domínio e a linha
@@ -285,42 +285,61 @@ func _capture_flash(events: Array[GameEvent]) -> void:
 				# anunciando um estado que o jogador já não tem.
 				_flash_ticks = 0
 				_flash_message = ""
+				_flash_is_alert = false
 			GameEvent.Kind.PLAYER_RESPAWNED:
 				# A causa deixa de existir no mesmo tick em que o jogador recupera o controlo.
 				_death_reason = -1
 			GameEvent.Kind.SHIELD_CRITICAL:
-				_flash_message = "ESCUDO CRÍTICO"
-				_flash_ticks = 120
+				_set_flash("ESCUDO CRÍTICO", 120, true)
 			GameEvent.Kind.DART_ARMED:
-				_flash_message = "DARDO ARMADO · DESVIE"
-				_flash_ticks = 30
+				_set_flash("DARDO ARMADO · DESVIE", 30, true)
 			GameEvent.Kind.TRAIL_CUT:
-				_flash_message = "TRILHA CORTADA · CONTINUE!"
-				_flash_ticks = 75
+				_set_flash("TRILHA CORTADA · CONTINUE!", 75, true)
 			GameEvent.Kind.EMBER_IGNITED:
-				_flash_message = "BRASA NA TRILHA · AVANCE"
-				_flash_ticks = 60
+				_set_flash("BRASA NA TRILHA · AVANCE", 60, true)
 			GameEvent.Kind.WALKER_EXTINGUISHED:
-				_flash_message = "VAGALUME CONTIDO +%d" % event.data.get("points", 0)
-				_flash_ticks = 60
+				_set_flash("VAGALUME CONTIDO +%d" % event.data.get("points", 0), 60, false)
 			GameEvent.Kind.BOSS_PHASE_CHANGED:
-				_flash_message = "NÚCLEO · FASE %d" % (int(event.data.get("phase", 0)) + 1)
-				_flash_ticks = 100
+				_set_flash("NÚCLEO · FASE %d" % (int(event.data.get("phase", 0)) + 1), 100, true)
 			GameEvent.Kind.BOSS_CORNERED:
-				_flash_message = "NÚCLEO EM FÚRIA"
-				_flash_ticks = 75
+				_set_flash("NÚCLEO EM FÚRIA", 75, true)
 			GameEvent.Kind.OVERTIME_STARTED:
-				_flash_message = "PRESSÃO MÁXIMA · AVANCE"
-				_flash_ticks = 100
+				_set_flash("PRESSÃO MÁXIMA · AVANCE", 100, true)
 			GameEvent.Kind.BEACON_CAPTURED:
-				_flash_message = "BALIZA ×%d  +%d" % [event.data.get("chain", 1), event.data.get("points", 0)]
-				_flash_ticks = 90
+				_set_flash(
+					"BALIZA ×%d  +%d" % [event.data.get("chain", 1), event.data.get("points", 0)],
+					90,
+					false,
+				)
 			GameEvent.Kind.ITEM_STARTED:
-				_flash_message = "%s ATIVO" % _item_name(int(event.data.get("item", 0)))
-				_flash_ticks = 75
+				_set_flash("%s ATIVO" % _item_name(int(event.data.get("item", 0))), 75, false)
 			GameEvent.Kind.BOSS_SEALED:
-				_flash_message = "NÚCLEO SELADO"
-				_flash_ticks = 100
+				_set_flash("NÚCLEO SELADO", 100, false)
+
+
+## Escreve a linha de flash respeitando a hierarquia de `docs/ART_DIRECTION.md` §Hierarquia 4:
+## «o alerta de perigo conserva prioridade sobre recompensas».
+##
+## O slot é único e era do último a escrever, sem olhar a quem. Isso invertia a hierarquia no
+## caso mais comum do jogo: as balizas ficam no chão livre, que é onde os dardos armam. Meio
+## segundo depois de "DARDO ARMADO · DESVIE" (30 ticks) o jogador colhe a baliza que estava a
+## perseguir, e "BALIZA ×2  +240" ocupa a linha por 90 ticks — pontos por cima do único aviso
+## sobre o qual ainda dava para agir, e três vezes mais tempo do que o aviso teria durado.
+##
+## A regra: um alerta toma a linha sempre, inclusive de outro alerta — a ameaça mais nova é a
+## que ainda pede decisão. Uma recompensa só entra com a linha livre de alerta; caso contrário
+## é descartada, não enfileirada. Descartar é honesto porque o ganho não depende desta linha:
+## ele já está a ser pago, degrau a degrau, no contador de pontuação (ADR-0009), e a baliza
+## conta em `B n/m` na linha de vitais. O aviso não tem segunda casa.
+##
+## Continua apresentação pura: lê eventos já confirmados e não devolve nada ao domínio
+## (invariante 6). Trocar a hierarquia não pode mexer em checksum (invariante 8).
+func _set_flash(message: String, ticks: int, is_alert: bool) -> void:
+	if not is_alert and _flash_ticks > 0 and _flash_is_alert:
+		return
+	_flash_message = message
+	_flash_ticks = ticks
+	_flash_is_alert = is_alert
 
 
 func _status_text(simulation: GameSimulation, session: GameSession, paused: bool) -> String:
