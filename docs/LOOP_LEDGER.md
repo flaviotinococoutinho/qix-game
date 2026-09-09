@@ -382,6 +382,19 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   os arcos do stick e da ação cruzam a linha de texto do rodapé (35,8 px dos 91 do título,
   17,6 px dos 139 do status) — recuar reabriria a ergonomia fechada em #90. Falta confirmação
   numa tela do novo lugar da pausa.
+- [~] **O envelope de `FREE` não era o que o shader desenha (achado de 2026-09-08T17:00Z).**
+  `PaletteContrast.rendered_swatches` aplicava só a scanline; o ramo `FREE` de
+  `board_reveal.gdshader` também multiplica por um poço radial e **soma** uma grade. Os seis pares
+  contra `FREE` — três do campo, três do cursor — saíam otimistas, e os pisos da catraca tinham
+  sido registrados sobre esses números. Nada regrediu na paleta e nenhum par cruzou a meta de 3:1;
+  `FREE`×`THREAT`, o mais apertado, vai de 3,73 para 3,62. Envelope corrigido, seis pisos
+  rebaixados, tabela nova e datada em `ART_DIRECTION.md`.
+  *Pronto (o que faltava e foi entregue):* medição igual ao shader e uma guarda que force a
+  releitura do shader — `test_nenhum_numero_do_ramo_free_do_shader_fica_fora_da_medicao` recusa
+  literal novo do ramo `FREE` e entrada órfã, provada plantando `0.81 + 0.19` no poço.
+  *Continua aberto:* a mesma pergunta para os ramos `BOUNDARY` e `TRAIL`, que hoje conferem por
+  leitura mas não têm guarda equivalente; e as camadas do cursor, que a view não modula mas
+  também ninguém amarra ao `_draw`.
 - [x] **Toque estável (#90, via #92).** Regressões de jitter/arrasto integradas e verdes,
   preservando floating stick, histerese de entrada/saída, margem angular e flick do Atlas.
   Ergonomia em dispositivo real continua no item de QA humana.
