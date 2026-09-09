@@ -50,7 +50,8 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | shipping | ícone quadrado, presets sem segredo, filtros, dispatch pela cena principal, smoke de áudio com marker/watchdog, seleção segura do serial, frame pacing e contratos de framebuffer/Metal HUD |
 | integração | existência, carga, campanha/feedback/touch ligados, camadas obrigatórias da cena principal, permissão Android de vibração e 60 Hz persistidos no projeto |
 | captura de erros | o runner de testes falha por erro de script ocorrido depois de uma asserção, e limpa a janela entre testes |
-| inventário desta matriz | a contagem de arquivos e de casos `test_*` é derivada pela mesma varredura de diretório do runner e conferida contra a linha declarada aqui; toda afirmação `N testes, M asserções, K falhas` do documento precisa repetir os mesmos números. Fora do alcance de propósito: a contagem de asserções (só existe depois de executar) e os demais `docs/*.md`, cujos números de outro ambiente são registro histórico |
+| inventário desta matriz | a contagem de arquivos e de casos `test_*` é derivada pela mesma varredura de diretório do runner e conferida contra a linha declarada aqui; toda afirmação `N testes, M asserções, K falhas` do documento precisa repetir os mesmos números. Fora do alcance de propósito: a contagem de asserções, que só existe depois de executar |
+| procedência das contagens fora desta matriz | toda linha que se lê sozinha — linha de tabela ou início de item de lista — em `docs/*.md` e que afirme `N testes` ou `M asserções` precisa dizer, nela mesma, de que ambiente e data veio, ou declarar-se derivada da árvore desta branch. Prosa corrida, linha de continuação recuada, `docs/loop/` e `docs/decisions/` ficam fora de propósito; a regra é provada nos dois sentidos sobre uma linha sintética carimbada e nua |
 | invariantes 1 e 4 | varredura estática de `game/simulation`, `game/rules` e `game/session` por símbolo do mundo real (acaso global, relógio, `Input`, `Tween`, física, `await`, `_process`); o próprio scanner é validado contra amostras positivas e negativas, de modo que ele não pode passar sem olhar |
 | invariante 10 | SHA-256 de todo arquivo de mídia de `assets`, `game`, `ui`, `app`, `content`, `tools`, `tests` e `reference` conferido contra `assets/ASSET-PROVENANCE.md`; hash declarado sem arquivo correspondente é recusado como órfão salvo em linha `(removido)`; arquivo marcado `(removido)` não pode reaparecer; a checagem é exercitada contra bytes de controle não declarados e o padrão da tabela é validado numa linha sintética, para que uma reformatação não a transforme em laço vazio |
 
@@ -67,7 +68,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | natureza da rota | **automatizada, não humana**; não mede dificuldade, ergonomia, diversão ou balanceamento percebido |
 | boss autorável | WANDER, PURSUIT e SWEEP externos, determinísticos, distintos e limitados a velocidade segura |
 | áudio PCM | guard frame cobre a leitura one-past-end do loop observada no Android e documentada no Godot #119778 |
-| geração autorável | WAL v3 finalizou 16 staged/16 committed; subconjunto direcionado passou 22 testes/353 asserções |
+| geração autorável | WAL v3 finalizou 16 staged/16 committed; subconjunto direcionado passou 22 testes/353 asserções em macOS, 2026-09-03 |
 | perfil isolado do board | R8 p50/p95 1/1 µs em 240 amostras; legado sintético 31.160/32.304 µs; speedup p95 32.304× e 4× menos bytes por refresh |
 | gamepad multi-device | sticks/botões ficam por `device`; A/confirm e Start/pause são consumidos uma vez mesmo chegando por InputMap e raw |
 | guarda de invariantes | o teste fica **vermelho** quando `randi()` e `Time.get_ticks_msec()` são plantados em `game/simulation/game_simulation.gd`, apontando arquivo, linha, regra e invariante; verificado plantando e revertendo a violação |
@@ -86,7 +87,7 @@ As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09
 | smoke macOS com áudio real | **passou** | 900/900 ticks a 60 Hz; nominal 15 s, wall 17 s; 1 marker; watchdog 30 s sem timeout/sinal; saída 0 |
 | frame pacing exportado | **passou** | 600 amostras em gameplay ativo; p95 18,331 ms, p99 20,041 ms, máximo 75,433 ms; render CPU p95 0,071 ms; zero stalls ≥150 ms |
 | GPU Metal exportada | **passou** | 1.380 pares válidos; GPU p95 0,23 ms, p99 0,29 ms, máximo 0,4 ms; frame p95/p99 16,67 ms, máximo 64,97 ms; malformed/unpaired/stalls = 0 |
-| framebuffer exportado | **passou** | 17 asserções, viewport final 240×320, máscara R8 igual ao board; somente `CLAIMED` preservou o texel original amostrado |
+| framebuffer exportado | **passou** | 17 asserções em macOS, 2026-09-03; viewport final 240×320, máscara R8 igual ao board; somente `CLAIMED` preservou o texel original amostrado |
 | export Android | **passou** | APK 40.486.376 bytes; archive, payload e assinatura debug verdes; SHA-256 `db61015cfc6bea849ec41fad6907e1c0af625d8c38866c2e38bc68306c6411e2` |
 | seleção Android | **passou** | `selected_serial=emulator-5554`, `selection_source=runner-started-emulator`; sem seleção implícita de device físico |
 | smoke Android/AVD | **passou** | readiness estável, instalação sem streaming, main loop após 13 s, +30 s vivo, screenshot e scan sem crash do pacote/ANR/script/resource |

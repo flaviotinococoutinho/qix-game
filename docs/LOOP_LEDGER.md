@@ -16,6 +16,8 @@
 > Atlas Vivo (`0c63665`), Godot AI 4.0.2 (`6d23de4`), bundle #78 e resíduos foram preservados por ancestralidade.
 > O [CI 34190696324](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34190696324) passou no head `9d02d6f`; a composição validada está incorporada em `main`.
 > O [CI pós-merge 34191087087](https://github.com/flaviotinococoutinho/qix-game/actions/runs/34191087087) também passou em `3f2d96e`.
+> A execução de 2026-09-08T07:04Z mexeu apenas no backlog e entregou o item #69 de procedência das
+> contagens; a integração acima não foi reverificada por ela.
 
 O usuário autorizou explicitamente nesta sessão a modernização, auditoria, revisão, correções,
 integração e merges das PRs. Esta execução cumpriu esse escopo amplo: a regra rotineira de um
@@ -49,7 +51,7 @@ ad-hoc não equivalem a distribuição comercial, escuta crítica ou balanceamen
   IDs/pools, ameaças justas, balizas, quatro itens, bônus, campanha/replay v4, GLBs originais,
   palco 2.5D, F2/F3/F4 e feedback. A decisão corrente é a
   [ADR-0014](decisions/ADR-0014-atlas-lifecycle-depth-stage.md); ADR-0012 continua sendo cursor ink.
-- Na árvore Atlas anterior foram registrados 260 testes / 13.598 asserções / zero falhas e
+- Na árvore Atlas anterior, em macOS, 2026-09-07, foram registrados 260 testes / 13.598 asserções / zero falhas e
   20 verificações em renderer real. A evidência detalhada está em [ATLAS_VIVO.md](ATLAS_VIVO.md).
   Esses números não são o inventário nem o resultado da composição atual.
 - Não restaurar goldens v3 ou caminhos anteriores à taxonomia `game/simulation/{board,enemies,
@@ -280,15 +282,31 @@ para o inventário da **árvore final**, não somar números copiados das descri
   `docs/loop/runs/2026-09-07T180244Z.md`.
 - [ ] **Procedência da licença raiz (#73).** Preservar o aviso de `IMPLEMENTATION_STATUS`:
   não substituir titularidade ou licença sem decisão do mantenedor e verificação de direitos.
-- [ ] **Contagem de outro ambiente parece atual fora da matriz (#69).** `IMPLEMENTATION_STATUS.md`
-  passou a separar a evidência Atlas dos registros históricos e a apontar para TEST_MATRIX.
-  `SHIPPING_PASS.md` ainda cita **134 testes, 11.489 asserções** do run de macOS de 2026-09-03
-  sem repetir a data e o ambiente na própria linha da tabela. O
-  número é verdadeiro **por ser histórico**, e por isso a guarda de inventário do #69 não o
-  alcança: forçá-lo a bater com a árvore de hoje falsificaria evidência que a nuvem não reproduz.
-  O risco é de leitura — nada **na linha** avisa que aquilo é outro ambiente e outra data.
-  *Pronto:* toda contagem de suíte em `docs/` diz, na própria linha, de que ambiente e data veio,
-  ou é derivada da árvore.
+- [x] **Contagem de outro ambiente parece atual fora da matriz (#69).** `SHIPPING_PASS.md` nomeia
+  o run no título da seção e carrega uma coluna **Origem** por linha; `TEST_MATRIX.md` e
+  `ATLAS_VIVO.md` tiveram suas linhas carimbadas ou marcadas como derivadas.
+  `tests/unit/doc_suite_count_provenance_test.gd` guarda a regra: **linha que se lê sozinha** —
+  linha de tabela ou início de item de lista — em `docs/*.md` afirmando `N testes`/`M asserções`
+  diz ambiente **e** data, ou declara-se derivada da árvore (contagem derivada não leva data,
+  senão a guarda plantaria a mentira que existe para impedir).
+  **Prosa corrida fica fora de propósito e não deve ser trazida para dentro:** `PERFORMANCE.md`
+  qualifica seus números na frase seguinte, e exigir carimbo por linha ali repetiria a heurística
+  de baixa precisão que o #82 mediu e recusou. Precisão medida nesta entrega: 8 acusações sobre os
+  nove docs vivos, todas verdadeiras, zero falso positivo. Relato em
+  `docs/loop/runs/2026-09-08T070425Z.md`.
+  A guarda de inventário ficou vermelha com o arquivo novo e a matriz foi **remedida**, não
+  copiada: 409 testes / 19.041 asserções / 0 falhas na árvore desta branch, Linux headless.
+  **Revisão de 2026-09-08T16:00Z, na mesma branch:** a porta da contagem derivada aceitava a
+  palavra `árvore` sozinha, e com isso `134 testes, 11.489 asserções, 0 falhas naquela árvore` —
+  os números de macOS de 2026-09-03, sem ambiente nem data — atravessava a suíte **verde**.
+  Citar a árvore de onde o número veio é o contrário de declarar procedência: é a doença, com a
+  palavra certa dentro. As marcas passaram a nomear **esta** árvore, e a linha viva da árvore
+  Atlas neste próprio arquivo — que passava pelo mesmo buraco — foi carimbada. A varredura
+  também não descia para as quatro subpastas de `docs/`, e o cabeçalho da guarda só declarava
+  duas: as quatro agora constam com motivo, e uma pasta nova fica vermelha até alguém decidir.
+  *Continua fora do alcance:* a guarda de inventário confere casos e arquivos contra a árvore,
+  mas **não** as asserções — nesta execução `19.044` passou verde antes de a medição dizer
+  `19.041`. Fechar isso mudaria o custo de todo PR que mexe em teste; é decisão do mantenedor.
 
 ### P3 — experiência e estética
 
@@ -312,6 +330,15 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
 - [x] **Geometria real do HUD (#52, via #55).** A sonda executa frames; medir Label apenas
   em `_initialize()` não reproduz sua geometria final.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
+  Medido de novo em 2026-09-08 (Linux headless): 1,04–1,05:1 nas quatro paletas, meta 3:1.
+  **Dois caminhos já foram investigados e recusados — não reandar sem argumento novo.** (a) Tinta
+  própria, como ADR-0011 e ADR-0012: impossível, porque uma célula de campo é **um pixel lógico**
+  (`CoordinateSpace`, campo 225×283 em viewport 240×320) — não há sub-célula onde desenhar
+  contorno, e a trilha tem um pixel de largura. (b) Vale do pulso descendo até a luminância de
+  `FREE`: separaria de `BOUNDARY`, mas apagaria parte da trilha contra `FREE`, que é o chão onde
+  ela passa a partida inteira — piora a legibilidade que o critério manda preservar.
+  Sobra a decisão de paleta, com dono humano: escurecer `boundary_color` ou `trail_color` mexe em
+  `FREE`×`BOUNDARY` (9,0–10,0:1) e `FREE`×`TRAIL` (11,2–12,9:1), hoje folgados.
   *Pronto:* decisão visual, catracas atualizadas e confirmação numa tela, sem piorar legibilidade.
 - [x] **Toque estável (#90, via #92).** Regressões de jitter/arrasto integradas e verdes,
   preservando floating stick, histerese de entrada/saída, margem angular e flick do Atlas.
