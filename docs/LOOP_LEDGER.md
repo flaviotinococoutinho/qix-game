@@ -126,6 +126,15 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
   mesclada via #92, mas a recomendação de branch diária não foi aceita automaticamente.
   O item volta a livre porque nenhum PR aberto o reivindica; agendamento externo não foi alterado.
   *Pronto:* decisão do mantenedor registrada e scheduler coerente com ela.
+- [ ] **Drenar a fila de sete PRs (#98–#104), que não compõe.** Medido em 2026-09-09
+  (`docs/loop/runs/2026-09-09T090126Z.md`): as sete tocam **código disjunto**, mas cinco escrevem
+  na mesma linha de `TEST_MATRIX.md` a contagem da própria branch. Cada PR está verde sozinha;
+  **`main` + #99 + #104 dá 3 falhas**, medido de verdade, não deduzido. Duas são a guarda de
+  inventário do #69 — agora com ferramenta que as resolve, `tools/sync_test_matrix_inventory.gd`.
+  A terceira é uma armadilha entre PRs: o #99 acrescenta a guarda de procedência **e** carimba a
+  linha; o #104, saído de `main` antes, carrega a linha sem carimbo. Nenhum CI vê isso, porque a
+  incompatibilidade só existe na árvore composta. **Mescle #99 primeiro**; a receita completa está
+  no relato. *Pronto:* fila em zero, com a matriz derivada da árvore final e o cabeçalho datado.
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
@@ -193,7 +202,8 @@ para o inventário da **árvore final**, não somar números copiados das descri
 - [x] **Exceção visual em regras (#74, via #92).** `RoundVisualDefinition` admite cores; isso não
   autoriza outros Resources de domínio a ler `float` ou consumir a apresentação. A costura
   RoundContent também é declarada; serializadores são derivados do grafo real, sem count=2.
-- [ ] **Guarda geral de direção em `game/session/` (#74).** O acesso a `content.visual`
+- [~] **Guarda geral de direção em `game/session/` (#74).** Reivindicado pela **PR #98** (aberta em
+  2026-09-08); conferido no GitHub em 2026-09-09. Não escolher. O acesso a `content.visual`
   já é recusado pela guarda integrada de regras/apresentação. O achado ainda aberto em
   `docs/loop/runs/2026-09-07T100000Z.md` é mais amplo: quais outras dependências de apresentação
   podem ser lidas pela sessão sem a guarda nominal perceber? *Pronto:* ampliar a prova de
@@ -214,7 +224,9 @@ para o inventário da **árvore final**, não somar números copiados das descri
   `docs/loop/runs/2026-09-07T180244Z.md`.
 - [ ] **Procedência da licença raiz (#73).** Preservar o aviso de `IMPLEMENTATION_STATUS`:
   não substituir titularidade ou licença sem decisão do mantenedor e verificação de direitos.
-- [ ] **Contagem de outro ambiente parece atual fora da matriz (#69).** `IMPLEMENTATION_STATUS.md`
+- [~] **Contagem de outro ambiente parece atual fora da matriz (#69).** Reivindicado pela **PR #99**
+  (aberta em 2026-09-08); conferido no GitHub em 2026-09-09. Não escolher. É a PR a mesclar
+  primeiro: ela traz a guarda de procedência que as outras quatro contradizem por acidente. `IMPLEMENTATION_STATUS.md`
   passou a separar a evidência Atlas dos registros históricos e a apontar para TEST_MATRIX.
   `SHIPPING_PASS.md` ainda cita **134 testes, 11.489 asserções** do run de macOS de 2026-09-03
   sem repetir a data e o ambiente na própria linha da tabela. O
@@ -246,6 +258,9 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
 - [x] **Geometria real do HUD (#52, via #55).** A sonda executa frames; medir Label apenas
   em `_initialize()` não reproduz sua geometria final.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
+  Livre em intenção, mas **os arquivos estão ocupados**: a **PR #100** reescreve
+  `tools/palette_contrast.gd` e o teste de contraste para remedir o envelope de `FREE` — outra
+  pergunta, mesmas linhas. Atacar antes de #100 mesclar é conflito garantido.
   *Pronto:* decisão visual, catracas atualizadas e confirmação numa tela, sem piorar legibilidade.
 - [x] **Toque estável (#90, via #92).** Regressões de jitter/arrasto integradas e verdes,
   preservando floating stick, histerese de entrada/saída, margem angular e flick do Atlas.
