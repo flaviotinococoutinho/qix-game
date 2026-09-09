@@ -78,6 +78,35 @@ func test_dart_snapshot_uses_domain_direction_and_warmup() -> void:
 	view.free()
 
 
+func test_dart_warmup_telegraph_carries_the_domain_corridor_and_only_while_armed() -> void:
+	var simulation := _simulation()
+	var slot := DartRules.try_spawn(
+		simulation.pools, simulation.board, Vector2i(16, 14), simulation.rng,
+		384, 6, 24, 240, MinorActorPools.Cause.EXPOSURE)
+	ok(slot >= 0)
+	var corridor := DartRules.peek_path(
+		simulation.pools, slot, simulation.board, QixMinorActorView.TELEGRAPH_MAX_CELLS)
+	ok(corridor.size() > QixMinorActorView.MUZZLE_CELLS, "há corredor além da boca do disparo")
+	var before := simulation.state_checksum()
+	var view := QixMinorActorView.new()
+	view.sync(simulation)
+	var actor: Dictionary = view.presentation_state().darts[0]
+	eq(actor.lifecycle, ActorLifecycle.State.WARMUP)
+	eq(actor.path.size(), corridor.size())
+	for index in corridor.size():
+		@warning_ignore("integer_division")
+		var cell := Vector2i(corridor[index] % simulation.board.width, corridor[index] / simulation.board.width)
+		eq(actor.path[index], Vector2(CoordinateSpace.field_to_screen(cell)))
+	eq(simulation.state_checksum(), before, "desenhar o corredor não consome RNG nem move o dardo")
+	# Disparado, o aviso some: a leitura passa a ser o rastro do voo confirmado.
+	simulation.pools.set_dart(slot, MinorActorPools.D.WARMUP, 0)
+	simulation.pools.set_dart(slot, MinorActorPools.D.STATE, ActorLifecycle.State.ACTIVE)
+	view.sync(simulation)
+	eq(view.presentation_state().darts[0].lifecycle, ActorLifecycle.State.ACTIVE)
+	eq(view.presentation_state().darts[0].path.size(), 0, "corredor previsto só existe no armamento")
+	view.free()
+
+
 func test_retired_ember_uses_last_confirmed_cell_after_trail_disappears() -> void:
 	var simulation := _simulation()
 	simulation.player.trail_active = true

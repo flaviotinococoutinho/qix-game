@@ -160,11 +160,11 @@ Não aplicar `ours`/`theirs` global; preservar a base integrada e reaplicar acha
 - [ ] **Manter esforço no jogo, não só no mecanismo.** O censo histórico do #85 distingue
   runtime, guardas, documentação e poda. *Pronto:* medir em dez execuções se pelo menos
   uma em cada três modifica `game/`, `ui/`, `app/` ou `content/`.
-  **Contagem corrente:** 2026-09-08T06:05Z foi **mecanismo** (`tests/` + `docs/`). O atrito medido
-  é que todos os itens de experiência ainda livres — `BOUNDARY`×`TRAIL`, QA humana, playtest —
-  pedem uma tela que a nuvem não tem. Ou o critério de pronto de algum deles passa a admitir
-  decisão no escuro verificada por catraca numérica (`verify_palette_contrast.gd` já existe e é
-  headless), ou a proporção não se cumpre sem o mantenedor. Decidir isso vale mais que insistir.
+  **Medido e reprovado em 2026-09-09: 0 de 15** (`docs/loop/runs/2026-09-09T035930Z.md`, na #102).
+  A execução de 06:30Z quebrou a série tocando `game/simulation/enemies/` e `game/enemies/`.
+  A causa apontada era a fila cheia; a de 06:30Z mostra que a regra 7 não proibia trabalho de
+  jogo, porque nenhuma PR aberta toca `game/`, `ui/`, `app/` ou `content/` — o que colide é só
+  o inventário derivado de `TEST_MATRIX.md`. Remedir depois da drenagem, com essa distinção.
 - [x] **Unificar relatórios da fila (#71, via #92).** `merge_queue_report.sh --order` substitui
   `merge_order_report.sh`; a verificação de sintaxe cobre os scripts do loop. Preservar o
   relatório de superfície, cuja pergunta é diferente. Mudança integrada e CI verde no head `9d02d6f`.
@@ -329,6 +329,15 @@ analógico, fase contínua da trilha e cadência de transição. Isso não equiv
   e isolamento da apresentação.
 - [x] **Geometria real do HUD (#52, via #55).** A sonda executa frames; medir Label apenas
   em `_initialize()` não reproduz sua geometria final.
+- [~] **O aviso do dardo mostra o corredor real (achado de 2026-09-09, fora do backlog).**
+  O armamento desenhava `direction * 5.0` — cinco células — enquanto `dart_min_range` vale 24 e
+  o dardo nasce por backtrack *a partir* do jogador. O alvo não conseguia ler que estava na mira.
+  `DartRules.peek_path` é leitura pura com a mesma aritmética de `update()`, e a view desenha o
+  corredor só em WARMUP. Teto de 48 células (o dobro de `dart_min_range`) por custo medido: sem
+  ele, seis dardos armados custavam 4,768 ms/frame; com ele, 0,54 ms. Corredor que bate no teto
+  perde a ponta de seta, porque seta significa «morre aqui». *Pronto:* entregue e verde
+  (408/19131, rota M2 intacta, checksum dourado imóvel); **falta** a leitura em tela, que vai
+  junto no item de QA humana abaixo. Ver `docs/loop/runs/2026-09-09T063041Z.md`.
 - [ ] **Contraste `BOUNDARY`×`TRAIL`.** A dívida de luminância não foi resolvida nesta revisão.
   Medido de novo em 2026-09-08 (Linux headless): 1,04–1,05:1 nas quatro paletas, meta 3:1.
   **Dois caminhos já foram investigados e recusados — não reandar sem argumento novo.** (a) Tinta

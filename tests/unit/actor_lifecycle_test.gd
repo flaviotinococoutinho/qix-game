@@ -137,6 +137,71 @@ func test_invalid_lifecycle_timers_are_rejected_and_affect_replay_hash() -> void
 	ok(profile.validation_errors().size() >= 3)
 
 
+func test_dart_peek_path_walks_the_same_corridor_that_update_confirms() -> void:
+	var pools := MinorActorPools.new()
+	var board := BoardState.new(20, 20)
+	var player := PlayerState.new()
+	player.reset(Vector2i(5, 0))
+	# A 256 fp o dardo anda uma célula por tick num único subpasso, então amostrar por tick
+	# observa o percurso inteiro e a igualdade pode ser estrita.
+	_setup_dart(pools, Vector2i(5, 10), 256)
+	var before := pools.canonical_bytes()
+	var peeked := DartRules.peek_path(pools, 0, board, board.width + board.height)
+	eq(pools.canonical_bytes(), before, "prever o corredor não move nem retira o dardo")
+	ok(peeked.size() > 0)
+	eq(_walk_dart(pools, board, player, Vector2i(5, 10)), peeked,
+		"o aviso mostra exatamente o percurso que o dardo vai cumprir")
+	eq(pools.dart(0, MinorActorPools.D.REASON), MinorActorPools.Reason.ABSORBED,
+		"o corredor termina na borda que absorve o dardo")
+	# Acima de uma célula por tick o domínio arbitra cada subpasso, e o corredor previsto é
+	# mais fino que a amostragem por tick: toda célula andada precisa estar prevista, na ordem.
+	var fast := MinorActorPools.new()
+	_setup_dart(fast, Vector2i(5, 10), 384)
+	var fast_peek := DartRules.peek_path(fast, 0, board, board.width + board.height)
+	var fast_walk := _walk_dart(fast, board, player, Vector2i(5, 10))
+	ok(fast_walk.size() < fast_peek.size(), "o subpasso visita células que a amostragem por tick pula")
+	var cursor := 0
+	for index in fast_walk:
+		while cursor < fast_peek.size() and fast_peek[cursor] != index:
+			cursor += 1
+		ok(cursor < fast_peek.size(), "célula andada %d estava prevista no corredor" % index)
+		cursor += 1
+	eq(fast_walk[fast_walk.size() - 1], fast_peek[fast_peek.size() - 1],
+		"os dois terminam na mesma célula absorvente")
+
+
+func test_dart_peek_path_stops_on_the_first_cell_that_is_not_free() -> void:
+	var pools := MinorActorPools.new()
+	var board := BoardState.new(20, 20)
+	_setup_dart(pools, Vector2i(5, 10), 256)
+	var open := DartRules.peek_path(pools, 0, board, board.width + board.height)
+	board.set_cell(9, 10, BoardState.Cell.CLAIMED)
+	var blocked := DartRules.peek_path(pools, 0, board, board.width + board.height)
+	ok(blocked.size() < open.size(), "território conquistado encurta o aviso, como encurta o voo")
+	eq(blocked[blocked.size() - 1], board.index_of(9, 10),
+		"a célula que absorve entra no corredor: é onde o dardo termina")
+	eq(DartRules.peek_path(pools, 0, board, 2).size(), 2, "o teto limita o laço sem inventar rota")
+
+
+## Anda o dardo do slot 0 até o primeiro desfecho, devolvendo as células novas por tick.
+func _walk_dart(
+	pools: MinorActorPools, board: BoardState, player: PlayerState, start: Vector2i
+) -> PackedInt32Array:
+	var walked := PackedInt32Array()
+	var cuts: Array[int] = []
+	var last := board.index_of(start.x, start.y)
+	for _tick in 64:
+		var outcome := DartRules.update(pools, 0, board, player, false, cuts)
+		var cell := pools.dart_cell(0)
+		var index := board.index_of(cell.x, cell.y)
+		if index != last:
+			walked.append(index)
+			last = index
+		if outcome != DartRules.Outcome.NONE:
+			break
+	return walked
+
+
 func _setup_dart(pools: MinorActorPools, cell: Vector2i, speed: int) -> void:
 	pools.begin_dart(0, 0)
 	pools.set_dart(0, MinorActorPools.D.X_FP, cell.x << 8)
