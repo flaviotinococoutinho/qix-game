@@ -1,10 +1,10 @@
 # Godot AI do QIX: launcher, diagnóstico e recuperação
 
-A integração do projeto vive em `tools/mcp/godot_mcp.py` e `godot_runtime.py`, fora do inventário assinado de `addons/godot_ai`. O launcher fixa **Godot AI 4.0.2**, preserva as opções de resolução uv oficiais e usa **HTTP 8001 / WebSocket 9501**. As entradas `godot-ai` de `.mcp.json` e `.codex/config.toml` chamam o mesmo launcher.
+A integração do projeto está em `tools/mcp/godot_mcp.py` e `godot_runtime.py`, fora do inventário assinado de `addons/godot_ai`. O launcher fixa **Godot AI 4.0.2**, preserva as opções de resolução uv oficiais e usa **HTTP 8001 / WebSocket 9501**. As entradas `godot-ai` de `.mcp.json` e `.codex/config.toml` chamam o mesmo launcher.
 
-## Uso reproduzível
+## Iniciar o launcher e executar o diagnóstico
 
-Execute o cliente com a pasta do repositório como diretório de trabalho: os argumentos dos arquivos MCP são relativos a essa pasta. São necessários um `python3` existente no PATH e uma instalação existente de `uvx`. O launcher procura primeiro `QIX_GODOT_UVX`/`--uvx`, depois PATH, instalações de usuário/Homebrew e caches uv. Não instala o executável uv. Ao iniciar stdio, o uv pode resolver o pacote Python fixado no cache; o diagnóstico e o dry-run não fazem instalação nem iniciam servidor/editor.
+Execute o cliente com a pasta do repositório como diretório de trabalho: os argumentos dos arquivos MCP são relativos a essa pasta. Use `python3` no PATH e uma instalação de `uvx`. O launcher procura primeiro `QIX_GODOT_UVX`/`--uvx`, depois PATH, instalações de usuário/Homebrew e caches uv. Não instala o executável uv. Ao iniciar stdio, o uv pode resolver o pacote Python fixado no cache; o diagnóstico e o dry-run não fazem instalação nem iniciam servidor/editor.
 
 ```sh
 python3 -B tools/mcp/godot_mcp.py --print-command
@@ -12,9 +12,9 @@ python3 -B tools/mcp/godot_mcp.py --doctor
 python3 -B tools/mcp/godot_mcp.py
 ```
 
-O último comando é o servidor **stdio** para o cliente MCP. Não acrescente impressão de banners no stdout. Falhas/orientações vão para stderr. Overrides de fonte/intérprete/cache `UV_*`, `PYTHONPATH` e `PYTHONHOME` são removidos apenas do subprocesso uv, sem alterar o ambiente global. Origem PyPI, versão e ausência de builds são explícitas no argv.
+O último comando é o servidor **stdio** para o cliente MCP. Não acrescente impressão de banners no stdout. Mensagens de erro e orientação vão para stderr. Overrides de fonte/intérprete/cache `UV_*`, `PYTHONPATH` e `PYTHONHOME` são removidos apenas do subprocesso uv, sem alterar o ambiente global. Origem PyPI, versão e ausência de builds são explícitas no argv.
 
-`--doctor` consulta somente loopback, sem redirects, com limite de resposta e timeout. Usa a capability HTTP privada oficial, inclusive para o status autenticado do v4. Faz initialize/resources-read de `godot://sessions` e encerra somente a sessão HTTP criada pelo próprio diagnóstico. Relatórios omitem tokens, nonce, PID, package_path e corpos de erro. Só retorna exit 0 se servidor/plugin forem 4.0.2, WebSocket for 9501 e houver sessão `ready` de **este caminho de projeto** com plugin 4.0.2. Isso não valida testes nem comprova a execução de gameplay.
+`--doctor` consulta somente loopback, sem redirects, com limite de resposta e timeout. Usa a capability HTTP privada oficial, inclusive para o status autenticado do v4. Faz initialize/resources-read de `godot://sessions` e encerra somente a sessão HTTP criada pelo próprio diagnóstico. Relatórios omitem tokens, nonce, PID, package_path e corpos de erro. Só retorna exit 0 se servidor/plugin forem 4.0.2, WebSocket for 9501 e houver sessão `ready` **do caminho exato deste projeto** com plugin 4.0.2. Isso não valida testes nem comprova a execução de gameplay.
 
 Para inspecionar o endpoint legado sem alterá-lo:
 
@@ -35,27 +35,27 @@ Em 2026-09-08, o root autorizou 8001/9501 para o editor atual, mantendo o servid
 
 Procedimento para outra máquina:
 
-1. Garantir que 8001/9501 estejam livres ou correspondam ao servidor 4.0.2 pretendido. Inspecionar antes de qualquer ação; não matar um ocupante por número de porta.
-2. Ler e guardar somente as duas propriedades via `EditorInterface.get_editor_settings()`, `has_setting()` e `get_setting()`. Preservar presença para um rollback exato; não copiar configurações ou segredos completos do usuário para o projeto.
-3. Configurar `set_setting("godot_ai/http_port", 8001)` e `set_setting("godot_ai/ws_port", 9501)`. EditorSettings salva automaticamente. O efeito é global; outro projeto aberto depois usa essas preferências até novo ajuste.
-4. Aplicar pelo Reload Plugin do dock ou pelo helper oficial `reload_enabled_plugin()`. Ele faz disable/enable e persiste o estado de habilitação, sem fechar o editor nem as cenas. Nunca usar o modo `inspect` do Fennara para essa escrita. Um worker de edição precisa ter o Resource EditorSettings como alvo explícito, contexto seguro e guard do caminho do projeto; não chamar `ctx.mark_modified()`.
-5. Recarregar a entrada MCP no cliente para usar o launcher do projeto. Confirmar `--doctor`: servidor 4.0.2, endpoint 8001, ws9501, sessão QIX pronta. A configuração de um processo MCP já iniciado não muda só porque o TOML/JSON foi editado.
+1. Confirme que as portas 8001 e 9501 estão livres ou correspondam ao servidor 4.0.2 pretendido. Inspecione antes de qualquer ação. Não encerre um ocupante por número de porta.
+2. Leia e guarde somente as duas propriedades via `EditorInterface.get_editor_settings()`, `has_setting()` e `get_setting()`. Preserve a informação de presença para um rollback exato. Não copie configurações ou segredos completos do usuário para o projeto.
+3. Configure `set_setting("godot_ai/http_port", 8001)` e `set_setting("godot_ai/ws_port", 9501)`. EditorSettings salva automaticamente. O efeito é global; outro projeto aberto depois usa essas preferências até novo ajuste.
+4. Aplique pelo Reload Plugin do dock ou pelo helper oficial `reload_enabled_plugin()`. Ele faz disable/enable e persiste o estado de habilitação, sem fechar o editor nem as cenas. Nunca use o modo `inspect` do Fennara para essa escrita. Um worker de edição precisa ter o Resource EditorSettings como alvo explícito, contexto seguro e guard do caminho do projeto; não chame `ctx.mark_modified()`.
+5. Recarregue a entrada MCP no cliente para usar o launcher do projeto. Confira o resultado de `--doctor`: servidor 4.0.2, endpoint 8001, ws9501, sessão QIX pronta. A configuração de um processo MCP já iniciado não muda só porque o TOML/JSON foi editado.
 
-Rollback: ler o backup, restaurar cada propriedade com `set_setting` quando `present=true`, ou removê-la com `erase` quando ausente originalmente; reaplicar o reload oficial. Restaurar também os dois argumentos de porta do launcher/configuração usados pelo cliente se a decisão for voltar ao endpoint anterior. Reverter portas não atualiza um servidor legado para v4.
+Para fazer rollback, leia o backup. Restaure cada propriedade com `set_setting` quando `present=true`, ou remova-a com `erase` quando ausente originalmente. Reaplique o reload oficial. Restaure também os dois argumentos de porta do launcher/configuração usados pelo cliente se a decisão for voltar ao endpoint anterior. Reverter portas não atualiza um servidor legado para v4.
 
 Isolamento completo de EditorSettings entre projetos exige outro perfil/instalação de editor. Godot documenta modo self-contained; XDG_CONFIG_HOME é suporte Linux/BSD, não uma promessa de isolamento no macOS. Não modificar o bundle assinado compartilhado para improvisar isolamento. [Documentação Godot de caminhos](https://docs.godotengine.org/en/latest/tutorials/io/data_paths.html).
 
 ## Por que não substituir cegamente o 3.2.4
 
-A auditoria identificou servidor 3.2.4 `owner_type=attach`, zero sessões de editor, 11 leases e **nenhum capability record v4** para porta8000. O fluxo Replace do plugin v4 exige registro privado, nonce autenticado e prova do processo (`server_lifecycle.gd:1094–1133`); sem isso, o endpoint antigo é classificado como ocupado/externo. Não assumir que Restart Server estará autorizado só porque o nome e a versão aparecem no status.
+A auditoria identificou servidor 3.2.4 `owner_type=attach`, zero sessões de editor, 11 leases e **nenhum capability record v4** para porta 8000. O fluxo Replace do plugin v4 exige registro privado, nonce autenticado e prova do processo (`server_lifecycle.gd:1094–1133`); sem isso, o endpoint antigo é classificado como ocupado/externo. Não assuma que Restart Server está autorizado só porque o nome e a versão aparecem no status.
 
-O caminho de encerramento normal do v3 é feito pelos clientes proprietários dos leases: desconectar cada bridge executa `LeaseClient.close()`, que libera o próprio lease. Heartbeat padrão10s, TTL30s. O servidor attach arma um reaper que considera sessões de editor + leases; com ambos zerados, o grace padrão120s e polling5s levam ao encerramento automático. Variáveis de opt-out/grace podem alterar isso; não foram lidas do processo. Não inventar lease IDs nem liberar leases alheios. Esta migração escolheu portas novas para continuar trabalhando sem interromper os 11 bridges.
+O caminho de encerramento normal do v3 é feito pelos clientes proprietários dos leases: desconectar cada bridge executa `LeaseClient.close()`, que libera o próprio lease. O heartbeat padrão é de 10 segundos e o TTL, de 30 segundos. O servidor attach arma um reaper que considera sessões de editor + leases; com ambos zerados, o prazo padrão de 120 segundos e o polling a cada 5 segundos levam ao encerramento automático. Variáveis de opt-out/grace podem alterar isso; não foram lidas do processo. Não invente lease IDs nem libere leases de outros clientes. Esta migração escolheu portas novas para continuar trabalhando sem interromper os 11 bridges.
 
-Fontes primárias: código Python3.2.4 instalado (`attach/lease.py`, `orphan_reaper.py`, `server.py`), [migração v4](https://github.com/hi-godot/godot-ai/blob/v4.0.2/docs/v4-migration.md), [release4.0.2](https://github.com/hi-godot/godot-ai/releases/tag/v4.0.2).
+Fontes primárias: código Python 3.2.4 instalado (`attach/lease.py`, `orphan_reaper.py`, `server.py`), [migração v4](https://github.com/hi-godot/godot-ai/blob/v4.0.2/docs/v4-migration.md), [release 4.0.2](https://github.com/hi-godot/godot-ai/releases/tag/v4.0.2).
 
 ## Suíte QIX: contrato independente do test_run do addon
 
-O MCP `test_run` procura `tests/test_*.gd` estendendo McpTestSuite. QIX usa `tests/{unit,integration}/*_test.gd` estendendo TestCase. O resultado MCP `total=0` não aprova QIX. Não renomear suítes nem trocar sua base para contornar essa diferença.
+O MCP `test_run` procura `tests/test_*.gd` estendendo McpTestSuite. QIX usa `tests/{unit,integration}/*_test.gd` estendendo TestCase. O resultado MCP `total=0` não aprova QIX. Não renomeie suítes nem troque sua base para contornar essa diferença.
 
 O runner `tests/run_tests.gd` oferece `--json PATH` após o separador `--`. A integração explícita do projeto conserva log/JSON/assessment em uma pasta exclusiva por execução, fora do projeto, e limita o processo ao timeout. Ela **não faz import** nem inicia gameplay/editor.
 
@@ -69,7 +69,7 @@ python3 -B tools/mcp/godot_mcp.py --test \
   --filter actor_presentation --output /tmp/qix-test-evidence
 ```
 
-O JSON exige `schema_version:1`, `total`, `assertions`, `failures` e `discovery_errors` como inteiros. Aprovação exige total>0, assertions>0, failures=0, discovery_errors=0, exit0 e nenhum ERROR/SCRIPT ERROR/SHADER ERROR/USER ERROR no log. Timeout, JSON ausente/malformado e resultado antigo nunca viram aprovação. Somente um coordenador deve executar import/engine/export; o wrapper não prova que outro operador não iniciou Godot em paralelo.
+O JSON exige `schema_version:1`, `total`, `assertions`, `failures` e `discovery_errors` como inteiros. Aprovação exige total>0, assertions>0, failures=0, discovery_errors=0, exit 0 e nenhum ERROR/SCRIPT ERROR/SHADER ERROR/USER ERROR no log. Timeout, JSON ausente/malformado e resultado antigo nunca viram aprovação. Somente um coordenador deve executar import/engine/export; o wrapper não prova que outro operador não iniciou Godot em paralelo.
 
 ## Validação da integração
 
@@ -81,12 +81,12 @@ As 21 regressões Python passaram em 2026-09-08: resolução, política uv, capa
 
 ## Recibo de conexão real em 2026-09-08
 
-Após alterar as portas, o servidor4.0.2 já respondia, mas a sessão de editor permanecia ausente: o plugin estava DORMANT, `normal_start_released=false`, aguardando o botão oficial **Retry client migration**. O banner dizia `claude_code status failed: probe timed out`. O probe Claude tem limite6s; uma leitura posterior do CLI no projeto concluiu em5,18s com Scope Project/Status Connected. Não se modificou esse limite no vendor.
+Após alterar as portas, o servidor 4.0.2 já respondia, mas a sessão de editor permanecia ausente: o plugin estava DORMANT, `normal_start_released=false`, aguardando o botão oficial **Retry client migration**. O banner dizia `claude_code status failed: probe timed out`. O probe Claude tem limite de 6 segundos; uma leitura posterior do CLI no projeto concluiu em 5,18 segundos com Scope Project/Status Connected. Não se modificou esse limite no vendor.
 
-Com autorização do root, preservaram-se9arquivos de configuração existentes entre27caminhos reconhecidos/projetados, em diretório privado `qix-godot-client-backup-20260908-836wyf0y` sob o diretório temporário do macOS. O manifesto contém caminhos, hashes e cópias600; o diretório é700. O retry foi solicitado pela mesma API do botão, `_on_dock_post_update_action_requested("retry")`, com guard do projeto e comprovação de backup. Nenhum estado de autoridade, marcador de migração ou `_release_normal_startup` foi manipulado para contornar a barreira.
+Com autorização do root, preservaram-se 9 arquivos de configuração existentes entre 27 caminhos reconhecidos/projetados, em diretório privado `qix-godot-client-backup-20260908-836wyf0y` sob o diretório temporário do macOS. O manifesto contém caminhos, hashes e cópias com permissão `600`; o diretório usa `700`. O retry foi solicitado pela mesma API do botão, `_on_dock_post_update_action_requested("retry")`, com guard do projeto e comprovação de backup. Nenhum estado de autoridade, marcador de migração ou `_release_normal_startup` foi manipulado para contornar a barreira.
 
-A migração oficial alterou somente entradas `godot-ai` em6configurações globais: Claude Desktop, Codex, Antigravity, VSCode, Gemini CLI e OpenCode. A comparação estrutural contra os backups comprovou preservação dos demais campos em todos6arquivos; `.mcp.json` e `.codex/config.toml` do projeto, incluindo Blender e o launcher próprio, ficaram idênticos aos backups.
+A migração oficial alterou somente entradas `godot-ai` em 6 configurações globais: Claude Desktop, Codex, Antigravity, VSCode, Gemini CLI e OpenCode. A comparação estrutural contra os backups comprovou preservação dos demais campos em todos os 6 arquivos; `.mcp.json` e `.codex/config.toml` do projeto, incluindo Blender e o launcher próprio, ficaram idênticos aos backups.
 
-O doctor então retornou `ready`, servidor/plugin4.0.2, HTTP8001/WS9501, sessão do caminho exato QIX e gameplay parado. Um recibo em `/tmp/qix-20260908-godot-readonly-receipt.json` conserva as leituras MCP de sessão/editor, hierarquia de `app/bootstrap.tscn` (9nós) e dos6GLBs originais (`surveyor`, `core`, `walker`, `dart`, `ember`, `beacon`), todos carregados como PackedScene. As8operações finais concluíram sem erro. O recibo também conserva uma tentativa anterior da hierarquia com argumento incorreto, corrigida para o `depth` previsto pelo schema; essa tentativa não alterou o editor.
+O doctor então retornou `ready`, servidor e plugin 4.0.2, HTTP 8001 e WebSocket 9501, sessão do caminho exato QIX e gameplay parado. Um recibo em `/tmp/qix-20260908-godot-readonly-receipt.json` conserva as leituras MCP de sessão/editor, hierarquia de `app/bootstrap.tscn` (9 nós) e dos 6 GLBs originais (`surveyor`, `core`, `walker`, `dart`, `ember`, `beacon`), todos carregados como PackedScene. As 8 operações finais concluíram sem erro. O recibo também conserva uma tentativa anterior da hierarquia com argumento incorreto, corrigida para o `depth` previsto pelo schema; essa tentativa não alterou o editor.
 
 Essa evidência comprova a conexão e a leitura de recursos importados pelo editor. Não substitui validação visual, testes de gameplay ou export, que continuam sob coordenação do root.

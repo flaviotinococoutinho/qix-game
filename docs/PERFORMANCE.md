@@ -1,4 +1,9 @@
-# Performance — domínio, board e palco Atlas Vivo
+# Performance: domínio, board e palco Atlas Vivo
+
+> **Verificado em** 2026-10-15 · commit `a36f64020e8a63bba28509ddafaab6683ac4897b` · revisão editorial em ambiente Linux, sem execução de Godot
+> **Alcance:** clareza do texto e separação das evidências históricas. Não foram executados testes, medições, exportações, inspeção visual ou gameplay nesta revisão.
+
+Registro anterior de verificação:
 
 > **Verificado em** 2026-09-08 · commit `e8307d1` · revisão estrutural da integração Atlas + remoto + MCP
 > **Alcance:** separação entre geometria/payload, orçamento e tempos históricos. Nenhuma medida
@@ -49,8 +54,7 @@ com alcance explícito; seus comandos apontam para os respectivos artefatos hist
 
 ## Perfil isolado do board — geometria atual e tempos históricos
 
-Comando reproduzível — o perfil do board **não** precisa de mono nem de macOS, e é a parte deste
-documento que qualquer sessão consegue refazer:
+Para executar o perfil do board, selecione uma instalação do Godot. Esse perfil aceita build não-Mono e pode ser executado fora do macOS:
 
 ```bash
 G=/Applications/Godot_mono.app/Contents/MacOS/Godot   # local; na nuvem, o build Linux headless
@@ -69,9 +73,7 @@ registro de **2026-09-03**, commit ab512ef, Godot 4.7.2 Mono, macOS/Apple M2.
 | RGBA8 legado sintético, `set_pixel()` por célula | 32 | 31.418,3125 µs | 31.160 µs | 32.304 µs | 32.478 µs | 254.700 |
 | cold start R8 | 1 | 7 µs | 7 µs | 7 µs | 7 µs | 63.675 |
 
-Na execução histórica de setembro/03, a razão p95 observada foi **32.304×**. O ganho estrutural é mais importante que
-a razão bruta do cronômetro: o caminho novo elimina 63.675 chamadas `Image.set_pixel()` em
-GDScript, reduz em 4× o payload por atualização e reutiliza a textura em steady-state
+Na execução histórica de setembro/03, a razão p95 observada foi **32.304×**. A mudança estrutural elimina 63.675 chamadas `Image.set_pixel()` em GDScript, reduz em 4× o payload por atualização e reutiliza a textura em steady-state
 (`texture_create_count=0`). O board é enviado apenas quando sua identidade ou versão muda;
 sincronizações repetidas entram em `skipped_count`.
 
@@ -79,12 +81,7 @@ sincronizações repetidas entram em `skipped_count`.
 saíram idênticas — `225x283`, `63675` células, `63675` bytes/refresh no R8 contra `254700` no
 RGBA8 legado, `texture_create_count=0` em steady-state e `1` no cold start, `sample_capacity=240`.
 As colunas de tempo, não: a máquina da nuvem deu p95 de `1 µs` no R8 (igual) e `50.978 µs` no
-legado (contra `32.304 µs` no M2), cold start de `14 µs` (contra `7 µs`). É o esperado — outra
-CPU, outro relógio — e é a razão de a tabela acima continuar a ser a medição do M2 em vez de ser
-sobrescrita a cada sessão: **substituir estes valores por uma medição de outra máquina não
-responderia à mesma pergunta.** O que a remedição prova é que o *argumento* do R8 (4× menos
-payload, textura reutilizada) não depende da máquina, e é justamente essa parte que
-`tests/unit/performance_doc_geometry_test.gd` agora amarra ao domínio.
+legado (contra `32.304 µs` no M2), cold start de `14 µs` (contra `7 µs`). As máquinas têm CPUs e relógios diferentes. A tabela do M2 permanece identificada pelo ambiente e pela data, sem ser substituída pelos tempos da nuvem. A remedição confirmou nessa execução a redução de 4× no payload e a reutilização da textura. `tests/unit/performance_doc_geometry_test.gd` verifica os valores estruturais contra o domínio.
 
 ## Instrumentação em runtime
 
@@ -175,7 +172,7 @@ O runner final também abriu o bundle gráfico com o driver de áudio padrão e 
 de conclusão. A duração nominal foi 15 segundos e a duração wall-clock observada, 17 segundos.
 O watchdog configurado em 30 segundos não expirou, não enviou sinal e o processo saiu 0.
 
-Esse gate impede que um simples exit code esconda encerramento precoce: ticks solicitados,
+Esse gate verifica a duração da execução além do código de saída: ticks solicitados,
 concluídos, taxa física, marker, tempo mínimo e watchdog precisam ser coerentes. O timeout é
 autorável com `QIX_MACOS_AUDIO_SMOKE_TIMEOUT_SECONDS`; reduzir o valor abaixo da duração real
 faz o runner falhar, não aprovar uma amostra truncada.

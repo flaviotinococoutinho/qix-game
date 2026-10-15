@@ -1,11 +1,14 @@
-# IMPLEMENTATION_STATUS — Atlas Vivo integrado localmente
+# Estado da implementação do Atlas Vivo
 
-> **Verificado em** 2026-09-08 · commit `e8307d1` · revisão de código e documentação da integração local
-> **Alcance:** Atlas Vivo, bundle remoto #78 e atualização MCP preservados na árvore de integração.
+> **Verificado em** 2026-10-15 · commit `a36f64020e8a63bba28509ddafaab6683ac4897b` · leitura estática via GitHub
+> **Alcance:** revisão editorial e conferência dos caminhos citados na árvore. Godot, renderer, exports e aparelhos não foram executados. Os resultados técnicos abaixo conservam as datas e os limites anteriores.
+>
+> **Verificação técnica anterior:** 2026-09-08 · commit `e8307d1` · revisão de código e documentação da integração local
+> **Alcance técnico anterior:** Atlas Vivo, bundle remoto #78 e atualização MCP preservados na árvore de integração.
 > A suíte final, a composição com os resíduos da fila e as ações no GitHub ainda estão em andamento.
 > Nenhuma aprovação de release, aparelho físico ou publicação é inferida deste registro.
 
-## Estado atual
+## Estado registrado na integração de 2026-09-08
 
 O projeto combina o domínio determinístico do Atlas, campanha ativa com atores/itens e palco
 2.5D com as melhorias remotas de contraste, entrada, feedback e guardas. A integração está sendo
@@ -14,7 +17,7 @@ validada pelo coordenador. O inventário e os resultados correntes pertencem a
 [relato de integração](loop/runs/2026-09-08T-mcp-github-integration.md), vinculados à árvore testada;
 números de branches anteriores não são somados nem apresentados como resultado final.
 
-O jogo é uma base jogável de produção. O repertório completo de Volfied, produção artística AAA,
+O jogo tem uma campanha jogável. O repertório completo de Volfied, produção artística AAA,
 calibração humana e distribuição comercial continuam abertos. A
 [ADR-0014](decisions/ADR-0014-atlas-lifecycle-depth-stage.md) define a evolução Atlas;
 [PROJECT_CONTRACT.md](PROJECT_CONTRACT.md) define o ownership e as fronteiras atuais.
@@ -65,8 +68,8 @@ coleta dos quatro tipos de item e reprodução dos replays. Progressões e placa
 anteriores à economia Atlas permanecem históricos; os valores correntes vivem no teste e nos
 logs da árvore validada. A possibilidade de uma rota sem mortes não substitui um playthrough humano.
 
-M2 é outra prova: desabilita explicitamente chefe/diretor/itens na fixture para isolar território
-e transição. Seu resultado não demonstra a dificuldade nem a cobertura de objetivos da campanha.
+A fixture M2 desabilita chefe, diretor e itens para verificar território
+e transição de forma isolada. Seu resultado não demonstra a dificuldade nem a cobertura de objetivos da campanha.
 Probes headless não ouvem áudio, não exercitam ergonomia e não medem a GPU do aparelho alvo.
 
 ## Pendências com impacto de produto

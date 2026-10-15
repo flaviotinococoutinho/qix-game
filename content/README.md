@@ -1,6 +1,6 @@
 # Conteúdo autorável da campanha
 
-`main_campaign.tres` é a entrada oficial de conteúdo. Todos os valores de gameplay e
+`campaigns/main_campaign.tres` é a entrada oficial de conteúdo. Todos os valores de gameplay e
 apresentação podem ser editados no Inspector do Godot sem alterar scripts.
 
 ## Estrutura
@@ -14,8 +14,8 @@ apresentação podem ser editados no Inspector do Godot sem alterar scripts.
 - `rounds/definitions/*.tres`: geometria e posições iniciais.
 - `visuals/*.tres`: nome, subtítulo, fundo e paleta; não participa do replay determinístico.
 
-Cada rodada referencia arquivos externos — não `sub_resource` embutidos — para permitir reuso,
-diffs pequenos e revisão independente entre design, balanceamento e arte.
+Cada rodada referencia arquivos externos, em vez de `sub_resource` embutidos.
+Essa separação permite reuso e revisão independente das regras, da geometria e da arte.
 
 ## Fluxo de autoria
 
@@ -23,14 +23,14 @@ diffs pequenos e revisão independente entre design, balanceamento e arte.
 2. Atribua um `round_id` e uma seed não zero e únicos.
 3. Mantenha o fundo com as mesmas dimensões do campo (`225 × 283` na campanha atual).
 4. Adicione o novo `RoundContent` ao array ordenado de `main_campaign.tres`.
-5. Escolha ou duplique um `BossBehaviorProfile`; mantenha seus limites válidos e lembre que
-   ele participa do contrato determinístico de regras/replay.
+5. Escolha ou duplique um `BossBehaviorProfile`. Mantenha os limites válidos.
+   O perfil participa do contrato determinístico das regras e do replay.
 6. Rode os testes `authored_campaign_test`, `boss_campaign_balance_test` e a suíte completa
    antes de publicar.
 
 O script `res://tools/build_campaign_content.gd` recompõe a baseline oficial de três rodadas e
-é idempotente. Ele **substitui** 16 Resources; portanto, mudanças manuais devem ser incorporadas
-ao script antes de regenerar a baseline.
+é idempotente. Ele substitui os Resources da campanha oficial. Incorpore mudanças manuais
+ao script antes de regenerar o conteúdo.
 
 A geração usa uma transação write-ahead v3 persistente:
 
@@ -56,14 +56,14 @@ A geração usa uma transação write-ahead v3 persistente:
    backups em disco para fazer rollback; em estado terminal, os targets e temporários reais são
    verificados antes de limpar o staging.
 
-A transação v3 possui **22 testes e 353 asserções** cobrindo sucesso, validação e corrupção de
+Os testes da transação v3 cobrem sucesso, validação e corrupção de
 metadata/artefatos, lock entre processos, interrupção abrupta, rollback byte a byte, cache,
-recovery e targets terminais. A execução oficial mais recente terminou com **16 staged / 16
+recovery e targets terminais. O registro histórico da geração v3 terminou com **16 staged / 16
 committed**.
 
 Os hashes detectam divergência acidental, mas não são HMAC nem autenticam um atacante capaz de
 reescrever manifest, WAL e artefatos em conjunto. O listener é um lock cooperativo entre
 geradores que seguem o protocolo, não uma trava universal do filesystem. WAL, `flush()` e rename
 também não substituem garantias de durabilidade do volume, backup externo ou versionamento. Para
-publicação, rode o gerador até obter sucesso, execute a suíte e revise o diff dos 16 arquivos em
+publicação, rode o gerador até obter sucesso, execute a suíte e revise o diff dos arquivos gerados em
 um repositório Git válido.

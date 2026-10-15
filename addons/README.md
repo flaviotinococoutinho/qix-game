@@ -1,15 +1,15 @@
-# `addons/` — o que está aqui e por quê
+# Inventário de `addons/`
 
 > **Verificado em** 2026-09-07 · commit `34634d0` · Godot 4.7.2-stable, Linux headless
 > **Alcance:** inventário das duas pastas que restam em `addons/`, cruzado por caminho
 > (`addons/<pasta>`) e por `class_name` contra `game/`, `ui/`, `app/`, `tools/`, `tests/`,
 > `content/` e `project.godot`. As **sete** remoções previstas pela ADR-0010 foram executadas —
 > a tabela § Remoções já executadas traz a contagem de cada uma remedida contra a árvore de
-> `origin/main` em `34634d0`, não copiada da prosa dos PRs. Não julga a qualidade de nenhum addon
-> nem se algum deles resolveria melhor um problema aberto — só registra quem consome o quê hoje.
+> `origin/main` em `34634d0`, não copiada dos textos dos PRs. Não julga a qualidade de nenhum addon
+> nem se algum deles resolveria melhor um problema aberto . Registra os consumidores observados na verificação datada acima.
 
-Uma pasta em `addons/` sem uma linha aqui é uma decisão adiada: quem lê o repositório amanhã não
-consegue distinguir dependência real de resto de download. A regra e o porquê estão em
+Cada pasta em `addons/` deve ter uma linha neste inventário com seu estado e consumidor.
+A regra e sua justificativa estão em
 [`docs/decisions/ADR-0010-addons-inventory.md`](../docs/decisions/ADR-0010-addons-inventory.md);
 esta tabela é a aplicação dela, e `tests/unit/addons_manifest_test.gd` recusa qualquer divergência
 entre a tabela e o disco.
@@ -33,8 +33,7 @@ um addon novo sem consumidor um lugar onde esperar a decisão, em vez de ficar e
 | `godot_ai` | `ferramenta` | Único plugin habilitado em `[editor_plugins]`, mais o autoload `_mcp_game_helper`. É a ponte MCP das sessões locais. |
 
 Nenhuma pasta `a-remover` resta: as sete saíram. Somadas, ocupavam **6 936 KiB** versionados e
-declaravam **101 cenas** que nenhum leitor deste jogo precisava abrir — toda busca por "cena deste
-jogo" atravessava-as primeiro.
+declaravam **101 cenas** sem consumidores no jogo.
 
 ## Remoções já executadas
 
@@ -45,10 +44,10 @@ A ADR-0010 decide que cada `a-remover` sai numa PR própria, com a mesma evidên
 |---|---|---|---|---|---|---|
 | `curved_lines_2d` | #60 | 296 | 42 | 2 589 | 17 | Nenhum dos 170 `uid://` citado fora da pasta; nenhum `class_name` em `game/`, `ui/`, `app/`, `tools/`, `tests/`, `content/` ou `project.godot`. A arte deste jogo é máscara R8 e shader, não SVG. |
 | `phantom_camera` | #62 | 203 | 30 | 1 455 | 11 | Nenhum dos 122 `uid://` citado fora da pasta; mais 13 fontes C# que este build não-mono nem compila. O campo é 240×320 fixo: não há câmera que se mova. |
-| `guide` | #63 | 549 | 19 | 1 096 | 79 | Nenhum dos 289 `uid://` citado fora da pasta. A entrada passa por `GameInputAdapter` e pela fronteira da ADR-0006, que não delega a ele. Era a maior devolução de namespace global das sete. |
+| `guide` | #63 | 549 | 19 | 1 096 | 79 | Nenhum dos 289 `uid://` citado fora da pasta. A entrada passa por `GameInputAdapter` e pela fronteira da ADR-0006, que não delega a ele. A remoção retirou esses símbolos do namespace global. |
 | `GDDraw` | #64 | 218 | 1 | 961 | 10 | Ferramenta de pintura de textura, sem consumidor. |
 | `yard` | #66 | 108 | 9 | 757 | 1 | Base de dados de recursos; `content/` já é transacional pela ADR-0008. |
-| `softbody2d` | #72 | 14 | 0 | 62 | 3 | Corpo mole por Voronoi só tem sentido com física, e o domínio é ponto fixo 8.8 sobre `PackedByteArray` (invariante 1). Levava `SoftBody2D` no namespace global — o primeiro resultado de quem procurasse "corpo/colisão" no autocompletar, e uma resposta errada sobre como este jogo funciona. |
+| `softbody2d` | #72 | 14 | 0 | 62 | 3 | Corpo mole por Voronoi só tem sentido com física, e o domínio é ponto fixo 8.8 sobre `PackedByteArray` (invariante 1). Adicionava `SoftBody2D` ao namespace global, embora o jogo não use esse tipo para colisões. |
 | `curve2collision` | #73 | 9 | 0 | 16 | 1 | Colisão a partir de `Curve2D`. O jogo não usa física. |
 
 As contagens acima foram remedidas contra `origin/main` em `34634d0` no momento da integração
@@ -66,8 +65,8 @@ pasta fica sem linha neste manifesto e `addons_manifest_test.gd` fica vermelho, 
 barreira que a ADR-0010 quis comprar. Quem decidir manter uma delas escreve a linha com o estado
 novo e faz `git add -f`.
 
-## Como acrescentar um addon
+## Acrescentar um addon
 
-Copie a pasta, acrescente a linha aqui com o estado e o motivo, e rode a suíte. Um addon novo sem
-linha falha em `addons_manifest_test.gd` antes de chegar à revisão — que é onde a pergunta "por que
-isto está aqui?" custa mais barato de responder.
+1. Copie a pasta para `addons/`.
+2. Acrescente uma linha ao inventário com o estado e o motivo.
+3. Execute a suíte. `addons_manifest_test.gd` recusa uma pasta sem linha no inventário.

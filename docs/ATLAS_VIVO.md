@@ -1,14 +1,17 @@
-# Atlas Vivo — jogo, autoria e direção de produção
+# Atlas Vivo: jogo, autoria e direção de produção
 
-> **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono e Blender 5.2.0 LTS
-> **Alcance:** implementação local sobre essa base, ainda sem commit próprio; testes e probes atuais em `build/modernization/`. Produção AAA, paridade integral com Volfied e QA de aparelhos físicos não foram concluídos.
+> **Verificado em** 2026-10-15 · commit `a36f64020e8a63bba28509ddafaab6683ac4897b` · leitura estática via GitHub
+> **Alcance:** revisão editorial e conferência dos caminhos citados na árvore. Godot, renderer, exports e aparelhos não foram executados. Os resultados técnicos abaixo conservam as datas e os limites anteriores.
+>
+> **Verificação técnica anterior:** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono e Blender 5.2.0 LTS
+> **Alcance técnico anterior:** implementação local sobre essa base, ainda sem commit próprio; testes e probes atuais em `build/modernization/`. Produção AAA, paridade integral com Volfied e QA de aparelhos físicos não foram concluídos.
 > A edição de 2026-09-08 apenas carimbou ambiente e data na linha da suíte: **nada foi remedido**, e a data acima segue sendo a da última verificação real.
 
 ## O que está jogável
 
 Três setores com perfis distintos de chefe, alvo de 80%, pressão por tempo/território e quatro
 balizas por setor. O jogador escolhe onde cortar, quanto arriscar na trilha e quais objetivos
-cercar. Capturas eliminam ameaças absorvidas pelo território e compram respiro no diretor.
+cercar. Capturas eliminam ameaças absorvidas pelo território e reduzem temporariamente a pressão do diretor.
 
 | Elemento | Desafio e resposta do jogador |
 |---|---|
@@ -90,10 +93,10 @@ já contém `mcp` e `blmcp`. A ferramenta descoberta é `execute_blender_code_fo
 fica em `build/modernization/blender-models-receipt.json`. O job usa um `.blend` vazio local e
 `QIX_PROJECT_ROOT`, preserva bytecode fora do bundle assinado e não altera preferências globais.
 
-## Barra de qualidade e próximos marcos
+## Critérios de qualidade e próximos marcos
 
-Esta entrega é uma base de produção evoluída e jogável. O termo AAA é um objetivo de produção,
-não o resultado de um refactor ou de um total de testes. Para avançar com critérios objetivos:
+O protótipo tem uma campanha jogável. A produção AAA continua como objetivo.
+Os critérios para avançar são:
 
 1. **Calibração humana:** terminar os três setores com teclado/gamepad/touch; medir mortes por
    causa, entendimento de avisos, duração e atalhos. Ajustar perfis por evidência, não só rapidez.

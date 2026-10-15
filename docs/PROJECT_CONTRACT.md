@@ -1,7 +1,10 @@
-# PROJECT_CONTRACT — QIX GAME / Atlas Vivo
+# Contrato do QIX GAME e do Atlas Vivo
 
-> **Verificado em** 2026-09-08 · commit `6d23de4` · integração local de `3c9724f` (#78) em andamento
-> **Alcance:** leitura de `project.godot`, arquivos de ownership, presets, plugin e grafo Git.
+> **Verificado em** 2026-10-15 · commit `a36f64020e8a63bba28509ddafaab6683ac4897b` · leitura estática via GitHub
+> **Alcance:** revisão editorial e conferência dos caminhos citados na árvore. Godot, renderer, exports e aparelhos não foram executados. Os resultados técnicos abaixo conservam as datas e os limites anteriores.
+>
+> **Verificação técnica anterior:** 2026-09-08 · commit `6d23de4` · integração local de `3c9724f` (#78) em andamento
+> **Alcance técnico anterior:** leitura de `project.godot`, arquivos de ownership, presets, plugin e grafo Git.
 > Este texto descreve o contrato combinado do Atlas Vivo e das mudanças remotas preservadas.
 > Suíte, renderer, exports e publicação da composição final estão **PENDENTES** nesta edição.
 > Os resultados anteriores pertencem às respectivas árvores; ver o [relato de integração](loop/runs/2026-09-08T-mcp-github-integration.md).
@@ -63,7 +66,9 @@ pasta local sem torná-la conteúdo do jogo.
 
 As sete remoções de `curved_lines_2d`, `phantom_camera`, `guide`, `GDDraw`, `yard`, `softbody2d`
 e `curve2collision` chegam juntas pelo #78, com os relatos de posse das PRs #60/#62/#63/#64/#66/#72/#73.
-A decisão é a ADR-0010; a publicação dessa integração em `main` ainda está pendente.
+A ADR-0010 registra essa decisão. O relato histórico de 2026-09-08 ainda
+registrava a publicação em `main` como pendente; a árvore consultada nesta
+revisão contém somente `fennara` e `godot_ai` em `addons/`.
 Contagens anteriores de cenas/classes foram medidas em árvores diferentes e não são copiadas
 como inventário atual. O manifesto e sua guarda derivam o estado do disco.
 
@@ -93,7 +98,7 @@ como inventário atual. O manifesto e sua guarda derivam o estado do disco.
 | Feedback | `QixFeedbackHub`, áudio e háptica | efeitos de eventos já confirmados; pausa e redução de movimento não alteram regras |
 | Conteúdo gerado | `CampaignContentTransaction` | validação, journal/WAL, lock, promoção, rollback e recovery; fonte em `tools/build_campaign_content.gd` |
 
-`RoundVisualDefinition` e a costura `RoundContent` são exceções declaradas à presença de tipos
+`RoundVisualDefinition` e `RoundContent` são exceções declaradas à presença de tipos
 visuais em `game/rules/`. Isso não isenta a pasta inteira: a guarda específica verifica que o
 visual não tem serializador canônico nem é nomeado pelo domínio. O inventário de serializadores
 acompanha os Resources reais de configuração, sem proibir novos perfis por uma contagem fixa.
@@ -117,7 +122,7 @@ caminho, sem excluir `addons/**` em bloco. A política precisa ser verificada no
 da composição final, sobretudo após atualizar o plugin; smokes antigos não provam o fechamento
 transitivo das dependências da versão 4.0.2.
 
-## Comandos reais
+## Executar as verificações
 
 ```bash
 G=/Applications/Godot_mono.app/Contents/MacOS/Godot
@@ -136,16 +141,18 @@ $G --path . --editor
 $G --path .
 ```
 
-Importar antes da descoberta de classes. Registrar saída completa e inspecionar erros, mesmo
-quando o processo devolve zero. O gerador de conteúdo modifica Resources versionados; executar
-quando a fonte autoral mudou, preservando seu journal. O probe de palco exige renderer real.
+Importe o projeto antes da descoberta de classes. Registre a saída completa e
+inspecione os erros, mesmo quando o processo devolve zero.
+
+O gerador de conteúdo modifica Resources versionados. Execute-o quando a fonte
+autoral mudar e preserve o journal da transação. O probe de palco exige um renderer gráfico.
 
 M2 é uma fixture de isolamento territorial, com chefe, diretor e itens explicitamente isolados.
 Ela protege a captura; não demonstra dificuldade ou conclusão da campanha. A rota de campanha
 ativa, incluindo os quatro itens e replay de cada rodada, está em
 `tests/integration/boss_active_campaign_playthrough_test.gd`.
 
-## Portão automático e limites
+## Verificação automática e limites
 
 `.github/workflows/verificacao.yml` usa Godot 4.7.2-stable no Linux e o wrapper
 `tools/ci/headless_gate.py`. O wrapper conserva logs, verifica exit code e diagnósticos, importa,

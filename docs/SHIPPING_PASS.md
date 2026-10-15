@@ -1,4 +1,9 @@
-# SHIPPING_PASS — candidato de QA validado
+# Shipping: evidências do candidato de QA
+
+> **Verificado em** 2026-10-15 · commit `a36f64020e8a63bba28509ddafaab6683ac4897b` · revisão editorial em ambiente Linux, sem execução de Godot
+> **Alcance:** clareza do texto e separação das evidências históricas. Não foram executados testes, medições, exportações, inspeção visual ou gameplay nesta revisão.
+
+Registro anterior de verificação:
 
 > **Verificado em** 2026-09-07 · commit `a1afb90` · macOS Apple M2, Godot 4.7.2 Mono
 > **Alcance:** adendo local Atlas Vivo sobre esta base; detalhes antigos abaixo continuam datados e não validam o palco 2.5D. Consulte `ATLAS_VIVO.md` e `build/modernization/` para a implementação atual.
@@ -12,13 +17,10 @@ arm64. O run canônico `20260903T065739Z-65912` terminou com
 
 ## Resultado
 
-O shipping pass implementa e valida automaticamente a superfície pedida: áudio/mix/háptica,
-gamepad/touch, três comportamentos autoráveis de chefe, campanha com transições reais, geração
-de conteúdo com WAL persistente, export dos dois pacotes, smoke Android, frame pacing/GPU e
-readback do framebuffer. A telemetria e o feedback permanecem fora da simulação determinística.
+O run histórico de 2026-09-03 cobriu áudio, mixagem, háptica, gamepad, touch, três comportamentos autoráveis de chefe, transições de campanha, geração com WAL persistente, export dos dois pacotes, smoke Android, frame pacing, GPU e readback do framebuffer. A telemetria e o feedback permanecem fora da simulação determinística.
 
 O estado é um **candidato de QA automatizado**, não uma release comercial nem comprovação de
-qualidade “AAA” em uso real. O runner e a suíte estão verdes; continuam abertos os gates que só
+qualidade "AAA" em uso real. O runner e a suíte passaram no run registrado; continuam abertos os gates que só
 podem ser fechados por uma pessoa, em hardware-alvo, ou por uma pipeline de distribuição.
 
 ## Limites arquiteturais
@@ -225,10 +227,7 @@ credenciais de publicação.
 
 ## Evidência final registrada — run `20260903T065739Z-65912`
 
-Toda linha da tabela vem desse run único. A coluna **Origem** repete ambiente e data em cada
-linha porque é assim que a tabela é lida: quem procura "quantos testes tem o projeto" varre a
-coluna, não o parágrafo acima. A contagem viva da árvore de hoje está em
-[TEST_MATRIX.md](TEST_MATRIX.md), e é outra — estes números não a substituem nem a contradizem.
+Todas as linhas da tabela pertencem ao mesmo run. A coluna Origem repete ambiente e data para permitir consultar cada resultado isoladamente. O inventário e os resultados de suíte ficam em [TEST_MATRIX.md](TEST_MATRIX.md). Os números deste run permanecem como evidência histórica.
 
 | Artefato | Resultado | Origem | Interpretação correta |
 |---|---|---|---|

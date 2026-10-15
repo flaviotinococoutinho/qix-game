@@ -1,6 +1,6 @@
-# QIX GAME (codinome)
+# QIX GAME
 
-Reimaginação original de um jogo territorial (gramática de Qix, sistemas de Volfied). Godot **4.7.2-stable**, GDScript tipado, simulação 2D determinística e apresentação **2.5D**, retrato lógico 240×320.
+QIX GAME é o codinome de um jogo territorial original, com gramática de Qix e sistemas inspirados em Volfied. Godot **4.7.2-stable**, GDScript tipado, simulação 2D determinística e apresentação **2.5D**, retrato lógico 240×320.
 
 O vertical slice M2/G2 e o shipping candidate já encadeiam uma campanha autorável de três
 rodadas: várias capturas até a meta de 80%, score/vidas carregados entre setores, replay isolado
@@ -9,11 +9,11 @@ pela área capturada. O chefe alterna entre três perfis determinísticos, e áu
 háptica, gamepad e touch ficam fora do estado autoritativo/replay. Nenhum asset extraído de ROM é
 necessário.
 
-A identidade visual “Lumen Cartography” combina cartografia bioluminescente, máscara
+A identidade visual "Lumen Cartography" combina cartografia bioluminescente, máscara
 territorial R8, ícone original e três cenários: Abyssal Relay, Aurora Foundry e Verdant
 Singularity. Consulte `assets/ASSET-PROVENANCE.md` antes de distribuir.
 
-## Atlas Vivo — integração de 2026-09-08
+## Atlas Vivo, integração de 2026-09-08
 
 O jogo ganhou palco ortográfico com seis modelos 3D originais feitos pelo MCP do Blender,
 HUD em resolução nativa, atores com identidade e ciclo de vida, diretor de ameaça, balizas,
@@ -26,11 +26,19 @@ Fontes editáveis e hashes estão em `tools/assets/source/` e `assets/models/lum
 Os relatórios da nova implementação ficam em `build/modernization/`; os números de shipping
 mais abaixo são **históricos da apresentação 2D de 2026-09-03**, não certificam esta versão.
 
-## Abrir, executar, testar
+## Executar o jogo e os testes
 
-Build macOS da integração: `build/integration-20260908/Lumen Atlas Integrado.app`.
-O comando abaixo reconstrói o pacote de QA na pasta `build/modernization/`.
-Reconstrução local com assinatura verificada: `bash tools/shipping/build_atlas_macos_local.sh`.
+Os registros da integração apontam a build macOS local
+`build/integration-20260908/Lumen Atlas Integrado.app`. Para reconstruir o
+pacote de QA em `build/modernization/`, execute no macOS:
+
+```bash
+bash tools/shipping/build_atlas_macos_local.sh
+```
+
+Para abrir o editor, jogar ou executar os testes, use a raiz do repositório
+como diretório de trabalho. Ajuste `G` para o executável do Godot 4.7.2-stable
+instalado no seu ambiente:
 
 ```bash
 G=/Applications/Godot_mono.app/Contents/MacOS/Godot
@@ -38,13 +46,21 @@ $G --headless --path . --import                              # 1× por checkout
 $G --headless --audio-driver Dummy --path . --script res://tests/run_tests.gd # testes
 $G --headless --path . --script res://tools/verify_m2_capture_route.gd # rota 17,9→82,5% + R2
 $G --headless --path . --script res://tools/profile_board_view.gd # perfil CPU do board
-$G --headless --path . --script res://tools/build_campaign_content.gd # regenera conteúdo transacionalmente
 tools/shipping/run_shipping_qa.sh                           # export + smoke/probes macOS/Android
 $G --path . --editor                                         # editor (MCP godot-ai + fennara)
 $G --path .                                                  # jogar
 ```
 
-Controles:
+Para regenerar o conteúdo da campanha, execute o comando abaixo. Ele modifica
+Resources versionados. Incorpore as alterações autorais ao gerador antes de
+executá-lo e revise o diff após a geração. Consulte
+[autoria de conteúdo](content/README.md) para o protocolo de transação.
+
+```bash
+$G --headless --path . --script res://tools/build_campaign_content.gd
+```
+
+## Controles
 
 - teclado: setas/WASD = direção; Espaço/Z = desenhar; Esc/P = pausa; Enter = confirmar;
 - apresentação: F2 = 2D/2.5D; F4 = reduzir movimento; M = som; F3 = diagnóstico de atores;
@@ -65,7 +81,7 @@ que silenciam probes curtos para evitar o leak de teardown conhecido
 ([#76745](https://github.com/godotengine/godot/issues/76745)). O runtime normal continua com
 áudio, inclusive nos smokes macOS e Android.
 
-## Registro histórico do shipping candidate — 2026-09-03
+## Registro histórico do shipping candidate de 2026-09-03
 
 - suíte final: **134 testes, 11.489 asserções, 0 falhas**;
 - runner `20260903T065739Z-65912`: macOS e Android concluídos com `overall_exit=0` e estado
@@ -85,7 +101,14 @@ que silenciam probes curtos para evitar o leak de teardown conhecido
 
 Esses resultados validam o candidate local, não uma publicação. Aparelho físico, audição
 crítica, gamepad/háptica/touch reais, playthrough por uma pessoa, soak, assinatura/notarização,
-AAB/loja, licença e integridade do repositório continuam como gates explícitos.
+AAB/loja, licença e integridade do repositório continuam como critérios de publicação.
 
-Conteúdo autorável em `content/`; documentação viva em `docs/` (`ART_DIRECTION`,
-`PROJECT_CONTRACT`, `TEST_MATRIX`, `IMPLEMENTATION_STATUS`, `SHIPPING_PASS`, `decisions/`).
+## Consultar a documentação
+
+- [Conteúdo da campanha](content/README.md): arquivos e fluxo de autoria.
+- [Contrato do projeto](docs/PROJECT_CONTRACT.md): camadas, invariantes e alvos.
+- [Estado da implementação](docs/IMPLEMENTATION_STATUS.md): comportamento e pendências.
+- [Matriz de testes](docs/TEST_MATRIX.md): inventário e alcance das verificações.
+- [Direção de arte](docs/ART_DIRECTION.md): identidade e leitura visual.
+- [Publicação](docs/SHIPPING_PASS.md): evidências e critérios de distribuição.
+- [Decisões arquiteturais](docs/decisions/): justificativas e histórico.

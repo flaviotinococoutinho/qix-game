@@ -1,4 +1,9 @@
-# TEST_MATRIX
+# Matriz de testes
+
+> **Verificado em** 2026-10-15 · commit `a36f64020e8a63bba28509ddafaab6683ac4897b` · revisão editorial em ambiente Linux, sem execução de Godot
+> **Alcance:** clareza do texto e separação das evidências históricas. Não foram executados testes, medições, exportações, inspeção visual ou gameplay nesta revisão.
+
+Registro anterior de verificação:
 
 > **Verificado em** 2026-09-09 · commit `41899a7` · Godot 4.7.2 Mono, macOS; com as correções desta integração aplicadas
 > **Alcance:** suíte explícita desta integração, com inventário derivado pelo sincronizador.
@@ -11,7 +16,7 @@
 python3 tools/ci/headless_gate.py --godot "$GODOT" --logs /tmp/qix-headless --isolate-missing-editor-extension
 ```
 
-Resultado da suíte integrada: **463 testes, 20863 asserções, 0 falhas** — composição local
+Resultado histórico da suíte de 2026-09-09: **463 testes, 20863 asserções, 0 falhas**, composição local
 sobre `a5b2b06`, em macOS headless. Números de outras branches ou ambientes não são
 intercambiáveis. Resultados históricos permanecem nos relatos originais.
 
@@ -19,7 +24,7 @@ intercambiáveis. Resultados históricos permanecem nos relatos originais.
 
 A guarda de inventário, quando presente nesta branch, compara os casos pelo mesmo mecanismo
 de descoberta do runner. A contagem de asserções é medida pela execução, não inferida do texto.
-Os logs retêm diagnósticos e o código de saída. A extensão nativa opcional ausente é isolada
+Os logs registram os diagnósticos e o código de saída. A extensão nativa opcional ausente é isolada
 explicitamente pelo gate; seus scripts runtime permanecem. Isso não é QA da extensão nativa.
 
 As evidências de shipping citadas abaixo pertencem ao run de macOS de **2026-09-03**,
@@ -136,5 +141,5 @@ As verificações de import/editor devem ser executadas sequencialmente.
 ## Reconciliação Atlas Vivo e MCP — 2026-09-08
 
 A campanha local v4, o palco 2.5D e as melhorias remotas estão em validação conjunta.
-A contagem corrente será atualizada após executar a árvore reconciliada; os resultados
+A contagem precisa ser atualizada após executar a árvore reconciliada; os resultados
 datados no corpo registram os respectivos estados históricos. Ver [Atlas Vivo](ATLAS_VIVO.md).

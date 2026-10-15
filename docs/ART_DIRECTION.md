@@ -1,4 +1,9 @@
-# Direção de arte — Lumen Cartography / Atlas Vivo
+# Direção de arte: Lumen Cartography e Atlas Vivo
+
+> **Verificado em** 2026-10-15 · commit `a36f64020e8a63bba28509ddafaab6683ac4897b` · revisão editorial em ambiente Linux, sem execução de Godot
+> **Alcance:** clareza do texto e separação das evidências históricas. Não foram executados testes, medições, exportações, inspeção visual ou gameplay nesta revisão.
+
+Registro anterior de verificação:
 
 > **Verificado em** 2026-09-08 · commit `5318d0a` · Godot 4.7.2-stable, build Linux não-Mono, sandbox de nuvem headless
 > **Alcance:** remedição do envelope de `FREE` feita nesta branch sobre `5318d0a`; a edição
@@ -115,8 +120,7 @@ simulações de protanopia/deuteranopia/tritanopia usadas pelo tooling. O piso a
 
 A dívida BOUNDARY×TRAIL motivou a combinação de padrões e pulso, e permanece um ponto de revisão
 humana. Os pares de corpo de ameaça sobre borda/trilha motivaram tinta, em vez de depender apenas
-de matiz. Floors e KNOWN_DEBT no tooling são catracas explícitas; melhorá-los exige atualizar
-expectativas e documentar a mudança, sem tratar números antigos como medição recém-executada.
+de matiz. Os limites mínimos e `KNOWN_DEBT` registram as expectativas e as pendências no tooling. Para alterar esses limites, atualize as expectativas e documente o motivo. Preserve a data das medições anteriores.
 
 ## Registro histórico das camadas do cursor — 2026-09-05
 
@@ -169,8 +173,7 @@ scanline. O shader faz mais que isso no ramo `FREE`: multiplica também por um *
 Enquanto os dois ficaram fora da conta, o chão medido era mais escuro que o pixel mais claro
 realmente desenhado, e todo par contra `FREE` saía **otimista**.
 
-Nada na paleta mudou e nada regrediu: os números abaixo sempre foram os do jogo. O que mudou é
-que agora são medidos. Sempre o pior caso entre visão tricromática e as três dicromacias.
+A revisão de 2026-09-08 não mudou a paleta. Ela corrigiu o cálculo do envelope de `FREE`. A tabela registra o pior caso entre visão tricromática e as três simulações de dicromacia.
 
 | Par | Antes (medido) | Agora (envelope real) | Piso | Meta 3:1 |
 |---|---|---|---|---|
@@ -188,8 +191,7 @@ cursor sobre `BOUNDARY`. **Nenhum par cruzou a meta nos dois sentidos** — `FRE
 apertado, continua acima de 3:1 com 0,62 de folga em vez de 0,73.
 
 O envelope é conservador de propósito: ele cruza os extremos de scanline, poço e grade sem
-afirmar que os três saturam no mesmo pixel. Para um piso de legibilidade, errar para o chão mais
-claro possível é errar na direção certa. A leitura em movimento, num aparelho real, continua
+afirmar que os três saturam no mesmo pixel. O limite de legibilidade considera o chão mais claro possível. A leitura em movimento, num aparelho real, continua
 pendente de revisão humana como o resto desta seção.
 
 ## Barra de qualidade e próximos marcos
@@ -205,7 +207,5 @@ pendente de revisão humana como o resto desta seção.
 - Arte, animação e áudio com proveniência, coerência por setor e revisão humana registrada.
 - Trocar apresentação preserva checksum; guardas mecânicas e inspeção real se complementam.
 
-A biblioteca atual é uma fundação original para produzir e iterar. AAA continua um objetivo de
-conteúdo, arte, engenharia, acessibilidade e QA, não uma conclusão extraída de um refactor,
-de modelos 3D ou de uma suíte verde. Resultados atuais e pendências estão em
+A meta de qualidade inclui conteúdo, arte, engenharia, acessibilidade e QA. A aprovação depende das verificações de cada área, incluindo avaliação humana. Os resultados registrados e as pendências estão em
 [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) e [TEST_MATRIX.md](TEST_MATRIX.md).
